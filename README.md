@@ -1,36 +1,53 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AI-Path — Personalised AI Tutor for Learning AI
 
-## Getting Started
+Adaptive AI tutor that builds personal learning paths and adjusts **difficulty,
+explanations, and practice to each learner's live progress**.
+Built for the *Build Fast with AI: AI Build Challenge 2026* — track
+**Personalised AI Tutor for Learning AI**.
 
-First, run the development server:
+## What it does
+- **Adaptive learning path** — 12 units; ticking units off updates the whole app live.
+- **Adaptive quizzes** — Easy bank always open; **Medium unlocks at 60% average**.
+  Every submit is scored, timestamped, and feeds the transcript + charts.
+- **Adaptive AI tutor** — receives your live profile (level, units done, avg score,
+  current unit) with every message and adjusts depth, tone, and practice.
+- **Hybrid AI engine** — `auto` (default): local **Ollama** first, **Groq cloud**
+  fallback. Cloud mode works for every user; local mode is free + private.
+- **Live dashboard & transcript** — progress ring, streak (real calendar days),
+  activity feed with relative timestamps, score trajectory chart. No mock numbers.
 
+## Tech stack
+Next.js 16 (App Router, webpack build) · React 19 · Tailwind CSS v4 ·
+lucide-react · Ollama (`llama3.1:8b` default) · Groq (`llama-3.3-70b-versatile`)
+· localStorage persistence (Supabase schema in `supabase/schema.sql` for phase 2).
+
+## Run locally
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cd D:\AI_tutor
+npm install
+# optional: local AI (otherwise set GROQ_API_KEY below)
+D:\ollama\START-OLLAMA.bat
+cp .env.local.example .env.local   # fill GROQ_API_KEY for cloud mode
+npm run dev -- --port 3000
+# open http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Environment
+| Var | Purpose | Required |
+|---|---|---|
+| `OLLAMA_HOST` | local Ollama server (default `http://127.0.0.1:11434`) | only for local mode |
+| `OLLAMA_MODEL` | default local model (`llama3.1:latest`) | no |
+| `GROQ_API_KEY` | free key from `console.groq.com` — powers cloud mode for all users | for deploy |
+| `AI_PROVIDER` | `auto` (default) / `groq` / `ollama` | no |
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Switch engine anytime: AI Tutor header dropdown or Settings → Lab Runtime & API.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Deploy (Vercel, free)
+1. Push this repo to GitHub.
+2. Vercel → Import → add `GROQ_API_KEY` + `AI_PROVIDER=groq` in Environment Variables.
+3. Deploy. Cloud tutor works for every visitor; no Ollama needed on server.
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## AI tools disclosed
+Built with OpenCode (Muse Spark) as pair-programmer; LLMs used at runtime:
+Ollama `llama3.1:8b` (local) and Groq `llama-3.3-70b-versatile` (cloud).
+Quiz content is a curated static bank; tutor answers are model-generated.
