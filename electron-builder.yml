@@ -3,12 +3,15 @@ productName: AI-Path
 directories:
   output: dist-installer
 files:
-  - .next/standalone/**/*
   - .next/static/**/*
   - public/**/*
   - electron/**/*
   - package.json
 extraResources:
+  # Standalone Next.js server copied RAW (not asar): nested node_modules
+  # survive, and server.js can chdir freely.
+  - from: .next/standalone
+    to: standalone
   # Ollama sidecar binary ships inside the .exe (models download on first run)
   - from: D:/ollama/bin/ollama.exe
     to: ollama-bin/ollama.exe
@@ -16,6 +19,9 @@ win:
   target:
     - target: nsis
       arch: [x64]
+  # No admin/dev-mode on this PC: skip exe signing+metadata edit
+  # (winCodeSign needs symlink privilege). Unsigned installer works fine.
+  signAndEditExecutable: false
 nsis:
   oneClick: false
   perMachine: false

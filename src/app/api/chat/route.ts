@@ -6,7 +6,7 @@
 //   must be the default for other users.
 // - "auto" (default): try local Ollama first, fall back to Groq cloud.
 const OLLAMA_HOST = process.env.OLLAMA_HOST ?? "http://127.0.0.1:11434";
-const DEFAULT_MODEL = process.env.OLLAMA_MODEL ?? "qwen3:8b";
+const DEFAULT_MODEL = process.env.OLLAMA_MODEL ?? "gemma3:4b";
 const DEFAULT_PROVIDER = (process.env.AI_PROVIDER ?? "auto") as "auto" | "ollama" | "groq";
 
 const SYSTEM_PROMPT = `You are the AI-Path personal tutor for Mohammed, a beginner learning Python then AI/ML.

@@ -9,7 +9,7 @@
     "start": "next start",
     "lint": "eslint",
     "electron": "electron ./electron/main.js",
-    "dist": "npm run build && electron-builder --win nsis"
+    "dist": "npm run build && node electron/prepare-standalone.js && electron-builder --win nsis"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
@@ -30,5 +30,9 @@
     "eslint-config-next": "16.3.6",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "allowScripts": {
+    "electron@36.9.5": true,
+    "electron-builder@25.1.8": true
   }
 }

@@ -20,6 +20,14 @@ const DEFAULT_MODEL = process.env.OLLAMA_MODEL || "qwen3:8b";
 const isPackaged = app.isPackaged;
 const children = new Set();
 
+// Debug log (packaged app has no console): %APPDATA%/AI-Path/setup.log
+function log(...args) {
+  try {
+    const line = `[${new Date().toISOString()}] ${args.map(String).join(" ")}\n`;
+    fs.appendFileSync(path.join(app.getPath("userData"), "setup.log"), line);
+  } catch { /* ignore */ }
+}
+
 function ollamaBin() {
   // 1) bundled sidecar (inside the installed .exe resources)
   const bundled = path.join(process.resourcesPath || "", "ollama-bin", "ollama.exe");
@@ -113,13 +121,22 @@ async function ensureWeb(win) {
     report(win, "app", "App ready ✓");
     return;
   } catch { /* start standalone server */ }
-  const serverJs = path.join(process.resourcesPath, "app", ".next", "standalone", "server.js");
+  // In the packaged app the standalone server lives in resources/standalone
+  // (raw copy via extraResources — asar can't host its nested node_modules).
+  const serverJs = isPackaged
+    ? path.join(process.resourcesPath, "standalone", "server.js")
+    : path.join(process.cwd(), ".next", "standalone", "server.js");
+  log("starting standalone server:", serverJs, "exists:", fs.existsSync(serverJs));
   const child = spawn(process.execPath, [serverJs], {
-    env: { ...process.env, PORT, HOSTNAME: "127.0.0.1" },
+    // ELECTRON_RUN_AS_NODE makes the Electron binary behave as plain
+    // Node.js — without it, it boots a nested Electron app that quits instantly.
+    env: { ...process.env, PORT, HOSTNAME: "127.0.0.1", ELECTRON_RUN_AS_NODE: "1" },
     windowsHide: true,
   });
   children.add(child);
-  child.on("exit", () => children.delete(child));
+  child.stdout.on("data", (d) => log("[web]", d.toString().trim().slice(0, 300)));
+  child.stderr.on("data", (d) => log("[web-err]", d.toString().trim().slice(0, 500)));
+  child.on("exit", (code) => { log("standalone server exited, code:", code); children.delete(child); });
   await waitFor(APP_URL, 60000, "AI-Path server");
   report(win, "app", "App ready ✓");
 }
@@ -142,6 +159,18 @@ function createMain() {
   });
   win.loadURL(APP_URL);
   return win;
+}
+
+// Only one instance — extra launches just focus the running window
+// (prevents several copies fighting over the same port).
+const gotLock = app.requestSingleInstanceLock();
+if (!gotLock) {
+  app.quit();
+} else {
+  app.on("second-instance", () => {
+    const w = BrowserWindow.getAllWindows()[0];
+    if (w) { if (w.isMinimized()) w.restore(); w.focus(); }
+  });
 }
 
 app.whenReady().then(async () => {
