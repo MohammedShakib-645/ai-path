@@ -2,80 +2,36 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard,
+  Home,
   BookOpen,
-  Terminal,
-  FileCheck,
-  LineChart,
+  BotMessageSquare,
+  ClipboardList,
+  BarChart3,
   Settings,
-  Layers,
-  X,
-  ChevronRight,
-  ShieldCheck,
+  Brain,
+  Sparkles,
 } from "lucide-react";
 
-interface NavItem {
-  href: string;
-  label: string;
-  icon: React.ComponentType<{ className?: string }>;
-  badge?: string;
-}
-
-const NAV_SECTIONS = [
-  {
-    title: "ACADEMICS",
-    items: [
-      { href: "/", label: "Overview", icon: LayoutDashboard },
-      { href: "/learning-path", label: "Curriculum Syllabus", icon: BookOpen },
-      { href: "/ai-tutor", label: "Code Mentor Lab", icon: Terminal, badge: "Interactive" },
-      { href: "/quizzes", label: "Examinations", icon: FileCheck, badge: "3 Due" },
-    ],
-  },
-  {
-    title: "REPORTS & ACCOUNT",
-    items: [
-      { href: "/progress", label: "Gradebook & Analytics", icon: LineChart },
-      { href: "/settings", label: "Preferences & API", icon: Settings },
-    ],
-  },
+const NAV = [
+  { href: "/", label: "Dashboard", icon: Home },
+  { href: "/learning-path", label: "Learning Path", icon: BookOpen },
+  { href: "/ai-tutor", label: "AI Tutor", icon: BotMessageSquare },
+  { href: "/quizzes", label: "Quizzes", icon: ClipboardList },
+  { href: "/progress", label: "Progress", icon: BarChart3 },
+  { href: "/settings", label: "Settings", icon: Settings },
 ];
 
-export default function Sidebar({
-  mobileOpen,
-  onClose,
-}: {
-  mobileOpen?: boolean;
-  onClose?: () => void;
-}) {
+export default function Sidebar({ mobileOpen, onClose }: { mobileOpen?: boolean; onClose?: () => void }) {
   const pathname = usePathname();
-
   return (
     <>
-      {/* Desktop Persistent Sidebar */}
-      <aside className="hidden md:flex w-[250px] shrink-0 pro-sidebar text-slate-300 flex-col min-h-screen sticky top-0 h-screen p-4 overflow-y-auto">
+      <aside className="hidden md:flex w-[240px] shrink-0 sidebar-gradient text-white flex-col h-screen sticky top-0 p-5">
         <SidebarContent pathname={pathname} />
       </aside>
-
-      {/* Mobile Drawer */}
       {mobileOpen && (
-        <div className="fixed inset-0 z-50 md:hidden flex">
-          <div
-            className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity"
-            onClick={onClose}
-          />
-          <aside className="relative w-[270px] max-w-[85vw] pro-sidebar text-slate-300 flex flex-col h-full p-4 z-10 shadow-xl">
-            <div className="flex items-center justify-between pb-3 mb-2 border-b border-slate-800">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                Menu
-              </span>
-              <button
-                onClick={onClose}
-                className="w-7 h-7 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition"
-                aria-label="Close Navigation"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+        <div className="fixed inset-0 z-50 md:hidden">
+          <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+          <aside className="absolute left-0 top-0 w-[250px] sidebar-gradient text-white flex-col h-full p-5 flex">
             <SidebarContent pathname={pathname} onNavigate={onClose} />
           </aside>
         </div>
@@ -84,115 +40,59 @@ export default function Sidebar({
   );
 }
 
-function SidebarContent({
-  pathname,
-  onNavigate,
-}: {
-  pathname: string;
-  onNavigate?: () => void;
-}) {
+function SidebarContent({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
   return (
-    <div className="flex flex-col h-full">
-      {/* Institution Branding */}
-      <div className="flex items-center gap-3 px-2 py-3 mb-4 border-b border-slate-800">
-        <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-sm shadow-sm shrink-0">
-          <Layers className="w-4 h-4" />
+    <>
+      <div className="flex items-center gap-2.5 mb-8 mt-1">
+        <div className="w-10 h-10 rounded-xl bg-cyan-400/20 flex items-center justify-center border border-cyan-300/30">
+          <Brain className="w-6 h-6 text-cyan-300" />
         </div>
-        <div className="min-w-0">
-          <div className="font-bold text-sm text-white tracking-tight leading-tight flex items-center gap-1.5">
-            PATH ACADEMY
+        <div>
+          <div className="font-extrabold text-[22px] leading-none tracking-wide">
+            AI-<span className="text-indigo-300">PATH</span>
           </div>
-          <div className="text-[10px] text-slate-400 font-medium tracking-wide flex items-center gap-1 mt-0.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
-            CS Cohort 2026
-          </div>
+          <div className="text-[11px] text-slate-300/90 mt-1">Your Personal AI Tutor</div>
         </div>
       </div>
 
-      {/* Structured Nav Sections */}
-      <div className="space-y-6 flex-1">
-        {NAV_SECTIONS.map((section, sIdx) => (
-          <div key={sIdx} className="space-y-1">
-            <div className="px-2.5 pb-1 text-[10px] font-bold tracking-wider text-slate-400 uppercase">
-              {section.title}
-            </div>
-            {section.items.map((item) => {
-              const active =
-                item.href === "/"
-                  ? pathname === "/"
-                  : pathname.startsWith(item.href);
-              const Icon = item.icon;
+      <nav className="space-y-1.5 flex-1">
+        {NAV.map((item) => {
+          const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+          const Icon = item.icon;
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={onNavigate}
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-[14px] font-medium transition-all ${
+                active
+                  ? "bg-gradient-to-r from-indigo-600/80 to-indigo-500/50 text-white shadow-lg shadow-indigo-900/40 border border-indigo-400/20"
+                  : "text-slate-300 hover:bg-white/5 hover:text-white"
+              }`}
+            >
+              <Icon className="w-5 h-5" />
+              {item.label}
+            </Link>
+          );
+        })}
+      </nav>
 
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={onNavigate}
-                  className={`flex items-center justify-between px-2.5 py-2 rounded-md text-[13px] font-medium transition-colors ${
-                    active
-                      ? "bg-blue-600 text-white font-semibold"
-                      : "text-slate-300 hover:bg-slate-800 hover:text-white"
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <Icon className={`w-4 h-4 shrink-0 ${active ? "text-white" : "text-slate-400"}`} />
-                    <span className="truncate">{item.label}</span>
-                  </div>
-                  {item.badge && (
-                    <span
-                      className={`text-[10px] font-semibold px-1.5 py-0.2 rounded border ${
-                        active
-                          ? "bg-blue-700 text-blue-100 border-blue-500"
-                          : "bg-slate-800 text-slate-300 border-slate-700"
-                      }`}
-                    >
-                      {item.badge}
-                    </span>
-                  )}
-                </Link>
-              );
-            })}
-          </div>
-        ))}
-      </div>
-
-      {/* Cohort Status Box */}
-      <div className="p-3 my-4 rounded-lg bg-slate-850 border border-slate-800 text-xs space-y-2">
-        <div className="flex items-center justify-between text-[11px] font-semibold text-slate-400">
-          <span>Term Progression</span>
-          <span className="text-white font-bold">25%</span>
-        </div>
-        <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
-          <div className="h-full bg-blue-500 rounded-full" style={{ width: "25%" }} />
-        </div>
-        <div className="text-[10px] text-slate-400 flex items-center justify-between pt-0.5">
-          <span>3 of 12 Units Complete</span>
-          <span className="text-emerald-400 font-medium">On Schedule</span>
+      <div className="mt-6 rounded-2xl p-4 bg-[#131d45]/80 border border-indigo-500/20 relative overflow-hidden">
+        <Sparkles className="w-4 h-4 text-indigo-300 mb-2" />
+        <p className="text-[13px] leading-snug text-slate-200">
+          Small steps
+          <br />
+          every day lead to
+          <br />
+          big achievements!
+        </p>
+        <div className="mt-3 flex justify-end opacity-80">
+          <svg width="90" height="46" viewBox="0 0 90 46" fill="none">
+            <path d="M5 42 L28 12 L45 30 L65 8 L85 42 Z" fill="#4f46e5" opacity="0.7" />
+            <path d="M65 8 L65 2 L71 4 L65 6" fill="#a5b4fc" />
+          </svg>
         </div>
       </div>
-
-      {/* Student Profile Footer */}
-      <div className="pt-3 border-t border-slate-800">
-        <Link
-          href="/settings"
-          onClick={onNavigate}
-          className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-slate-800 transition group"
-        >
-          <div className="w-8 h-8 rounded-full bg-slate-700 border border-slate-600 flex items-center justify-center font-bold text-xs text-white shrink-0">
-            MS
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-xs font-semibold text-white truncate group-hover:text-blue-300">
-              Mohammed Shakib
-            </div>
-            <div className="text-[10px] text-slate-400 truncate flex items-center gap-1">
-              <ShieldCheck className="w-3 h-3 text-emerald-400 inline" />
-              Verified Student
-            </div>
-          </div>
-          <ChevronRight className="w-3.5 h-3.5 text-slate-500 group-hover:text-white" />
-        </Link>
-      </div>
-    </div>
+    </>
   );
 }

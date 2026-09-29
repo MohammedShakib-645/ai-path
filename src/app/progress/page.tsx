@@ -1,235 +1,258 @@
 "use client";
-import TopHeader from "../../components/TopHeader";
 import Link from "next/link";
-import { useProgress, completionPct, avgScore, streakCount, UNITS } from "../../lib/store";
 import {
-  CheckCircle2,
-  ShieldCheck,
-  GraduationCap,
+  useProgress, completionInt, avgScore, streakCount, CATEGORIES, catPct,
+  UNITS, nextUnit, relTime, learnerLevel,
+} from "../../lib/store";
+import {
+  Search, Sun, ArrowLeft, BookOpen, CheckCircle2, Clock, Flame,
+  Lightbulb, AlertTriangle,
 } from "lucide-react";
 
 export default function ProgressPage() {
   const s = useProgress();
-  const pct = completionPct(s);
+  const pct = completionInt(s);
   const avg = avgScore(s);
   const streak = streakCount(s);
+  const upcoming = nextUnit(s);
+  const level = learnerLevel(s);
 
-  // Real chart: last 7 saved quiz scores (%), padded so the line always renders
+  // Real chart: last 7 quiz scores, padded at the left
   const scores = s.attempts.slice(-7).map((a) => Math.round((a.score / Math.max(1, a.total)) * 100));
-  const points = [...Array(Math.max(0, 7 - scores.length)).fill(Math.max(50, (scores[0] ?? 70) - 10)), ...scores].slice(-7);
-  const labels = s.attempts.slice(-7).map((a) => a.quiz.split(":")[0]);
-  while (labels.length < 7) labels.unshift("—");
-  const W = 600,
-    H = 180;
+  const points = [...Array(Math.max(0, 7 - scores.length)).fill(Math.max(5, (scores[0] ?? 60) - 10)), ...scores].slice(-7);
+  const W = 520, H = 180;
+  const coords = points.map((p, i) => `${(30 + i * ((W - 30) / 6)).toFixed(1)},${(H - (p / 100) * H).toFixed(1)}`);
+  const line = `M ${coords.join(" L ")}`;
+  const area = `M 30,${H} L ${coords.join(" L ")} L ${W},${H} Z`;
 
-  const pathCoordinates = points.map((p, i) => {
-    const x = (i * (W / (points.length - 1))).toFixed(1);
-    const y = (H - ((p - 50) / 50) * H).toFixed(1);
-    return `${x},${y}`;
-  });
+  const weak = [...CATEGORIES].sort((a, b) => catPct(s, a) - catPct(s, b)).slice(0, 3);
 
-  const linePath = `M ${pathCoordinates.join(" L ")}`;
-  const areaPath = `M 0,${H} L ${pathCoordinates.join(" L ")} L ${W},${H} Z`;
-
-  const competencies = [
-    { code: "COMP-01", units: [1, 2, 3], name: "Python Syntax & Runtime Primitives", assessment: "Diagnostics + Labs" },
-    { code: "COMP-02", units: [4, 5, 6], name: "Control Structures & Data Layout", assessment: "Diagnostics + Labs" },
-    { code: "COMP-03", units: [7, 8, 9], name: "Abstraction, Files & OOP", assessment: "Labs + Exam" },
-    { code: "COMP-04", units: [10, 11, 12], name: "Numerical Methods & ML Capstone", assessment: "Capstone" },
-  ].map((c) => {
-    const done = c.units.filter((u) => s.done.includes(u)).length;
-    const pctDone = Math.round((done / c.units.length) * 100);
-    return {
-      ...c,
-      score: `${pctDone}%`,
-      status: pctDone === 100 ? "Exemplary" : pctDone >= 34 ? "Proficient" : "Developing",
-      grade: pctDone === 100 ? "A" : pctDone >= 67 ? "B+" : pctDone >= 34 ? "B" : "C",
-    };
-  });
+  const actIcon = (kind: string) =>
+    kind === "quiz"
+      ? { bg: "bg-green-100", icon: <CheckCircle2 className="w-5 h-5 text-green-600" /> }
+      : kind === "started"
+      ? { bg: "bg-purple-100", icon: <span className="text-purple-600 text-[14px]">▶</span> }
+      : kind === "tutor"
+      ? { bg: "bg-yellow-100", icon: <span className="text-[14px]">⭐</span> }
+      : { bg: "bg-blue-100", icon: <BookOpen className="w-5 h-5 text-blue-600" /> };
 
   return (
-    <div className="space-y-6 pb-12">
-      <TopHeader
-        title="Student Transcript & Gradebook"
-        subtitle="Verified Academic Performance Report • Course CS-101"
-      />
-
-      {/* Academic Standing Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { label: "Cumulative Average", val: s.attempts.length ? `${avg}%` : "—", sub: `${s.attempts.length} graded assessment${s.attempts.length === 1 ? "" : "s"}`, status: "Live scores" },
-          { label: "Completed Units", val: `${s.done.length} / ${UNITS.length}`, sub: `${pct}% of curriculum`, status: "On Track" },
-          { label: "Laboratory Time", val: `${s.labHours} hrs`, sub: "Verified runtime logs", status: "Requirement: 20h" },
-          { label: "Study Streak", val: `${streak} day${streak === 1 ? "" : "s"}`, sub: "Consecutive calendar days", status: "Current" },
-        ].map((c, i) => (
-          <div key={i} className="pro-card p-5 space-y-1">
-            <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-              {c.label}
-            </div>
-            <div className="text-2xl font-bold text-slate-900 tracking-tight font-mono">
-              {c.val}
-            </div>
-            <div className="text-xs font-semibold text-slate-700 pt-0.5">
-              {c.sub}
-            </div>
-            <div className="text-[11px] text-slate-400 font-medium">
-              {c.status}
+    <div>
+      <div className="flex items-start justify-between gap-4 mb-5 flex-wrap">
+        <div className="flex items-center gap-3">
+          <Link href="/" className="text-[#101a3f] hover:text-indigo-600 mt-1">
+            <ArrowLeft className="w-6 h-6" />
+          </Link>
+          <div>
+            <h1 className="text-[26px] md:text-[30px] font-extrabold text-[#101a3f] leading-tight">Progress Dashboard</h1>
+            <p className="text-[13px] text-slate-500 mt-0.5">Track your learning journey and see how far you&apos;ve come!</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="hidden sm:flex items-center gap-2 bg-white border border-slate-100 rounded-full px-4 py-2.5 w-[300px] shadow-sm">
+            <Search className="w-4 h-4 text-slate-400 shrink-0" />
+            <input placeholder="Search topics, concepts, or ask anything..." className="outline-none text-[13px] w-full bg-transparent" />
+          </div>
+          <button className="w-10 h-10 rounded-full bg-white border border-slate-100 flex items-center justify-center shadow-sm">
+            <Sun className="w-5 h-5 text-slate-500" />
+          </button>
+          <div className="flex items-center gap-2">
+            <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-lg">👤</div>
+            <div className="hidden lg:block">
+              <div className="text-[13px] font-bold text-[#101a3f]">Mohammed Shakib</div>
+              <div className="text-[11px] text-slate-500 flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-green-500 inline-block" /> {level}
+              </div>
             </div>
           </div>
-        ))}
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-[1.8fr_1fr] gap-6">
-        <div className="space-y-6">
-          {/* Performance Trend Chart */}
-          <div className="pro-card p-6 space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-              <div>
-                <h3 className="text-sm font-bold text-slate-900">
-                  Assessment Performance Trajectory
-                </h3>
-                <p className="text-xs text-slate-500">Evaluation scores across consecutive coursework milestones</p>
+      <div className="grid grid-cols-1 xl:grid-cols-[1.7fr_1fr] gap-4">
+        <div className="space-y-4">
+          {/* Stat cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {[
+              { t: "Total Topics", v: "12", sub: `Completed ${s.done.length} / 12`, w: pct, icon: <BookOpen className="w-5 h-5 text-white" />, bg: "bg-indigo-500" },
+              { t: "Quizzes Taken", v: `${s.attempts.length}`, sub: s.attempts.length ? `Avg. Score ${avg}%` : "No quizzes yet", w: avg, icon: <CheckCircle2 className="w-5 h-5 text-white" />, bg: "bg-green-500" },
+              { t: "Study Time", v: `${s.labHours} hrs`, sub: "This Week", w: Math.min(100, Math.round((s.labHours / 20) * 100)), icon: <Clock className="w-5 h-5 text-white" />, bg: "bg-blue-500" },
+              { t: "Current Streak", v: `${streak} days`, sub: "Keep it up!", w: Math.min(100, streak * 20), icon: <Flame className="w-5 h-5 text-white" />, bg: "bg-orange-400" },
+            ].map((c, i) => (
+              <div key={i} className="card p-4">
+                <div className="flex gap-2 items-center">
+                  <span className={`w-10 h-10 rounded-2xl ${c.bg} flex items-center justify-center shrink-0`}>{c.icon}</span>
+                  <span className="text-[11px] text-slate-500 font-medium">{c.t}</span>
+                </div>
+                <div className="font-extrabold text-[22px] text-[#101a3f] mt-1">{c.v}</div>
+                <div className="text-[11px] text-slate-400">{c.sub}</div>
+                <div className="h-[6px] bg-slate-100 rounded-full mt-2 overflow-hidden">
+                  <div className="h-full bg-gradient-to-r from-indigo-500 to-green-400 rounded-full transition-all" style={{ width: `${c.w}%` }} />
+                </div>
               </div>
-              <span className="text-xs font-semibold text-slate-600 font-mono">
-                Current: {points[points.length - 1]}%
-              </span>
-            </div>
+            ))}
+          </div>
 
-            <div className="w-full overflow-hidden pt-2">
-              <svg viewBox={`0 0 ${W} ${H + 25}`} className="w-full h-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-[1.4fr_1fr] gap-4">
+            {/* Chart */}
+            <div className="card p-5">
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="font-bold text-[15px] text-[#101a3f]">Learning Progress Overview</h3>
+                <span className="text-[11px] bg-slate-50 border border-slate-100 px-2 py-1 rounded-lg text-slate-500">Last 7 Days ▾</span>
+              </div>
+              <svg viewBox={`0 0 ${W} ${H + 22}`} className="w-full">
                 <defs>
-                  <linearGradient id="academicGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#2563eb" stopOpacity="0.15" />
-                    <stop offset="100%" stopColor="#2563eb" stopOpacity="0.0" />
+                  <linearGradient id="pgrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#6366f1" stopOpacity="0.25" />
+                    <stop offset="100%" stopColor="#6366f1" stopOpacity="0" />
                   </linearGradient>
                 </defs>
-
-                {[50, 65, 80, 100].map((v) => {
-                  const y = H - ((v - 50) / 50) * H;
-                  return (
-                    <g key={v}>
-                      <line x1="0" x2={W} y1={y} y2={y} stroke="#f1f5f9" strokeDasharray="3 3" />
-                      <text x="0" y={y - 4} fontSize="9" fill="#94a3b8" fontFamily="monospace">
-                        {v}%
-                      </text>
-                    </g>
-                  );
-                })}
-
-                <path d={areaPath} fill="url(#academicGrad)" />
-                <path d={linePath} fill="none" stroke="#2563eb" strokeWidth="2.5" />
-
-                {points.map((p, i) => {
-                  const cx = (i * (W / (points.length - 1))).toFixed(1);
-                  const cy = (H - ((p - 50) / 50) * H).toFixed(1);
-                  return (
-                    <circle key={i} cx={cx} cy={cy} r="4" fill="#2563eb" stroke="#ffffff" strokeWidth="2" />
-                  );
-                })}
-              </svg>
-
-              <div className="flex justify-between text-[11px] font-mono text-slate-400 mt-2 px-1">
-                {labels.map((l, i) => (
-                  <span key={i} className="truncate max-w-[70px]">{l}</span>
+                {[0, 25, 50, 75, 100].map((v) => (
+                  <g key={v}>
+                    <line x1="30" x2={W} y1={H - (v / 100) * H} y2={H - (v / 100) * H} stroke="#eef2f7" />
+                    <text x="0" y={H - (v / 100) * H + 4} fontSize="10" fill="#94a3b8">{v}%</text>
+                  </g>
                 ))}
+                <path d={area} fill="url(#pgrad)" />
+                <polyline points={coords.join(" ")} fill="none" stroke="#6366f1" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                {coords.map((pt, i) => {
+                  const [cx, cy] = pt.split(",");
+                  return <circle key={i} cx={cx} cy={cy} r="4.5" fill="#6366f1" stroke="white" strokeWidth="2" />;
+                })}
+                <g>
+                  <rect x={W - 52} y={H - (points[6] / 100) * H - 30} width="46" height="22" rx="6" fill="#4f46e5" />
+                  <text x={W - 29} y={H - (points[6] / 100) * H - 15} fontSize="11" fontWeight="bold" fill="white" textAnchor="middle">{points[6]}%</text>
+                </g>
+              </svg>
+              <div className="flex justify-between text-[10px] text-slate-400 px-7">
+                {["Day 1", "Day 2", "Day 3", "Day 4", "Day 5", "Day 6", "Day 7"].map((d) => <span key={d}>{d}</span>)}
+              </div>
+            </div>
+
+            {/* Ring */}
+            <div className="card p-5 flex flex-col items-center">
+              <div className="relative w-[132px] h-[132px]">
+                <svg width="132" height="132" viewBox="0 0 132 132">
+                  <circle cx="66" cy="66" r="54" fill="none" stroke="#eef1f7" strokeWidth="13" />
+                  <circle
+                    cx="66" cy="66" r="54" fill="none" stroke="#22c55e" strokeWidth="13" strokeLinecap="round"
+                    strokeDasharray={2 * Math.PI * 54} strokeDashoffset={2 * Math.PI * 54 * (1 - pct / 100)}
+                    transform="rotate(-90 66 66)"
+                  />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <b className="text-[24px] text-[#101a3f]">{pct}%</b>
+                  <span className="text-[10px] text-slate-500">Overall Progress</span>
+                </div>
+              </div>
+              <div className="bg-blue-50/60 rounded-xl p-3 mt-4 text-left text-[12px] text-slate-600 w-full">
+                🚀 <b className="text-[#101a3f]">Great Progress!</b>
+                <br />
+                {s.done.length} of {UNITS.length} units done — keep the streak alive!
               </div>
             </div>
           </div>
 
-          {/* Competency Mastery Table */}
-          <div className="pro-card p-6 space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-              <div>
-                <h3 className="text-sm font-bold text-slate-900">
-                  Subject Competency Rubric
-                </h3>
-                <p className="text-xs text-slate-500">Institutional learning outcomes evaluation</p>
-              </div>
+          <div className="grid grid-cols-1 lg:grid-cols-[1.4fr_1fr] gap-4">
+            {/* Subject-wise */}
+            <div className="card p-5">
+              <h3 className="font-bold text-[15px] text-[#101a3f] mb-4">Subject-wise Progress</h3>
+              {CATEGORIES.map((c) => {
+                const p = catPct(s, c);
+                const d = c.units.filter((u) => s.done.includes(u)).length;
+                const st = p === 100 ? "Completed" : p > 0 ? "In Progress" : "Not Started";
+                return (
+                  <div key={c.id} className="flex items-center gap-3 mb-3.5">
+                    <span className={`w-9 h-9 rounded-xl ${c.iconBg} flex items-center justify-center text-[18px] shrink-0`}>{c.icon}</span>
+                    <span className="w-[110px] text-[13px] font-semibold text-slate-700 shrink-0">{c.label}</span>
+                    <div className="flex-1 h-[8px] bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-gradient-to-r from-indigo-500 to-blue-400 rounded-full transition-all" style={{ width: `${p}%` }} />
+                    </div>
+                    <span className="text-[11px] text-slate-500 w-[44px] text-right shrink-0">{p}%<br />{d} / {c.units.length}</span>
+                    <span className={`text-[10px] font-bold px-2 py-1 rounded-full shrink-0 ${st === "Completed" ? "bg-green-100 text-green-700" : st === "In Progress" ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-500"}`}>
+                      {st}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="border-b border-slate-200 text-slate-500 uppercase tracking-wider text-[10px]">
-                    <th className="pb-2 font-bold">Code</th>
-                    <th className="pb-2 font-bold">Competency Objective</th>
-                    <th className="pb-2 font-bold">Assessment</th>
-                    <th className="pb-2 font-bold">Score</th>
-                    <th className="pb-2 font-bold">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {competencies.map((comp) => (
-                    <tr key={comp.code} className="hover:bg-slate-50/50">
-                      <td className="py-3 font-mono text-slate-500">{comp.code}</td>
-                      <td className="py-3 font-medium text-slate-900">{comp.name}</td>
-                      <td className="py-3 text-slate-500">{comp.assessment}</td>
-                      <td className="py-3 font-mono font-semibold text-slate-900">{comp.score} ({comp.grade})</td>
-                      <td className="py-3">
-                        <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-semibold border ${
-                            comp.status === "Exemplary"
-                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                              : comp.status === "Proficient"
-                              ? "bg-blue-50 text-blue-700 border-blue-200"
-                              : "bg-amber-50 text-amber-700 border-amber-200"
-                          }`}
-                        >
-                          {comp.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            {/* Weak topics */}
+            <div className="card p-5">
+              <div className="flex justify-between mb-3 items-center">
+                <h3 className="font-bold text-[15px] text-[#101a3f] flex items-center gap-1.5">
+                  <AlertTriangle className="w-4 h-4 text-red-500" /> Weak Topics
+                </h3>
+                <span className="text-[11px] text-indigo-600 font-medium">View All</span>
+              </div>
+              {weak.map((c) => {
+                const p = catPct(s, c);
+                const d = c.units.filter((u) => s.done.includes(u)).length;
+                return (
+                  <div key={c.id} className="flex items-center gap-3 mb-3">
+                    <span className={`w-9 h-9 rounded-full ${c.iconBg} flex items-center justify-center text-[16px] shrink-0`}>{c.icon}</span>
+                    <span className="flex-1">
+                      <b className="text-[13px] text-[#101a3f] block">{c.label}</b>
+                      <span className="text-[11px] text-slate-400">Progress: {d}/{c.units.length}</span>
+                    </span>
+                    <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${p === 0 ? "bg-red-100 text-red-600" : "bg-amber-100 text-amber-700"}`}>
+                      {p === 0 ? "Needs Practice" : "Practice More"}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Quote bar */}
+          <div className="card p-4 flex items-center gap-3 !bg-gradient-to-r !from-indigo-50 !to-blue-50">
+            <span className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center shrink-0"><Lightbulb className="w-5 h-5 text-indigo-600" /></span>
+            <div>
+              <b className="text-[13px] text-[#101a3f]">&ldquo;Progress, not perfection. Keep going!&rdquo;</b>
+              <p className="text-[11px] text-slate-500">Every concept you learn builds your future.</p>
             </div>
           </div>
         </div>
 
-        {/* Institutional Accreditation & Credentialing */}
-        <div className="space-y-6">
-          <div className="pro-card p-6 space-y-3">
-            <h4 className="font-bold text-sm text-slate-900 flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-emerald-600" /> Certificate Track Verification
-            </h4>
-            <p className="text-xs text-slate-600 leading-relaxed">
-              Enrolled in the Verified Certificate of Proficiency in Python Systems Architecture. All submissions are automatically evaluated against faculty benchmark tests.
-            </p>
-            <div className="pt-2 border-t border-slate-100 space-y-1 text-xs">
-              <div className="flex justify-between text-slate-600">
-                <span>Certification Code:</span>
-                <span className="font-mono text-slate-900 font-semibold">CERT-CS-89241</span>
-              </div>
-              <div className="flex justify-between text-slate-600">
-                <span>Accreditation Body:</span>
-                <span className="font-semibold text-slate-900">Path Academic Council</span>
-              </div>
+        {/* Right column */}
+        <div className="space-y-4">
+          <div className="card p-5 text-center">
+            <div className="w-[64px] h-[64px] mx-auto rounded-full bg-indigo-100 flex items-center justify-center text-[36px]">🤖</div>
+            <div className="text-[12px] text-slate-500 mt-1">Your Level</div>
+            <div className="font-extrabold text-[20px] text-[#101a3f]">{level}</div>
+            <div className="text-[11px] text-slate-400">Keep learning, you&apos;re doing great!</div>
+            <div className="h-[10px] bg-slate-100 rounded-full mt-3 overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-purple-500 to-blue-400 rounded-full transition-all" style={{ width: `${Math.max(8, pct)}%` }} />
+            </div>
+            <div className="flex justify-between text-[11px] text-slate-400 mt-1"><span>Level 1</span><span>Next Level</span></div>
+          </div>
+
+          <div className="card p-5">
+            <div className="flex justify-between mb-3 items-center">
+              <h3 className="font-bold text-[15px] text-[#101a3f]">🕐 Recent Activity</h3>
+              <span className="text-[11px] text-indigo-600 font-medium">View All</span>
+            </div>
+            <div className="space-y-3 text-[12px]">
+              {s.activity.slice(0, 4).map((a, i) => {
+                const ic = actIcon(a.kind);
+                return (
+                  <div key={i} className="flex gap-2.5 items-start">
+                    <span className={`w-9 h-9 rounded-xl ${ic.bg} flex items-center justify-center shrink-0`}>{ic.icon}</span>
+                    <span className="flex-1"><b className="text-[#101a3f]">{a.text}</b><br /><span className="text-slate-400">{a.detail}</span></span>
+                    <span className="text-slate-400 text-[10px] shrink-0">{relTime(a.at)}</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
-          <div className="pro-card p-6 space-y-3">
-            <h4 className="font-bold text-sm text-slate-900 flex items-center gap-2">
-              <GraduationCap className="w-4 h-4 text-slate-700" /> Required Prerequisite Courses
-            </h4>
-            <div className="space-y-2 text-xs">
-              <div className="p-2.5 bg-slate-50 border border-slate-200 rounded flex justify-between items-center">
-                <div>
-                  <div className="font-semibold text-slate-900">CS-101: Systems Programming</div>
-                  <div className="text-[11px] text-slate-500">Current Coursework</div>
-                </div>
-                <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
-                  Enrolled
-                </span>
-              </div>
-              <div className="p-2.5 bg-slate-50 border border-slate-200 rounded flex justify-between items-center opacity-70">
-                <div>
-                  <div className="font-semibold text-slate-900">CS-201: Data Structures & Algorithms</div>
-                  <div className="text-[11px] text-slate-500">Prerequisite: CS-101</div>
-                </div>
-                <span className="text-[10px] font-semibold text-slate-500">
-                  Locked
-                </span>
-              </div>
+          <div className="card p-5">
+            <h3 className="font-bold text-[15px] text-[#101a3f] mb-2 flex items-center gap-2">💡 Recommended Next</h3>
+            <div className="bg-purple-50/70 rounded-xl p-3 text-[13px]">
+              <b className="text-[#101a3f]">{upcoming.title}</b>
+              <p className="text-slate-500 text-[12px]">Unit {upcoming.id} of 12 — picked from your live progress.</p>
+              <Link href="/learning-path" className="mt-2 inline-flex items-center gap-1 bg-gradient-to-r from-purple-600 to-indigo-500 text-white text-[12px] font-bold px-4 py-2 rounded-lg">
+                Continue Learning →
+              </Link>
             </div>
           </div>
         </div>

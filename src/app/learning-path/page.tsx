@@ -1,178 +1,236 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import TopHeader from "../../components/TopHeader";
-import { useProgress, toggleUnit, completionPct, UNITS } from "../../lib/store";
 import {
-  Clock,
-  ChevronDown,
-  ChevronUp,
-  ArrowRight,
-  FileCheck,
-  GraduationCap,
+  useProgress, toggleUnit, completionInt, UNITS, nextUnit,
+  studyTimeLabel, learnerLevel, setGoal, streakCount,
+} from "../../lib/store";
+import {
+  Search, Sun, ArrowLeft, BookOpen, Clock, ChevronDown,
+  Target, Star, Zap, Flame, Crown, Lightbulb,
 } from "lucide-react";
 
 export default function LearningPathPage() {
   const s = useProgress();
+  const pct = completionInt(s);
+  const upcoming = nextUnit(s);
+  const level = learnerLevel(s);
   const [expanded, setExpanded] = useState<number | null>(4);
-  const pct = completionPct(s);
+  const [editingGoal, setEditingGoal] = useState(false);
+  const [draft, setDraft] = useState(s.goal);
+
+  const weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const studiedSet = new Set(s.streak);
+  const todayIdx = (new Date().getDay() + 6) % 7; // Mon=0
+  const monday = new Date();
+  monday.setDate(monday.getDate() - todayIdx);
+  const keyOf = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
   return (
-    <div className="space-y-6 pb-12">
-      <TopHeader
-        title="Curriculum Syllabus & Course Units"
-        subtitle="Department of Computer Science • CS-101: Systems Programming & Applied AI"
-      />
-
-      <div className="grid grid-cols-1 xl:grid-cols-[1.8fr_1fr] gap-6">
-        <div className="space-y-6">
-          <div className="pro-card p-6 border-slate-700 bg-slate-900 text-white">
-            <div className="flex items-start justify-between gap-4">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-xs font-bold text-blue-400 bg-blue-900/40 px-2 py-0.5 rounded border border-blue-700/50">
-                    SYLLABUS // CS-101
-                  </span>
-                  <span className="text-xs text-slate-400">4.0 Academic Credits</span>
-                </div>
-                <h2 className="text-xl font-bold tracking-tight text-white">
-                  Python Systems Programming & Applied Machine Learning
-                </h2>
-                <p className="text-xs text-slate-300 leading-relaxed max-w-xl">
-                  A rigorous introduction to algorithmic problem solving, procedural abstraction, data structures, and computational machine learning.
-                </p>
-              </div>
-
-              <div className="text-right shrink-0 hidden sm:block">
-                <div className="text-xs text-slate-400 font-semibold">Overall Course Progress</div>
-                <div className="text-2xl font-bold text-white font-mono mt-0.5">{pct}%</div>
-                <div className="text-[11px] text-emerald-400 font-semibold mt-1">{s.done.length} of {UNITS.length} Units Complete</div>
+    <div>
+      {/* Header */}
+      <div className="flex items-start justify-between gap-4 mb-5 flex-wrap">
+        <div className="flex items-center gap-3">
+          <Link href="/" className="text-[#101a3f] hover:text-indigo-600 mt-1">
+            <ArrowLeft className="w-6 h-6" />
+          </Link>
+          <div>
+            <h1 className="text-[26px] md:text-[30px] font-extrabold text-[#101a3f] leading-tight">Learning Path</h1>
+            <p className="text-[13px] text-slate-500 mt-0.5">Your personalized journey to master AI & Machine Learning</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="hidden sm:flex items-center gap-2 bg-white border border-slate-100 rounded-full px-4 py-2.5 w-[300px] shadow-sm">
+            <Search className="w-4 h-4 text-slate-400 shrink-0" />
+            <input placeholder="Search topics, concepts, or ask anything..." className="outline-none text-[13px] w-full bg-transparent" />
+          </div>
+          <button className="w-10 h-10 rounded-full bg-white border border-slate-100 flex items-center justify-center shadow-sm">
+            <Sun className="w-5 h-5 text-slate-500" />
+          </button>
+          <div className="flex items-center gap-2">
+            <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-lg">👤</div>
+            <div className="hidden lg:block">
+              <div className="text-[13px] font-bold text-[#101a3f]">Mohammed Shakib</div>
+              <div className="text-[11px] text-slate-500 flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-green-500 inline-block" /> {level}
               </div>
             </div>
           </div>
+        </div>
+      </div>
 
-          <div className="pro-card p-6 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div>
-                <h3 className="text-base font-bold text-slate-900">Coursework Units ({UNITS.length} Total Units)</h3>
-                <p className="text-xs text-slate-500">Tap the number badge to mark a unit complete — dashboard updates instantly</p>
-              </div>
-              <span className="text-xs font-semibold text-slate-500 font-mono">Live: {pct}%</span>
+      <div className="grid grid-cols-1 xl:grid-cols-[1.7fr_1fr] gap-4">
+        <div className="space-y-4">
+          {/* Banner */}
+          <div className="card hero-gradient !border-0 p-6 text-white flex gap-4 items-center overflow-hidden relative">
+            <div className="w-16 h-16 rounded-full bg-purple-600/60 border border-white/30 flex items-center justify-center shrink-0">
+              <Target className="w-9 h-9" />
             </div>
+            <div className="flex-1 relative z-10">
+              <h2 className="text-[20px] font-extrabold">Your Learning Path</h2>
+              <p className="text-[13px] text-white/90 mt-1">
+                Based on your current level ({level}), we&apos;ve created a personalized roadmap to help you learn AI step by step.
+              </p>
+              <div className="flex gap-2 mt-3 flex-wrap">
+                { [`${level} Level`, "Estimated: 4 Weeks", "12 Topics"].map((t) => (
+                  <span key={t} className="bg-white/85 text-indigo-700 text-[11px] font-bold px-3 py-1.5 rounded-full">{t}</span>
+                ))}
+              </div>
+            </div>
+            <div className="hidden lg:block text-[13px] italic text-white/90 max-w-[180px] text-right relative z-10">
+              <span className="text-white/60 text-[20px]">❝</span> Learn at your own pace, build your future. <span className="text-white/60 text-[20px]">❞</span>
+            </div>
+            <div className="hidden md:flex w-[90px] h-[90px] rounded-full bg-white/25 border border-white/40 items-center justify-center text-[56px] shrink-0 relative z-10">🤖</div>
+          </div>
 
-            <div className="space-y-3">
-              {UNITS.map((topic, index) => {
-                const isDone = s.done.includes(topic.id);
-                const isCurrent = !isDone && (index === 0 || s.done.includes(UNITS[index - 1].id));
-                const isExpanded = expanded === topic.id;
+          {/* Stats */}
+          <div className="card p-4 flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-3">
+              <div className="w-[72px] h-[72px] rounded-full border-[7px] border-slate-100 border-t-green-500 border-r-green-500 flex items-center justify-center">
+                <div className="text-center leading-none">
+                  <div className="font-extrabold text-[16px] text-[#101a3f]">{pct}%</div>
+                  <div className="text-[8px] text-slate-500 mt-0.5">Completed</div>
+                </div>
+              </div>
+            </div>
+            {[
+              { v: `${s.done.length} / 12`, l: "Topics Completed", icon: <BookOpen className="w-5 h-5 text-blue-600" /> },
+              { v: studyTimeLabel(s.studyMins), l: "Study Time", icon: <Clock className="w-5 h-5 text-indigo-600" /> },
+              { v: level, l: "Current Level", icon: <Star className="w-5 h-5 text-amber-500" /> },
+            ].map((x, i) => (
+              <div key={i} className="flex items-center gap-2 bg-slate-50 rounded-xl px-4 py-3 flex-1 min-w-[140px]">
+                <span className="w-9 h-9 rounded-full bg-white flex items-center justify-center shadow-sm">{x.icon}</span>
+                <span>
+                  <span className="block font-extrabold text-[14px] text-[#101a3f]">{x.v}</span>
+                  <span className="text-[11px] text-slate-500">{x.l}</span>
+                </span>
+              </div>
+            ))}
+          </div>
 
-                return (
-                  <div
-                    key={topic.id}
-                    className={`rounded-lg border transition-all ${
-                      isCurrent ? "border-blue-500 bg-blue-50/20" : isDone ? "border-emerald-200 bg-emerald-50/15" : "border-slate-200 bg-white"
-                    }`}
-                  >
-                    <div className="p-4 sm:p-5 flex items-start justify-between gap-4">
-                      <div className="flex items-start gap-3.5 min-w-0">
-                        <button
-                          onClick={() => toggleUnit(topic.id)}
-                          className={`w-7 h-7 rounded font-mono text-xs font-bold flex items-center justify-center shrink-0 mt-0.5 transition ${
-                            isDone ? "bg-emerald-600 text-white" : isCurrent ? "bg-blue-600 text-white" : "bg-slate-100 border border-slate-300 text-slate-500"
-                          }`}
-                          title="Toggle completion status"
-                        >
-                          {isDone ? "✓" : `${String(topic.id).padStart(2, "0")}`}
-                        </button>
-                        <div className="min-w-0 space-y-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="font-bold text-sm text-slate-900">Unit {topic.id}: {topic.title}</span>
-                            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${isDone ? "bg-emerald-50 text-emerald-700 border-emerald-200" : isCurrent ? "bg-blue-50 text-blue-700 border-blue-200" : "bg-slate-50 text-slate-500 border-slate-200"}`}>
-                              {isDone ? "Completed" : isCurrent ? "Active Unit" : "Prerequisite Pending"}
+          {/* Topics list */}
+          <div className="card p-5">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-extrabold text-[16px] text-[#101a3f]">Learning Path (12 Topics)</h3>
+              <button onClick={() => setExpanded(expanded === -1 ? null : -1)} className="text-[12px] text-indigo-600 font-semibold">
+                Expand All ›
+              </button>
+            </div>
+            <div className="relative">
+              <div className="absolute left-[17px] top-4 bottom-4 w-[2px] bg-slate-100" />
+              <div className="space-y-3">
+                {UNITS.map((t) => {
+                  const isDone = s.done.includes(t.id);
+                  const status: string = isDone ? "Completed" : t.id === upcoming.id ? "In Progress" : "Not Started";
+                  const open = expanded === t.id || expanded === -1;
+                  return (
+                    <div key={t.id} className="flex gap-3 items-start relative">
+                      <button
+                        onClick={() => toggleUnit(t.id)}
+                        title="Click to mark complete / incomplete"
+                        className={`w-9 h-9 rounded-full font-bold text-[13px] flex items-center justify-center shrink-0 z-10 transition ${
+                          isDone ? "bg-green-500 text-white" : status === "In Progress" ? "bg-indigo-500 text-white" : "bg-slate-200 text-slate-500"
+                        }`}
+                      >
+                        {isDone ? "✓" : t.id}
+                      </button>
+                      <div className="flex-1 border border-slate-100 rounded-2xl p-4 bg-white shadow-sm">
+                        <div className="flex justify-between gap-3">
+                          <div className="flex gap-3">
+                            <span className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-[22px] shrink-0">{t.icon}</span>
+                            <div>
+                              <div className="font-bold text-[14px] text-[#101a3f]">{t.title}</div>
+                              <div className="text-[12px] text-slate-500">Unit {t.id} of 12 — core concepts, examples and practice.</div>
+                            </div>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${status === "Completed" ? "bg-green-100 text-green-700" : status === "In Progress" ? "bg-indigo-100 text-indigo-700" : "bg-slate-100 text-slate-500"}`}>
+                              {status}
                             </span>
+                            <div className="text-[11px] text-slate-400 mt-1.5 flex items-center gap-1 justify-end">
+                              <Clock className="w-3 h-3" /> {t.hours}
+                            </div>
                           </div>
                         </div>
+                        {open && (
+                          <div className="mt-3 flex items-center justify-between flex-wrap gap-2">
+                            <button onClick={() => toggleUnit(t.id)} className="text-[12px] text-indigo-600 font-semibold">
+                              {isDone ? "Mark incomplete" : "Mark complete"}
+                            </button>
+                            <Link href="/quizzes" className="text-[12px] font-bold text-white bg-gradient-to-r from-indigo-600 to-blue-500 px-4 py-2 rounded-lg">
+                              Take Quiz →
+                            </Link>
+                          </div>
+                        )}
                       </div>
-                      <div className="flex items-center gap-3 shrink-0">
-                        <span className="text-xs text-slate-500 font-mono flex items-center gap-1">
-                          <Clock className="w-3.5 h-3.5" /> {topic.hours}
-                        </span>
-                        <button
-                          onClick={() => setExpanded(isExpanded ? null : topic.id)}
-                          className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition"
-                          aria-label="Expand unit details"
-                        >
-                          {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                        </button>
-                      </div>
+                      <button onClick={() => setExpanded(open && expanded !== -1 ? null : t.id)} className="mt-4 text-slate-400 hover:text-slate-600 shrink-0">
+                        <ChevronDown className={`w-4 h-4 transition ${open && expanded !== -1 ? "rotate-180" : ""}`} />
+                      </button>
                     </div>
-
-                    {isExpanded && (
-                      <div className="px-5 pb-5 pt-3 border-t border-slate-100/80 bg-slate-50/50 space-y-3 text-xs">
-                        <div className="font-semibold text-slate-800">Learning Outcomes & Laboratory Breakdown:</div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                          <div className="p-2.5 bg-white border border-slate-200 rounded"><span className="font-semibold text-slate-900">Lecture:</span> Core concepts + memory semantics</div>
-                          <div className="p-2.5 bg-white border border-slate-200 rounded"><span className="font-semibold text-slate-900">Lab:</span> Test suite + edge cases</div>
-                          <div className="p-2.5 bg-white border border-slate-200 rounded"><span className="font-semibold text-slate-900">Reading:</span> Official Python docs</div>
-                          <div className="p-2.5 bg-white border border-slate-200 rounded"><span className="font-semibold text-slate-900">Assessment:</span> Graded diagnostic exam</div>
-                        </div>
-                        <div className="pt-2 flex items-center justify-between">
-                          <button onClick={() => toggleUnit(topic.id)} className="text-xs font-semibold text-blue-600 hover:underline">
-                            {isDone ? "Mark Unit Incomplete" : "Mark Unit Completed"}
-                          </button>
-                          <Link href="/quizzes" className="px-3.5 py-1.5 rounded bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs inline-flex items-center gap-1.5 transition">
-                            Launch Examination <ArrowRight className="w-3.5 h-3.5" />
-                          </Link>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="space-y-6">
-          <div className="pro-card p-6 space-y-3">
-            <h4 className="font-bold text-sm text-slate-900 flex items-center gap-2">
-              <FileCheck className="w-4 h-4 text-blue-600" /> Course Grading Distribution
-            </h4>
-            <p className="text-xs text-slate-500">Official weighted evaluation policy for CS-101:</p>
-            <div className="space-y-2 text-xs pt-1">
-              {[["Examinations & Diagnostics", "40%"], ["Laboratory Programming Exercises", "35%"], ["Final Machine Learning Capstone", "25%"]].map(([a, b]) => (
-                <div key={a} className="flex justify-between pb-1 border-b border-slate-100">
-                  <span className="text-slate-700">{a}</span>
-                  <span className="font-bold text-slate-900 font-mono">{b}</span>
-                </div>
+        {/* Right column */}
+        <div className="space-y-4">
+          <div className="card p-5">
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="font-bold text-[15px] text-[#101a3f] flex items-center gap-2">🎯 Your Learning Goals</h3>
+              <button onClick={() => { if (editingGoal) setGoal(draft); else setDraft(s.goal); setEditingGoal(!editingGoal); }} className="text-[11px] font-semibold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg">
+                {editingGoal ? "Save" : "Edit"}
+              </button>
+            </div>
+            <div className="bg-slate-50 rounded-xl p-3 text-[13px]">
+              <span className="text-[18px]">👑</span> <b className="text-[#101a3f]">{editingGoal ? <input value={draft} onChange={(e) => setDraft(e.target.value)} className="border rounded px-1 text-[12px] w-full mt-1" /> : s.goal}</b>
+              <p className="text-slate-500 text-[12px] mt-1">Become confident in AI/ML and create useful applications.</p>
+            </div>
+          </div>
+
+          <div className="card p-5">
+            <h3 className="font-bold text-[15px] text-[#101a3f] mb-3 flex items-center gap-2">💡 Recommended Next</h3>
+            <div className="bg-purple-50/60 border border-purple-100 rounded-xl p-4">
+              <div className="font-bold text-[14px] text-[#101a3f]">{upcoming.title}</div>
+              <p className="text-[12px] text-slate-500">Picked from your live progress — continue where you left off.</p>
+              <Link href="/quizzes" className="mt-3 inline-flex items-center gap-1 bg-gradient-to-r from-indigo-600 to-blue-500 text-white text-[12px] font-bold px-4 py-2 rounded-lg">
+                Continue Learning →
+              </Link>
+            </div>
+          </div>
+
+          <div className="card p-5">
+            <h3 className="font-bold text-[15px] text-[#101a3f] mb-3 flex items-center gap-2"><Zap className="w-4 h-4" /> Quick Actions</h3>
+            <div className="grid grid-cols-2 gap-2 text-[12px] font-semibold text-slate-600">
+              {[
+                ["Take a Quiz", "/quizzes"], ["Ask AI Tutor", "/ai-tutor"],
+                ["View Progress", "/progress"], ["Change Level", "/settings"],
+              ].map(([t, h]) => (
+                <Link key={t as string} href={h as string} className="border border-slate-100 rounded-xl py-3 px-2 text-center hover:bg-slate-50 bg-white shadow-sm">{t}</Link>
               ))}
             </div>
           </div>
 
-          <div className="pro-card p-6 space-y-3">
-            <h4 className="font-bold text-sm text-slate-900 flex items-center gap-2">
-              <GraduationCap className="w-4 h-4 text-slate-700" /> Academic Milestones
-            </h4>
-            <div className="space-y-2.5 text-xs">
-              <div className="p-2.5 rounded bg-slate-50 border border-slate-200">
-                <div className="font-semibold text-slate-900">Mid-Term Assessment Window</div>
-                <div className="text-[11px] text-slate-500">Scheduled: October 15–20, 2026</div>
-              </div>
-              <div className="p-2.5 rounded bg-slate-50 border border-slate-200">
-                <div className="font-semibold text-slate-900">Capstone Proposal Submission</div>
-                <div className="text-[11px] text-slate-500">Scheduled: November 05, 2026</div>
-              </div>
+          <div className="card p-5">
+            <h3 className="font-bold text-[15px] text-[#101a3f] mb-1 flex items-center gap-2">🔥 Study Streak</h3>
+            <p className="text-[13px] font-extrabold text-[#101a3f]">{streakCount(s)} Days</p>
+            <p className="text-[11px] text-slate-500 mb-3">Keep going!</p>
+            <div className="flex justify-between">
+              {weekDays.map((d, i) => {
+                const dt = new Date(monday);
+                dt.setDate(monday.getDate() + i);
+                const hit = studiedSet.has(keyOf(dt));
+                return (
+                  <div key={d} className="text-center">
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[12px] font-bold ${hit ? "bg-green-500 text-white" : "bg-slate-100 text-slate-400"}`}>
+                      {hit ? "✓" : "○"}
+                    </div>
+                    <div className="text-[10px] mt-1 text-slate-500">{d}</div>
+                  </div>
+                );
+              })}
             </div>
-          </div>
-
-          <div className="pro-card p-5 bg-slate-50 space-y-2">
-            <div className="font-bold text-xs text-slate-900">Laboratory Assistance</div>
-            <p className="text-xs text-slate-600 leading-relaxed">
-              Stuck on an exercise? The AI tutor answers from your local model or the shared cloud engine.
-            </p>
-            <Link href="/ai-tutor" className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700 pt-1">
-              Open AI Tutor →
-            </Link>
           </div>
         </div>
       </div>

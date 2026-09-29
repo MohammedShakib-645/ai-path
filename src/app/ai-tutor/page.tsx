@@ -1,11 +1,8 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
-import TopHeader from "../../components/TopHeader";
-import {
-  Terminal, Send, RotateCcw, Copy, Check,
-  ShieldCheck, Cpu, Zap, MessageSquarePlus,
-} from "lucide-react";
-import { useProgress, learnerLevel, completionPct, avgScore, nextUnit } from "../../lib/store";
+import Link from "next/link";
+import { Send, Bot, Copy, Check, RotateCcw, ArrowLeft, Search, Sun, Cpu, Lightbulb } from "lucide-react";
+import { useProgress, learnerLevel, completionInt, avgScore, nextUnit } from "../../lib/store";
 
 interface Msg { role: "user" | "assistant"; content: string; time?: string; engine?: string; ms?: number }
 interface OllamaModel { name: string; size: number; params?: string }
@@ -13,7 +10,7 @@ interface OllamaModel { name: string; size: number; params?: string }
 const QUICK = [
   "Explain Python lists vs tuples with examples",
   "What is floor division // vs normal division?",
-  "Debug: why do I get IndexError in a while loop?",
+  "Why do I get IndexError in a while loop?",
   "Give me a 3-line quiz on functions",
 ];
 const LS_KEY = "ai-path-tutor-history-v1";
@@ -24,11 +21,9 @@ function fmtBytes(n?: number) {
 }
 
 export default function AITutorPage() {
-  // Deterministic initial render (must match server) — stored history
-  // loads right after mount to avoid hydration mismatch.
-  const [msgs, setMsgs] = useState<Msg[]>([{
+  const [msgs, setMsgs] = useState<Msg[]>( [{
     role: "assistant",
-    content: "Ollama tutor ready. I run 100% locally on your best text model. Ask Python, paste code, or pick a quick topic above.",
+    content: "Hi Mohammed! 👋 I'm your AI Learning Companion. Ask me anything about Python, AI/ML, or your learning path.",
     time: "Session ready",
   }]);
   useEffect(() => {
@@ -37,6 +32,7 @@ export default function AITutorPage() {
       if (raw) setMsgs(JSON.parse(raw));
     } catch { /* ignore */ }
   }, []);
+
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [streaming, setStreaming] = useState(true);
@@ -50,9 +46,9 @@ export default function AITutorPage() {
     } catch { /* ignore */ }
   }, []);
   const [online, setOnline] = useState<boolean | null>(null);
-  const [latency, setLatency] = useState<number | null>(null);
   const [copied, setCopied] = useState<number | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+
   const prog = useProgress();
   const profile = {
     level: learnerLevel(prog),
@@ -61,19 +57,16 @@ export default function AITutorPage() {
     next: (() => { const u = nextUnit(prog); return `Unit ${u.id}: ${u.title}`; })(),
   };
 
-  // Load model list + health
   useEffect(() => {
     fetch("/api/chat", { cache: "no-store" })
-      .then(r => r.json())
-      .then(d => {
+      .then((r) => r.json())
+      .then((d) => {
         const ok = !!d.ollama?.ok;
         const list: OllamaModel[] = d.ollama?.models ?? [];
         setOnline(ok);
         setModels(list);
         if (ok && list.length && !list.some((m) => m.name === model)) {
-          const pref = list.find((m) => m.name.startsWith("llama3.1"))
-            ?? list.find((m) => m.name.startsWith("qwen2.5:7b"))
-            ?? list[0];
+          const pref = list.find((m) => m.name.startsWith("llama3.1")) ?? list.find((m) => m.name.startsWith("qwen2.5:7b")) ?? list[0];
           setModel(pref.name);
         }
       })
@@ -91,10 +84,9 @@ export default function AITutorPage() {
     setInput("");
     const t0 = Date.now();
     const userMsg: Msg = { role: "user", content: q, time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) };
-    const history = [...msgs, userMsg].map(m => ({ role: m.role, content: m.content }));
-    setMsgs(m => [...m, userMsg]);
+    const history = [...msgs, userMsg].map((m) => ({ role: m.role, content: m.content }));
+    setMsgs((m) => [...m, userMsg]);
     setLoading(true);
-
     try {
       if (streaming) {
         const res = await fetch("/api/chat", {
@@ -106,17 +98,16 @@ export default function AITutorPage() {
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
         let acc = "";
-        setMsgs(m => [...m, { role: "assistant", content: "", engine: `ollama:${model}`, time: "typing…" }]);
+        setMsgs((m) => [...m, { role: "assistant", content: "", engine: `ollama:${model}`, time: "typing…" }]);
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
           acc += decoder.decode(value, { stream: true });
           const snap = acc;
-          setMsgs(m => { const c = [...m]; c[c.length - 1] = { ...c[c.length - 1], content: snap }; return c; });
+          setMsgs((m) => { const c = [...m]; c[c.length - 1] = { ...c[c.length - 1], content: snap }; return c; });
         }
         const ms = Date.now() - t0;
-        setLatency(ms);
-        setMsgs(m => { const c = [...m]; c[c.length - 1] = { ...c[c.length - 1], time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }), ms }; return c; });
+        setMsgs((m) => { const c = [...m]; c[c.length - 1] = { ...c[c.length - 1], time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }), ms }; return c; });
       } else {
         const res = await fetch("/api/chat", {
           method: "POST",
@@ -125,16 +116,13 @@ export default function AITutorPage() {
         });
         const data = await res.json();
         const ms = Date.now() - t0;
-        setLatency(ms);
-        setMsgs(m => [...m, {
-          role: "assistant",
-          content: data.reply ?? "(empty reply)",
-          engine: data.engine, ms,
+        setMsgs((m) => [...m, {
+          role: "assistant", content: data.reply ?? "(empty reply)", engine: data.engine, ms,
           time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         }]);
       }
     } catch (e: any) {
-      setMsgs(m => [...m, { role: "assistant", content: `Request failed: ${e.message}. Is Ollama running? Start D:\\ollama\\START-OLLAMA.bat`, time: "error" }]);
+      setMsgs((m) => [...m, { role: "assistant", content: `Request failed: ${e.message}.`, time: "error" }]);
     } finally {
       setLoading(false);
     }
@@ -146,21 +134,20 @@ export default function AITutorPage() {
     setTimeout(() => setCopied(null), 1500);
   };
 
-  // Render fenced code blocks with a copy button
   const renderBody = (text: string, i: number) => {
     const parts = text.split(/(```[\s\S]*?```)/g);
     return parts.map((p, k) => {
       if (p.startsWith("```")) {
         const code = p.replace(/^```\w*\n?/, "").replace(/```$/, "");
         return (
-          <div key={k} className="my-2 rounded-md overflow-hidden border border-slate-700">
-            <div className="flex justify-between items-center px-2.5 py-1 bg-slate-800 text-[10px] font-mono text-slate-300">
+          <div key={k} className="my-2 rounded-xl overflow-hidden border border-slate-200">
+            <div className="flex justify-between items-center px-3 py-1.5 bg-slate-50 text-[10px] font-mono text-slate-500">
               <span>python</span>
-              <button onClick={() => copy(code, i * 100 + k)} className="hover:text-white flex items-center gap-1">
-                {copied === i * 100 + k ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />} copy
+              <button onClick={() => copy(code, i * 100 + k)} className="hover:text-indigo-600 flex items-center gap-1 font-semibold">
+                {copied === i * 100 + k ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />} copy
               </button>
             </div>
-            <pre className="bg-slate-950 text-slate-100 text-[12px] p-3 overflow-x-auto font-mono whitespace-pre">{code}</pre>
+            <pre className="bg-[#0e1530] text-slate-100 text-[12px] p-3 overflow-x-auto font-mono whitespace-pre">{code}</pre>
           </div>
         );
       }
@@ -169,104 +156,153 @@ export default function AITutorPage() {
   };
 
   return (
-    <div className="space-y-6 pb-12">
-      <TopHeader title="AI Tutor — Local Ollama" subtitle="Real answers from your own machine. No cloud, no cost." />
-
-      <div className="pro-card overflow-hidden flex flex-col h-[760px]">
-        {/* status bar */}
-        <div className="px-5 py-3 bg-slate-900 text-slate-300 flex items-center justify-between border-b border-slate-800 text-xs flex-wrap gap-2">
-          <div className="flex items-center gap-3">
-            <span className="flex items-center gap-2 font-mono font-bold text-white text-[13px]"><Terminal className="w-4 h-4 text-emerald-400" /> Local Tutor</span>
-            <span className="px-2 py-0.5 rounded bg-blue-600/40 border border-blue-500/40 text-blue-200 font-mono text-[11px] font-bold" title="Auto level from your real progress — unlocks harder quizzes">
-              {profile.level} · {completionPct(prog)}%
-            </span>
-            <span className={`inline-flex items-center gap-1.5 font-mono text-[11px] ${online === false ? "text-red-400" : online ? "text-emerald-400" : "text-slate-400"}`}>
-              <span className={`w-1.5 h-1.5 rounded-full ${online === false ? "bg-red-500" : online ? "bg-emerald-500 animate-pulse" : "bg-slate-500"}`} />
-              {online === null ? "checking…" : online ? "ollama online" : "ollama offline"}
-            </span>
-            {latency !== null && <span className="font-mono text-[11px] text-slate-400">last: {(latency / 1000).toFixed(1)}s</span>}
+    <div>
+      {/* Header */}
+      <div className="flex items-start justify-between gap-4 mb-5 flex-wrap">
+        <div className="flex items-center gap-3">
+          <Link href="/" className="text-[#101a3f] hover:text-indigo-600 mt-1">
+            <ArrowLeft className="w-6 h-6" />
+          </Link>
+          <div>
+            <h1 className="text-[26px] md:text-[30px] font-extrabold text-[#101a3f] leading-tight">AI Tutor</h1>
+            <p className="text-[13px] text-slate-500 mt-0.5">Get instant help & explanations — adapts to your {profile.level} level</p>
           </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="hidden sm:flex items-center gap-2 bg-white border border-slate-100 rounded-full px-4 py-2.5 w-[300px] shadow-sm">
+            <Search className="w-4 h-4 text-slate-400 shrink-0" />
+            <input placeholder="Search topics, concepts, or ask anything..." className="outline-none text-[13px] w-full bg-transparent" />
+          </div>
+          <button className="w-10 h-10 rounded-full bg-white border border-slate-100 flex items-center justify-center shadow-sm">
+            <Sun className="w-5 h-5 text-slate-500" />
+          </button>
           <div className="flex items-center gap-2">
-            <Cpu className="w-3.5 h-3.5 text-slate-400" />
-            <select
-              value={provider}
-              onChange={e => { setProvider(e.target.value as any); try { localStorage.setItem("ai-path-provider", e.target.value); } catch { /* ignore */ } }}
-              title="AI engine: cloud works for everyone, local only on this PC"
-              className="bg-slate-800 border border-slate-700 rounded px-2 py-1 text-[12px] font-mono text-emerald-300 outline-none"
+            <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-lg">👤</div>
+            <div className="hidden lg:block">
+              <div className="text-[13px] font-bold text-[#101a3f]">Mohammed Shakib</div>
+              <div className="text-[11px] text-slate-500 flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-green-500 inline-block" /> {profile.level}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-[1.7fr_1fr] gap-4">
+        <div className="card p-0 overflow-hidden">
+          {/* Engine bar */}
+          <div className="hero-gradient px-5 py-3.5 text-white flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-2.5">
+              <span className="w-10 h-10 rounded-full bg-white/25 border border-white/30 flex items-center justify-center"><Bot className="w-6 h-6" /></span>
+              <div>
+                <div className="font-extrabold text-[15px]">AI Learning Companion</div>
+                <div className="text-[11px] text-white/85 flex items-center gap-1.5">
+                  <span className={`w-1.5 h-1.5 rounded-full ${online === false ? "bg-red-300" : online ? "bg-green-300" : "bg-white/60"}`} />
+                  {online === null ? "checking…" : online ? `${completionInt(prog)}% complete · adapts to you` : "answering via cloud"}
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={() => { setMsgs([]); try { localStorage.removeItem(LS_KEY); } catch { /* ignore */ } }}
+              className="text-[11px] font-bold bg-white/20 hover:bg-white/30 border border-white/30 rounded-full px-3 py-1.5 flex items-center gap-1"
             >
-              <option value="auto">auto</option>
-              <option value="groq">cloud</option>
-              <option value="ollama">local</option>
-            </select>
-            <select value={model} onChange={e => setModel(e.target.value)} className="bg-slate-800 border border-slate-700 rounded px-2 py-1 text-[12px] font-mono text-white outline-none max-w-[240px]">
-              {models.length === 0 && <option value={model}>{model}</option>}
-              {models.map(m => <option key={m.name} value={m.name}>{m.name} {m.params ? `· ${m.params}` : ""} {fmtBytes(m.size) ? `· ${fmtBytes(m.size)}` : ""}</option>)}
-            </select>
-            <label className="flex items-center gap-1 text-[11px] font-mono text-slate-300 cursor-pointer">
-              <input type="checkbox" checked={streaming} onChange={e => setStreaming(e.target.checked)} className="accent-emerald-500" /> stream
-            </label>
-            <button onClick={() => { setMsgs([]); localStorage.removeItem(LS_KEY); }} className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 font-semibold text-[11px] flex items-center gap-1">
               <RotateCcw className="w-3 h-3" /> Clear
             </button>
           </div>
-        </div>
 
-        {/* quick prompts */}
-        <div className="px-5 py-2.5 bg-slate-50 border-b border-slate-200 flex items-center gap-2 overflow-x-auto text-xs">
-          <span className="font-bold text-slate-600 text-[11px] uppercase tracking-wider shrink-0 flex items-center gap-1"><Zap className="w-3 h-3" /> Try:</span>
-          {QUICK.map((q, i) => (
-            <button key={i} onClick={() => send(q)} disabled={loading} className="px-2.5 py-1 rounded-md bg-white border border-slate-200 hover:border-emerald-500 text-xs whitespace-nowrap disabled:opacity-50">{q}</button>
-          ))}
-        </div>
+          {/* Quick prompts */}
+          <div className="px-5 py-2.5 bg-slate-50/70 border-b border-slate-100 flex items-center gap-2 overflow-x-auto">
+            {QUICK.map((x, i) => (
+              <button key={i} onClick={() => send(x)} disabled={loading} className="text-[11px] font-medium bg-white border border-slate-200 rounded-full px-3 py-1.5 whitespace-nowrap hover:border-indigo-300 disabled:opacity-50">
+                {x}
+              </button>
+            ))}
+          </div>
 
-        {/* messages */}
-        <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5 bg-white">
-          {msgs.length === 0 && (
-            <div className="text-center text-slate-400 text-sm py-16">
-              <MessageSquarePlus className="w-8 h-8 mx-auto mb-2 text-slate-300" />
-              History cleared. Ask anything to start a new session.
-            </div>
-          )}
-          {msgs.map((m, i) => {
-            const user = m.role === "user";
-            return (
-              <div key={i} className={`flex gap-3 max-w-3xl ${user ? "ml-auto justify-end" : "mr-auto"}`}>
-                {!user && <div className="w-8 h-8 rounded-md bg-emerald-600 flex items-center justify-center text-white font-mono font-bold text-xs shrink-0 mt-0.5">AI</div>}
-                <div className="max-w-[85%] space-y-1">
-                  <div className={`rounded-lg p-4 text-[13px] leading-relaxed border ${user ? "bg-slate-900 text-white border-slate-800" : "bg-slate-50/70 border-slate-200 text-slate-800"}`}>
+          {/* Messages */}
+          <div className="h-[420px] overflow-y-auto p-5 space-y-4 bg-white">
+            {msgs.length === 0 && (
+              <div className="text-center text-slate-400 text-sm py-14">
+                <div className="w-14 h-14 mx-auto rounded-full bg-indigo-100 flex items-center justify-center text-[28px] mb-2">🤖</div>
+                History cleared. Ask anything to start a new session.
+              </div>
+            )}
+            {msgs.map((m, i) => {
+              const user = m.role === "user";
+              return (
+                <div key={i} className={`flex ${user ? "justify-end" : "justify-start"}`}>
+                  {!user && <span className="w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center text-[18px] shrink-0 mr-2">🤖</span>}
+                  <div className={`max-w-[78%] px-4 py-3 rounded-2xl text-[13px] leading-relaxed ${user ? "primary-gradient text-white rounded-br-md" : "bg-slate-50 border border-slate-100 text-slate-700 rounded-bl-md"}`}>
                     {user ? <div className="whitespace-pre-wrap">{m.content}</div> : renderBody(m.content, i)}
-                    {!user && (
-                      <div className="mt-3 pt-2 border-t border-slate-200/80 flex items-center justify-between text-[10px] font-mono text-slate-500">
-                        <span className="flex items-center gap-1"><ShieldCheck className="w-3.5 h-3.5 text-emerald-600" /> {m.engine ?? "local"} {m.ms ? `· ${(m.ms / 1000).toFixed(1)}s` : ""}</span>
-                        <button onClick={() => copy(m.content, i)} className="hover:text-slate-900 flex items-center gap-1 font-semibold">
-                          {copied === i ? <><Check className="w-3 h-3 text-emerald-600" /> Copied</> : <><Copy className="w-3 h-3" /> Copy</>}
+                    {!user && m.content !== "" && (
+                      <div className="mt-2 pt-2 border-t border-slate-200/70 flex items-center justify-between text-[10px] text-slate-400">
+                        <span className="font-mono">{m.engine ?? "ai"} {m.ms ? `· ${(m.ms / 1000).toFixed(1)}s` : ""}</span>
+                        <button onClick={() => copy(m.content, i)} className="hover:text-indigo-600 flex items-center gap-1 font-semibold">
+                          {copied === i ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />} Copy
                         </button>
                       </div>
                     )}
                   </div>
-                  <div className={`text-[10px] text-slate-400 font-mono px-1 ${user ? "text-right" : ""}`}>{m.time}</div>
                 </div>
-                {user && <div className="w-8 h-8 rounded-md bg-blue-600 text-white font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">MS</div>}
-              </div>
-            );
-          })}
-          {loading && <div className="font-mono text-xs text-slate-500">▊ generating with {model}…</div>}
-          <div ref={bottomRef} />
+              );
+            })}
+            {loading && <div className="text-[12px] text-slate-400 flex items-center gap-2"><span className="w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center text-[18px]">🤖</span> thinking…</div>}
+            <div ref={bottomRef} />
+          </div>
+
+          {/* Input */}
+          <div className="p-4 border-t border-slate-100 bg-white">
+            <form onSubmit={(e) => { e.preventDefault(); send(); }} className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-full pl-4 pr-1.5 py-1.5 focus-within:border-indigo-400">
+              <input
+                value={input} onChange={(e) => setInput(e.target.value)}
+                placeholder="Ask about Python, loops, functions…"
+                disabled={loading}
+                className="flex-1 bg-transparent outline-none text-[13px] text-slate-700 placeholder:text-slate-400"
+              />
+              <button disabled={!input.trim() || loading} className="w-10 h-10 rounded-full primary-gradient text-white flex items-center justify-center disabled:opacity-50 shrink-0">
+                <Send className="w-4 h-4" />
+              </button>
+            </form>
+          </div>
         </div>
 
-        {/* input */}
-        <div className="p-4 bg-slate-50 border-t border-slate-200">
-          <form onSubmit={e => { e.preventDefault(); send(); }} className="flex items-center gap-2 bg-white border border-slate-300 rounded-md p-1 focus-within:ring-1 focus-within:ring-emerald-600">
-            <span className="font-mono text-slate-400 pl-3 text-xs">&gt;</span>
-            <input value={input} onChange={e => setInput(e.target.value)} placeholder={`Ask ${model} — Python, code, errors…`} disabled={loading}
-              className="flex-1 px-2 py-2 text-sm bg-transparent outline-none placeholder:text-slate-400" />
-            <button disabled={!input.trim() || loading} className="px-4 py-2 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs flex items-center gap-1.5 disabled:opacity-40">
-              Send <Send className="w-3.5 h-3.5" />
-            </button>
-          </form>
-          <div className="flex justify-between px-1 pt-2 text-[11px] text-slate-500 font-mono">
-            <span>History saved on this device · {msgs.length} msgs</span>
-            <span>Enter ↵ to send · served by Ollama, private to you</span>
+        {/* Right column */}
+        <div className="space-y-4">
+          <div className="card p-5">
+            <h3 className="font-bold text-[15px] text-[#101a3f] mb-3 flex items-center gap-2"><Cpu className="w-4 h-4" /> AI Engine</h3>
+            <label className="text-[11px] font-semibold text-slate-500">Answer source</label>
+            <select
+              value={provider}
+              onChange={(e) => { setProvider(e.target.value as any); try { localStorage.setItem("ai-path-provider", e.target.value); } catch { /* ignore */ } }}
+              className="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2 text-[13px] bg-white outline-none focus:border-indigo-400"
+            >
+              <option value="auto">Auto — local first, cloud fallback</option>
+              <option value="groq">Cloud — works for everyone</option>
+              <option value="ollama">Local Ollama — this PC only</option>
+            </select>
+            <label className="text-[11px] font-semibold text-slate-500 mt-3 block">Local model</label>
+            <select value={model} onChange={(e) => setModel(e.target.value)} className="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2 text-[13px] bg-white outline-none font-mono focus:border-indigo-400">
+              {models.length === 0 && <option value={model}>{model}</option>}
+              {models.map((m) => <option key={m.name} value={m.name}>{m.name}{m.params ? ` · ${m.params}` : ""}{fmtBytes(m.size) ? ` · ${fmtBytes(m.size)}` : ""}</option>)}
+            </select>
+            <label className="flex items-center gap-2 mt-3 text-[12px] text-slate-600 cursor-pointer">
+              <input type="checkbox" checked={streaming} onChange={(e) => setStreaming(e.target.checked)} className="accent-indigo-600" /> Stream answers live
+            </label>
+          </div>
+
+          <div className="card p-5">
+            <h3 className="font-bold text-[15px] text-[#101a3f] mb-2 flex items-center gap-2">💡 Quick Tip</h3>
+            <p className="text-[12px] text-slate-600 leading-relaxed">
+              I can see you&apos;re at <b>{profile.level}</b> level on <b>{profile.next}</b>. Ask for an explanation, an example, or a mini-quiz — I adjust to you.
+            </p>
+          </div>
+
+          <div className="card p-4 flex items-center gap-3">
+            <span className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center text-[26px] shrink-0">🤖</span>
+            <div>
+              <b className="text-[13px] text-[#101a3f] flex items-center gap-1">You&apos;re doing great! <Lightbulb className="w-3.5 h-3.5 text-amber-400" /></b>
+              <p className="text-[11px] text-slate-500">Every question helps you get better at AI and Python.</p>
+            </div>
           </div>
         </div>
       </div>
