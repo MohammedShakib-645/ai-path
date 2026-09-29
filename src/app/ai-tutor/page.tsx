@@ -259,7 +259,7 @@ export default function AITutorPage() {
                 disabled={loading}
                 className="flex-1 bg-transparent outline-none text-[13px] text-slate-700 placeholder:text-slate-400"
               />
-              <button disabled={!input.trim() || loading} className="w-10 h-10 rounded-full primary-gradient text-white flex items-center justify-center disabled:opacity-50 shrink-0">
+              <button disabled={!input.trim() || loading} aria-label="Send message" className="w-10 h-10 rounded-full primary-gradient text-white flex items-center justify-center disabled:opacity-50 shrink-0">
                 <Send className="w-4 h-4" />
               </button>
             </form>

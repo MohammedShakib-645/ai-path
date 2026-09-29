@@ -55,7 +55,7 @@ function todayKey(d = new Date()) {
 
 function seed(): ProgressState {
   const now = Date.now();
-  const day = 864e3;
+  const day = 86400e3; // 24h in ms (NOT 864e3 — that's only 14.4 minutes!)
   return {
     done: [1, 2, 3],
     attempts: [
