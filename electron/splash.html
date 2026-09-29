@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>AI-Path</title>
+<style>
+  body { margin: 0; font-family: Inter, Segoe UI, sans-serif; background: #0b1233; color: #fff;
+         display: flex; align-items: center; justify-content: center; height: 100vh; }
+  .box { text-align: center; width: 320px; }
+  .logo { font-size: 30px; font-weight: 800; }
+  .logo span { color: #a5b4fc; }
+  .sub { color: #94a3b8; font-size: 12px; margin: 4px 0 22px; }
+  .row { display: flex; align-items: center; gap: 10px; background: #131d45;
+         border: 1px solid #263069; border-radius: 10px; padding: 10px 12px;
+         margin-bottom: 8px; font-size: 13px; text-align: left; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: #475569; flex-shrink: 0; }
+  .row.done .dot { background: #22c55e; }
+  .row.busy .dot { background: #f59e0b; animation: blink 1s infinite; }
+  @keyframes blink { 50% { opacity: 0.4; } }
+  .detail { color: #94a3b8; font-size: 11px; margin-top: 12px; min-height: 16px; }
+  .err { color: #f87171; font-size: 12px; margin-top: 10px; }
+  button { margin-top: 14px; background: transparent; color: #64748b; border: none; cursor: pointer; font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="box">
+  <div class="logo">AI-<span>PATH</span></div>
+  <div class="sub">Your Personal AI Tutor — starting up…</div>
+  <div class="row" id="r-ollama"><span class="dot"></span><span>🧠 Local AI engine</span></div>
+  <div class="row" id="r-model"><span class="dot"></span><span>📦 AI model (one-time download)</span></div>
+  <div class="row" id="r-app"><span class="dot"></span><span>🚀 App</span></div>
+  <div class="detail" id="detail"></div>
+  <div class="err" id="err"></div>
+  <button id="quit">Close</button>
+</div>
+<script>
+  const rows = { ollama: document.getElementById('r-ollama'), model: document.getElementById('r-model'), app: document.getElementById('r-app') };
+  window.aiPath.onStatus(({ step, detail }) => {
+    document.getElementById('detail').textContent = detail || '';
+    if (step === 'error') { document.getElementById('err').textContent = detail; return; }
+    const el = rows[step];
+    if (!el) return;
+    el.classList.remove('busy');
+    if (/✓/.test(detail)) el.classList.add('done'); else el.classList.add('busy');
+  });
+  document.getElementById('quit').onclick = () => window.aiPath.quit();
+</script>
+</body>
+</html>

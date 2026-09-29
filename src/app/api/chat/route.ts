@@ -6,7 +6,7 @@
 //   must be the default for other users.
 // - "auto" (default): try local Ollama first, fall back to Groq cloud.
 const OLLAMA_HOST = process.env.OLLAMA_HOST ?? "http://127.0.0.1:11434";
-const DEFAULT_MODEL = process.env.OLLAMA_MODEL ?? "llama3.1:latest";
+const DEFAULT_MODEL = process.env.OLLAMA_MODEL ?? "qwen3:8b";
 const DEFAULT_PROVIDER = (process.env.AI_PROVIDER ?? "auto") as "auto" | "ollama" | "groq";
 
 const SYSTEM_PROMPT = `You are the AI-Path personal tutor for Mohammed, a beginner learning Python then AI/ML.
@@ -21,7 +21,8 @@ async function askOllama(model: string, messages: any[], stream: boolean, temper
   const res = await fetch(`${OLLAMA_HOST}/api/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ model, messages, stream, options: { temperature } }),
+    // think:false — skip Qwen3 reasoning tokens for fast, chatty answers
+    body: JSON.stringify({ model, messages, stream, think: false, options: { temperature } }),
   });
   if (!res.ok) throw new Error(`Ollama HTTP ${res.status}`);
   return res;

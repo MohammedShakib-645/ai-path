@@ -42,7 +42,16 @@ npm run dev -- --port 3000
 
 Switch engine anytime: AI Tutor header dropdown or Settings → Lab Runtime & API.
 
-## Deploy (Vercel, free)
+## Desktop app (.exe, Windows)
+Anyone can run the full app + your models on their own laptop — no browser,
+no terminal, no setup:
+```bash
+npm run dist
+# → dist-installer/AI-Path-Setup-0.1.0.exe
+```
+First launch: splash screen starts the bundled Ollama sidecar, downloads
+`qwen3:8b` once (~5GB, with progress), starts the app server and opens
+AI-Path. Models live in `%APPDATA%/AI-Path/models` and persist across runs.
 1. Push this repo to GitHub.
 2. Vercel → Import → add `GROQ_API_KEY` + `AI_PROVIDER=groq` in Environment Variables.
 3. Deploy. Cloud tutor works for every visitor; no Ollama needed on server.

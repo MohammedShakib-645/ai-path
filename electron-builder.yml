@@ -1,0 +1,23 @@
+appId: com.aipath.tutor
+productName: AI-Path
+directories:
+  output: dist-installer
+files:
+  - .next/standalone/**/*
+  - .next/static/**/*
+  - public/**/*
+  - electron/**/*
+  - package.json
+extraResources:
+  # Ollama sidecar binary ships inside the .exe (models download on first run)
+  - from: D:/ollama/bin/ollama.exe
+    to: ollama-bin/ollama.exe
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  shortcutName: AI-Path

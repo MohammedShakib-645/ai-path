@@ -37,7 +37,7 @@ export default function AITutorPage() {
   const [loading, setLoading] = useState(false);
   const [streaming, setStreaming] = useState(true);
   const [models, setModels] = useState<OllamaModel[]>([]);
-  const [model, setModel] = useState(process.env.NEXT_PUBLIC_OLLAMA_MODEL ?? "llama3.1:latest");
+  const [model, setModel] = useState(process.env.NEXT_PUBLIC_OLLAMA_MODEL ?? "qwen3:8b");
   const [provider, setProvider] = useState<"auto" | "groq" | "ollama">("auto");
   useEffect(() => {
     try {
@@ -66,7 +66,7 @@ export default function AITutorPage() {
         setOnline(ok);
         setModels(list);
         if (ok && list.length && !list.some((m) => m.name === model)) {
-          const pref = list.find((m) => m.name.startsWith("llama3.1")) ?? list.find((m) => m.name.startsWith("qwen2.5:7b")) ?? list[0];
+          const pref = list.find((m) => m.name.startsWith("qwen3:8b")) ?? list.find((m) => m.name.startsWith("gemma3:4b")) ?? list.find((m) => m.name.startsWith("llama3.1")) ?? list[0];
           setModel(pref.name);
         }
       })
