@@ -151,7 +151,28 @@ export default function AITutorPage() {
         }
       } catch { /* plain-text stream body */ }
       const cur = snapshot().chats.find((c: any) => c.id === chat.id);
-      const baseMsgs = (cur?.msgs ?? []).filter((m: any, i: number, a: any[]) => !(regen && i === a.length - 1 && m.role === "assistant"));
+      let baseMsgs = (cur?.msgs ?? []).filter((m: any, i: number, a: any[]) => !(regen && i === a.length - 1 && m.role === "assistant"));
+      // App-executed chat actions: the AI's [ACT:...] tags run here for real.
+      const actTag = reply.match(/\[ACT:(clear|delete-chat|rename:[^\]]*)\]/i);
+      if (actTag) {
+        const cmd = actTag[1].toLowerCase();
+        if (cmd === "clear") {
+          saveChat(chat.id, { msgs: [{ role: "assistant", content: "✅ Old messages deleted — fresh start. What next?", engine, time: now(), ms: Date.now() - t0 }], title: "New chat" });
+          toast("Messages deleted ✓");
+          return;
+        }
+        if (cmd === "delete-chat") {
+          deleteChat(chat.id);
+          setActiveId(newChat(mode));
+          toast("Chat deleted ✓");
+          return;
+        }
+        if (cmd.startsWith("rename:")) {
+          const newTitle = actTag[1].slice(7).trim().slice(0, 60);
+          if (newTitle) saveChat(chat.id, { title: newTitle });
+        }
+        reply = reply.replace(/\[ACT:[^\]]*\]/g, "").trim() || "Done ✓";
+      }
       saveChat(chat.id, { msgs: [...baseMsgs, { role: "assistant", content: reply, engine, time: now(), ms: Date.now() - t0 }] });
       logActivity(`AI Tutor session (${modeLabel(chat.mode || mode)})`, `${history.length} messages`, "tutor");
     } catch (e: any) {

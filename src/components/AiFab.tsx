@@ -126,7 +126,18 @@ export default function AiFab() {
         const j = JSON.parse(raw);
         if (typeof j.reply === "string") reply = j.reply;
       } catch { /* plain text */ }
-      setMsgs((m) => [...m, { role: "assistant", content: reply || "(empty reply)" }]);
+      let reply2 = reply;
+      const actTag = reply.match(/\[ACT:(clear|delete-chat)\]/i);
+      if (actTag) {
+        if (actTag[1].toLowerCase() === "clear") {
+          setMsgs([{ role: "assistant", content: "✅ Chat cleared — fresh start. What next?" }]);
+          setLoading(false);
+          setRunningTask(null);
+          return;
+        }
+        reply2 = reply.replace(/\[ACT:[^\]]*\]/g, "").trim() || "Done ✓";
+      }
+      setMsgs((m) => [...m, { role: "assistant", content: reply2 || "(empty reply)" }]);
       logActivity(task ? `AI bot task: ${task}` : "Quick ask (AI bot)", q.slice(0, 60), "tutor");
     } catch {
       setMsgs((m) => [...m, { role: "assistant", content: "Request failed — please try again." }]);
