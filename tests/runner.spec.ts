@@ -11,10 +11,17 @@ const BASE = process.env.BASE_URL || "http://localhost:3000";
 
 async function editorReady(page: Page, code: string) {
   const ta = page.locator("textarea").first();
+  // 1) WAIT for React hydration — filling before hydration gets silently
+  //    reverted when React mounts (that broke every earlier attempt).
+  await expect(async () => {
+    const hyd = await ta.evaluate((el) => Object.keys(el).some((k) => k.startsWith("__reactProps")));
+    expect(hyd).toBe(true);
+  }).toPass({ timeout: 40000 });
+  // 2) Now fill and confirm the value sticks.
   await expect(async () => {
     await ta.fill(code);
     expect(await ta.inputValue()).toBe(code);
-  }).toPass({ timeout: 40000 });
+  }).toPass({ timeout: 10000 });
 }
 
 async function clickRun(page: Page) {
