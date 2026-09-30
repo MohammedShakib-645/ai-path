@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
+import ThemeToggle from "../../components/ThemeToggle";
 import {
   useProgress, toggleUnit, completionInt, UNITS, nextUnit,
   studyTimeLabel, learnerLevel, setGoal, streakCount,
@@ -44,9 +45,7 @@ export default function LearningPathPage() {
             <Search className="w-4 h-4 text-slate-400 shrink-0" />
             <input placeholder="Search topics, concepts, or ask anything..." className="outline-none text-[13px] w-full bg-transparent" />
           </div>
-          <button className="w-10 h-10 rounded-full bg-white border border-slate-100 flex items-center justify-center shadow-sm">
-            <Sun className="w-5 h-5 text-slate-500" />
-          </button>
+          <ThemeToggle />
           <div className="flex items-center gap-2">
             <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-lg">👤</div>
             <div className="hidden lg:block">

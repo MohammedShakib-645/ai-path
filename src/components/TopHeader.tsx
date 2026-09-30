@@ -1,5 +1,6 @@
 "use client";
-import { Search, Sun, Menu } from "lucide-react";
+import { Search, Menu } from "lucide-react";
+import ThemeToggle from "./ThemeToggle";
 import { useMenu } from "../app/MenuContext";
 import { greeting, useProgress, learnerLevel } from "../lib/store";
 
@@ -45,12 +46,7 @@ export default function TopHeader({ title, subtitle }: { title?: string; subtitl
             className="outline-none text-[13px] w-full bg-transparent text-slate-700 placeholder:text-slate-400"
           />
         </div>
-        <button
-          className="w-10 h-10 rounded-full bg-white border border-slate-100 flex items-center justify-center shadow-sm"
-          aria-label="Toggle theme"
-        >
-          <Sun className="w-5 h-5 text-slate-500" />
-        </button>
+        <ThemeToggle />
         <div className="flex items-center gap-2">
           <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-lg">👤</div>
           <div className="hidden lg:block">

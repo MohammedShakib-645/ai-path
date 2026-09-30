@@ -53,3 +53,50 @@ body {
 ::-webkit-scrollbar-track {
   background: transparent;
 }
+
+/* ---------- Dark mode (theme toggle) ---------- */
+.dark {
+  color-scheme: dark;
+}
+.dark body {
+  background-color: #0b1233;
+  color: #e2e8f0;
+}
+.dark .card {
+  background: #131d45;
+  border-color: #263069;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+.dark .bg-white {
+  background-color: #131d45 !important;
+}
+.dark .bg-slate-50 {
+  background-color: #1a2450 !important;
+}
+.dark .bg-slate-100 {
+  background-color: #1e2a5e !important;
+}
+.dark .border-slate-100,
+.dark .border-slate-200 {
+  border-color: #263069 !important;
+}
+.dark .text-\[\#101a3f\] {
+  color: #f1f5f9 !important;
+}
+.dark .text-slate-700,
+.dark .text-slate-600 {
+  color: #cbd5e1 !important;
+}
+.dark .text-slate-500,
+.dark .text-slate-400 {
+  color: #94a3b8 !important;
+}
+.dark input {
+  color: #e2e8f0 !important;
+}
+.dark input::placeholder {
+  color: #64748b !important;
+}
+.dark pre {
+  border-color: #263069 !important;
+}

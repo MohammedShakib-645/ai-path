@@ -22,7 +22,15 @@ export const viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`h-full ${inter.variable}`}>
+    <html lang="en" className={`h-full ${inter.variable}`} suppressHydrationWarning>
+      <head>
+        {/* Apply saved theme before paint (no flash, no hydration mismatch) */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{if(localStorage.getItem('ai-path-theme')==='dark')document.documentElement.classList.add('dark')}catch(e){}`,
+          }}
+        />
+      </head>
       <body className="min-h-full">
         <SidebarWrapper>{children}</SidebarWrapper>
       </body>
