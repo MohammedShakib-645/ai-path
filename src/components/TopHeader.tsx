@@ -3,12 +3,14 @@ import { Search, Menu } from "lucide-react";
 import ThemeToggle from "./ThemeToggle";
 import SearchBox from "./SearchBox";
 import { useMenu } from "../app/MenuContext";
-import { greeting, useProgress, learnerLevel } from "../lib/store";
+import { greeting, useProgress, useProfileName, learnerLevel } from "../lib/store";
 
 export default function TopHeader({ title, subtitle }: { title?: string; subtitle?: string }) {
   const onMenu = useMenu();
   const s = useProgress();
   const level = learnerLevel(s);
+  const name = useProfileName();
+  const first = name.split(" ")[0] || "Learner";
 
   return (
     <div className="flex items-start justify-between gap-4 mb-5 flex-wrap">
@@ -29,7 +31,7 @@ export default function TopHeader({ title, subtitle }: { title?: string; subtitl
           ) : (
             <>
               <h1 className="text-[26px] md:text-[30px] font-extrabold text-[#101a3f] leading-tight">
-                {greeting()}, Mohammed! <span>👋</span>
+                {greeting()}, {first}! <span>👋</span>
               </h1>
               <p className="text-[13px] text-slate-500 mt-0.5">
                 Your personalized learning journey continues. Keep going!
@@ -45,7 +47,7 @@ export default function TopHeader({ title, subtitle }: { title?: string; subtitl
         <div className="flex items-center gap-2">
           <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-lg">👤</div>
           <div className="hidden lg:block">
-            <div className="text-[13px] font-bold text-[#101a3f]">Mohammed Shakib</div>
+            <div className="text-[13px] font-bold text-[#101a3f]">{name}</div>
             <div className="text-[11px] text-slate-500 flex items-center gap-1">
               <span className="w-2 h-2 rounded-full bg-green-500 inline-block" /> {level}
             </div>

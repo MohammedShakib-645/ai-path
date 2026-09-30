@@ -8,7 +8,7 @@ export interface Unit { id: number; title: string; hours: string; icon: string }
 export interface QuizAttempt { quiz: string; score: number; total: number; at: number }
 export interface ActivityItem { text: string; detail: string; at: number; kind: "quiz" | "unit" | "lab" | "tutor" | "started" | "lesson" | "practice" | "note" | "plan" }
 export interface Chat { id: string; title: string; pinned: boolean; mode: string; msgs: { role: "user" | "assistant"; content: string; time?: string; engine?: string; ms?: number }[]; updatedAt: number }
-export interface Note { id: string; title: string; body: string; tag: string; topic: string; pinned: boolean; updatedAt: number }
+export interface Note { id: string; title: string; body: string; tag: string; topic: string; pinned: boolean; updatedAt: number; sketch?: string }
 export interface Bookmark { id: string; kind: string; ref: string; title: string; snippet: string; at: number }
 export interface StudyTask { id: string; text: string; done: boolean }
 export interface StudyDay { date: string; tasks: StudyTask[] }
@@ -61,7 +61,8 @@ export function catPct(s: ProgressState, c: Category) {
   return Math.round((d / c.units.length) * 100);
 }
 
-const KEY = "ai-path-progress-v1";
+const KEY = "ai-path-progress-v2";
+const LEGACY_KEY = "ai-path-progress-v1";
 const EVT = "ai-path-update";
 
 function todayKey(d = new Date()) {
@@ -91,7 +92,8 @@ function seed(): ProgressState {
 
 export function completeOnboarding(profile: { name: string; goal: string; level: string; language: string; dailyMins: number }) {
   const s = ensure();
-  touchStreak(s);
+  // Real-time rule: signing up is not studying — the streak only starts
+  // on the learner's first real action (quiz, unit, note, practice…).
   set({
     ...s,
     onboarded: true,
@@ -103,6 +105,7 @@ export function completeOnboarding(profile: { name: string; goal: string; level:
     const p = JSON.parse(localStorage.getItem("ai-path-profile") || "{}");
     localStorage.setItem("ai-path-profile", JSON.stringify({ ...p, name: profile.name }));
   } catch { /* ignore */ }
+  saveProfileName(profile.name);
 }
 
 export function recordMistakes(items: { q: string; picked: string; correct: string; topic: string }[]) {
@@ -115,6 +118,16 @@ function load(): ProgressState {
   try {
     const raw = localStorage.getItem(KEY);
     if (raw) return { ...seed(), ...JSON.parse(raw) };
+    // One-time honest migration from v1: keep real records (quizzes, units,
+    // notes, chats) but drop the stats that used to be seeded/inflated by
+    // fake increments — streak and study time restart at a truthful zero.
+    const legacy = localStorage.getItem(LEGACY_KEY);
+    if (legacy) {
+      const migrated: ProgressState = { ...seed(), ...JSON.parse(legacy), streak: [], labHours: 0, studyMins: 0 };
+      localStorage.setItem(KEY, JSON.stringify(migrated));
+      try { localStorage.removeItem(LEGACY_KEY); } catch { /* ignore */ }
+      return migrated;
+    }
   } catch { /* private mode */ }
   const s = seed();
   try { localStorage.setItem(KEY, JSON.stringify(s)); } catch { /* ignore */ }
@@ -175,6 +188,41 @@ export function useProgress(): ProgressState {
   return s;
 }
 
+// ---- profile name (onboarding/settings) — external store so no setState-in-effect ----
+let profileName = "Learner";
+const profileListeners = new Set<() => void>();
+
+function readProfileName() {
+  try {
+    const p = JSON.parse(localStorage.getItem("ai-path-profile") || "{}");
+    profileName = typeof p.name === "string" && p.name.trim() ? p.name.trim() : "Learner";
+  } catch {
+    profileName = "Learner";
+  }
+}
+if (typeof window !== "undefined") readProfileName();
+
+export function saveProfileName(name: string) {
+  profileName = name.trim() || "Learner";
+  try {
+    const p = JSON.parse(localStorage.getItem("ai-path-profile") || "{}");
+    localStorage.setItem("ai-path-profile", JSON.stringify({ ...p, name: profileName }));
+  } catch { /* ignore */ }
+  profileListeners.forEach((l) => l());
+}
+
+/** Real display name from onboarding/settings — never a hardcoded person. */
+export function useProfileName(): string {
+  return useSyncExternalStore(
+    (cb) => {
+      profileListeners.add(cb);
+      return () => profileListeners.delete(cb);
+    },
+    () => profileName,
+    () => "Learner"
+  );
+}
+
 function touchStreak(s: ProgressState) {
   const t = todayKey();
   if (!s.streak.includes(t)) s.streak = [...s.streak, t].slice(-60);
@@ -194,22 +242,33 @@ export function toggleUnit(id: number) {
     ...s,
     done,
     activity,
-    labHours: Math.round(((has ? s.labHours : s.labHours + 0.5)) * 10) / 10,
-    studyMins: has ? s.studyMins : s.studyMins + 30,
   });
 }
 
-export function recordQuiz(quiz: string, score: number, total: number) {
+/**
+ * Quiz attempt with REAL measured time: `secs` is how long the learner
+ * actually spent on the quiz (start → submit). No fabricated minutes.
+ */
+export function recordQuiz(quiz: string, score: number, total: number, secs = 0) {
   const s = ensure();
   const at = Date.now();
   touchStreak(s);
+  const studyMins = s.studyMins + Math.max(0, Math.round(secs / 60));
   set({
     ...s,
     attempts: [...s.attempts, { quiz, score, total, at }].slice(-30),
     activity: [{ text: `Quiz: ${quiz}`, detail: `Scored ${score}/${total} (${Math.round((score / Math.max(1, total)) * 100)}%)`, at, kind: "quiz" as const }, ...s.activity].slice(0, 20),
-    labHours: Math.round((s.labHours + 0.5) * 10) / 10,
-    studyMins: s.studyMins + 15,
+    studyMins,
+    labHours: Math.round((studyMins / 60) * 10) / 10,
   });
+}
+
+/** Real measured study time in seconds (practice runs, lessons). Ignores anything under 15s. */
+export function recordStudy(secs: number) {
+  if (!Number.isFinite(secs) || secs < 15) return;
+  const s = ensure();
+  const studyMins = s.studyMins + Math.max(1, Math.round(secs / 60));
+  set({ ...s, studyMins, labHours: Math.round((studyMins / 60) * 10) / 10 });
 }
 
 export function setGoal(goal: string) {
@@ -249,7 +308,7 @@ export function saveNote(n: Partial<Note> & { id?: string }): string {
     return n.id;
   }
   const id = uid();
-  set({ ...s, notes: [{ id, title: n.title || "Untitled", body: n.body || "", tag: n.tag || "General", topic: n.topic || "", pinned: false, updatedAt: Date.now() }, ...s.notes].slice(0, 100) });
+  set({ ...s, notes: [{ id, title: n.title || "Untitled", body: n.body || "", tag: n.tag || "General", topic: n.topic || "", pinned: false, updatedAt: Date.now(), sketch: n.sketch }, ...s.notes].slice(0, 100) });
   return id;
 }
 export function deleteNote(id: string) {

@@ -3,13 +3,16 @@ import { useState } from "react";
 import Link from "next/link";
 import ThemeToggle from "../../components/ThemeToggle";
 import SearchBox from "../../components/SearchBox";
+import ProfileName from "../../components/ProfileName";
 import {
   useProgress, toggleUnit, completionInt, UNITS, nextUnit,
   studyTimeLabel, learnerLevel, setGoal, streakCount,
 } from "../../lib/store";
+import { UNIT_EXTRAS, LIBRARY_LINKS } from "../../lib/unitExtras";
+import { relTime } from "../../lib/engine";
 import {
   Search, Sun, ArrowLeft, BookOpen, Clock, ChevronDown,
-  Target, Star, Zap, Flame, Crown, Lightbulb,
+  Target, Star, Zap, Flame, Crown, Lightbulb, ExternalLink, FileText, Library, History,
 } from "lucide-react";
 
 export default function LearningPathPage() {
@@ -20,6 +23,7 @@ export default function LearningPathPage() {
   const [expanded, setExpanded] = useState<number | null>(4);
   const [editingGoal, setEditingGoal] = useState(false);
   const [draft, setDraft] = useState(s.goal);
+  const [panel, setPanel] = useState<{ id: number; kind: "cheat" | "res" } | null>(null);
 
   const weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   const studiedSet = new Set(s.streak);
@@ -47,7 +51,7 @@ export default function LearningPathPage() {
           <div className="flex items-center gap-2">
             <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-lg">👤</div>
             <div className="hidden lg:block">
-              <div className="text-[13px] font-bold text-[#101a3f]">Mohammed Shakib</div>
+              <div className="text-[13px] font-bold text-[#101a3f]"><ProfileName /></div>
               <div className="text-[11px] text-slate-500 flex items-center gap-1">
                 <span className="w-2 h-2 rounded-full bg-green-500 inline-block" /> {level}
               </div>
@@ -56,7 +60,7 @@ export default function LearningPathPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-[1.7fr_1fr] gap-4">
+      <div className="stagger grid grid-cols-1 xl:grid-cols-[1.7fr_1fr] gap-4">
         <div className="space-y-4">
           {/* Banner */}
           <div className="card hero-gradient !border-0 p-6 text-white flex gap-4 items-center overflow-hidden relative">
@@ -83,8 +87,17 @@ export default function LearningPathPage() {
           {/* Stats */}
           <div className="card p-4 flex items-center gap-3 flex-wrap">
             <div className="flex items-center gap-3">
-              <div className="w-[72px] h-[72px] rounded-full border-[7px] border-slate-100 border-t-green-500 border-r-green-500 flex items-center justify-center">
-                <div className="text-center leading-none">
+              <div className="relative w-[72px] h-[72px] shrink-0">
+                <svg width="72" height="72" viewBox="0 0 72 72">
+                  <circle cx="36" cy="36" r="30" fill="none" stroke="#eef1f7" strokeWidth="7" className="lp-ring-track" />
+                  <circle
+                    cx="36" cy="36" r="30" fill="none" stroke="#22c55e" strokeWidth="7" strokeLinecap="round"
+                    strokeDasharray={2 * Math.PI * 30}
+                    strokeDashoffset={2 * Math.PI * 30 * (1 - pct / 100)}
+                    transform="rotate(-90 36 36)"
+                  />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center leading-none">
                   <div className="font-extrabold text-[16px] text-[#101a3f]">{pct}%</div>
                   <div className="text-[8px] text-slate-500 mt-0.5">Completed</div>
                 </div>
@@ -95,8 +108,8 @@ export default function LearningPathPage() {
               { v: studyTimeLabel(s.studyMins), l: "Study Time", icon: <Clock className="w-5 h-5 text-indigo-600" /> },
               { v: level, l: "Current Level", icon: <Star className="w-5 h-5 text-amber-500" /> },
             ].map((x, i) => (
-              <div key={i} className="flex items-center gap-2 bg-slate-50 rounded-xl px-4 py-3 flex-1 min-w-[140px]">
-                <span className="w-9 h-9 rounded-full bg-white flex items-center justify-center shadow-sm">{x.icon}</span>
+              <div key={i} className="stat-tile flex items-center gap-2 rounded-xl px-4 py-3 flex-1 min-w-[140px]">
+                <span className="stat-icon w-9 h-9 rounded-full flex items-center justify-center">{x.icon}</span>
                 <span>
                   <span className="block font-extrabold text-[14px] text-[#101a3f]">{x.v}</span>
                   <span className="text-[11px] text-slate-500">{x.l}</span>
@@ -137,7 +150,7 @@ export default function LearningPathPage() {
                             <span className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-[22px] shrink-0">{t.icon}</span>
                             <div>
                               <div className="font-bold text-[14px] text-[#101a3f]">{t.title}</div>
-                              <div className="text-[12px] text-slate-500">Unit {t.id} of 12 — core concepts, examples and practice.</div>
+                              <div className="text-[12px] text-slate-500">Unit {t.id} of 12 — lesson, cheat sheet, resources &amp; quiz.</div>
                             </div>
                           </div>
                           <div className="text-right shrink-0">
@@ -149,15 +162,65 @@ export default function LearningPathPage() {
                             </div>
                           </div>
                         </div>
-                        {open && (
-                          <div className="mt-3 flex items-center justify-between flex-wrap gap-2">
-                            <button onClick={() => toggleUnit(t.id)} className="text-[12px] text-indigo-600 font-semibold">
-                              {isDone ? "Mark incomplete" : "Mark complete"}
-                            </button>
-                            <Link href="/quizzes" className="text-[12px] font-bold text-white bg-gradient-to-r from-indigo-600 to-blue-500 px-4 py-2 rounded-lg">
-                              Take Quiz →
-                            </Link>
-                          </div>
+                        {open && UNIT_EXTRAS[t.id] && (
+                          <>
+                            <div className="mt-3 flex items-center justify-between flex-wrap gap-2">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <Link href={`/learn/${t.id}`} className="text-[12px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-100 px-3 py-1.5 rounded-lg hover:bg-indigo-100 hover:-translate-y-0.5 transition flex items-center gap-1.5">
+                                  <BookOpen className="w-3.5 h-3.5" /> Lesson
+                                </Link>
+                                <button
+                                  onClick={() => setPanel(panel?.id === t.id && panel.kind === "cheat" ? null : { id: t.id, kind: "cheat" })}
+                                  className={`text-[12px] font-bold px-3 py-1.5 rounded-lg border transition flex items-center gap-1.5 hover:-translate-y-0.5 ${panel?.id === t.id && panel.kind === "cheat" ? "bg-amber-100 border-amber-300 text-amber-700" : "bg-amber-50 border-amber-100 text-amber-700 hover:bg-amber-100"}`}
+                                >
+                                  <FileText className="w-3.5 h-3.5" /> Cheat Sheet
+                                </button>
+                                <button
+                                  onClick={() => setPanel(panel?.id === t.id && panel.kind === "res" ? null : { id: t.id, kind: "res" })}
+                                  className={`text-[12px] font-bold px-3 py-1.5 rounded-lg border transition flex items-center gap-1.5 hover:-translate-y-0.5 ${panel?.id === t.id && panel.kind === "res" ? "bg-blue-100 border-blue-300 text-blue-700" : "bg-blue-50 border-blue-100 text-blue-700 hover:bg-blue-100"}`}
+                                >
+                                  <Library className="w-3.5 h-3.5" /> Resources
+                                </button>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <button onClick={() => toggleUnit(t.id)} className="text-[12px] text-indigo-600 font-semibold hover:text-indigo-400">
+                                  {isDone ? "Mark incomplete" : "Mark complete"}
+                                </button>
+                                <Link href="/quizzes" className="text-[12px] font-bold text-white bg-gradient-to-r from-indigo-600 to-blue-500 px-4 py-2 rounded-lg hover:-translate-y-0.5 hover:shadow-md transition">
+                                  Take Quiz →
+                                </Link>
+                              </div>
+                            </div>
+                            {panel?.id === t.id && panel.kind === "cheat" && (
+                              <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50/60 p-3.5 pop-in">
+                                <div className="text-[12px] font-extrabold text-amber-700 mb-2 flex items-center gap-1.5"><Zap className="w-3.5 h-3.5" /> {t.title} — Cheat Sheet</div>
+                                <div className="grid sm:grid-cols-2 gap-2.5">
+                                  {UNIT_EXTRAS[t.id].cheat.map((sec, si) => (
+                                    <div key={si} className="rounded-lg bg-white border border-slate-100 p-2.5">
+                                      <div className="text-[11px] font-bold text-[#101a3f] mb-1">{sec.h}</div>
+                                      {sec.rows.map((r, ri) => (
+                                        <div key={ri} className="text-[11px] font-mono text-slate-600 leading-relaxed whitespace-pre-wrap">{r}</div>
+                                      ))}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            {panel?.id === t.id && panel.kind === "res" && (
+                              <div className="mt-3 rounded-xl border border-blue-200 bg-blue-50/60 p-3.5 pop-in">
+                                <div className="text-[12px] font-extrabold text-blue-700 mb-2 flex items-center gap-1.5"><Library className="w-3.5 h-3.5" /> {t.title} — Resources</div>
+                                <div className="space-y-1.5">
+                                  {UNIT_EXTRAS[t.id].resources.map((r, ri) => (
+                                    <a key={ri} href={r.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-[12.5px] text-slate-600 hover:text-indigo-600 hover:-translate-y-0.5 transition bg-white border border-slate-100 rounded-lg px-2.5 py-2">
+                                      <ExternalLink className="w-3.5 h-3.5 shrink-0" />
+                                      <span className="font-semibold truncate">{r.label}</span>
+                                      <span className="ml-auto text-[10px] uppercase font-extrabold text-slate-400 shrink-0">{r.kind}</span>
+                                    </a>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </>
                         )}
                       </div>
                       <button onClick={() => setExpanded(open && expanded !== -1 ? null : t.id)} className="mt-4 text-slate-400 hover:text-slate-600 shrink-0">
@@ -191,7 +254,7 @@ export default function LearningPathPage() {
             <div className="bg-purple-50/60 border border-purple-100 rounded-xl p-4">
               <div className="font-bold text-[14px] text-[#101a3f]">{upcoming.title}</div>
               <p className="text-[12px] text-slate-500">Picked from your live progress — continue where you left off.</p>
-              <Link href="/quizzes" className="mt-3 inline-flex items-center gap-1 bg-gradient-to-r from-indigo-600 to-blue-500 text-white text-[12px] font-bold px-4 py-2 rounded-lg">
+              <Link href={`/learn/${upcoming.id}`} className="mt-3 inline-flex items-center gap-1 bg-gradient-to-r from-indigo-600 to-blue-500 text-white text-[12px] font-bold px-4 py-2 rounded-lg hover:-translate-y-0.5 hover:shadow-md transition">
                 Continue Learning →
               </Link>
             </div>
@@ -227,6 +290,38 @@ export default function LearningPathPage() {
                   </div>
                 );
               })}
+            </div>
+          </div>
+
+          <div className="card p-5">
+            <h3 className="font-bold text-[15px] text-[#101a3f] mb-3 flex items-center gap-2"><History className="w-4 h-4" /> Recent Activity</h3>
+            {s.activity.length === 0 ? (
+              <p className="text-[12px] text-slate-500">No activity yet — mark a unit complete or take a quiz to start your feed.</p>
+            ) : (
+              <div className="space-y-2.5">
+                {s.activity.slice(0, 5).map((a, i) => (
+                  <div key={i} className="flex gap-2.5 items-start">
+                    <span className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${a.kind === "quiz" ? "bg-green-500" : a.kind === "unit" ? "bg-indigo-500" : "bg-amber-500"}`} />
+                    <div className="min-w-0">
+                      <div className="text-[12.5px] font-bold text-[#101a3f] truncate">{a.text}</div>
+                      <div className="text-[11px] text-slate-500">{a.detail} • {relTime(a.at)}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="card p-5">
+            <h3 className="font-bold text-[15px] text-[#101a3f] mb-3 flex items-center gap-2"><Library className="w-4 h-4" /> Resource Library</h3>
+            <div className="space-y-1.5">
+              {LIBRARY_LINKS.map((r, i) => (
+                <a key={i} href={r.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-[12.5px] text-slate-600 hover:text-indigo-600 hover:-translate-y-0.5 transition bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-2">
+                  <ExternalLink className="w-3.5 h-3.5 shrink-0" />
+                  <span className="font-semibold truncate">{r.label}</span>
+                  <span className="ml-auto text-[10px] uppercase font-extrabold text-slate-400 shrink-0">{r.kind}</span>
+                </a>
+              ))}
             </div>
           </div>
         </div>

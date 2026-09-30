@@ -8,6 +8,11 @@
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test": "playwright test",
+    "dark-audit": "node scripts/dark-audit.mjs",
+    "showcase": "node scripts/showcase.mjs && node scripts/build-showcase.mjs",
+    "showcase:serve": "npx --yes serve showcase -l 4000",
     "electron": "electron ./electron/main.js",
     "dist": "npm run build && node electron/prepare-standalone.js && electron-builder --win nsis"
   },

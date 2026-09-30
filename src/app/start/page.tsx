@@ -8,7 +8,7 @@ import { toast } from "../../components/Toaster";
 export default function StartPage() {
   const s = useProgress();
   const r = useRouter();
-  const [name, setName] = useState("Mohammed Shakib");
+  const [name, setName] = useState("");
   const [goal, setGoal] = useState("Learn Python and build real AI projects");
   const [level, setLevel] = useState("Beginner");
   const [language, setLanguage] = useState("Python");
@@ -29,7 +29,7 @@ export default function StartPage() {
     r.push("/");
   };
 
-  const field = "w-full border border-slate-200 rounded-xl px-4 py-2.5 text-[13px] bg-white outline-none focus:border-indigo-400";
+  const field = "w-full border border-slate-200 rounded-xl px-4 py-2.5 text-[13px] bg-white outline-none";
 
   return (
     <div className="min-h-[80vh] flex items-center justify-center">
@@ -47,7 +47,7 @@ export default function StartPage() {
         <div className="space-y-4 mt-6">
           <div>
             <label className="text-[13px] font-bold">1. Your name</label>
-            <input value={name} onChange={(e) => setName(e.target.value)} className={`${field} mt-1`} />
+            <input value={name} placeholder="e.g. Alex Johnson" onChange={(e) => setName(e.target.value)} className={`${field} mt-1`} />
           </div>
           <div>
             <label className="text-[13px] font-bold">2. What do you want to achieve?</label>

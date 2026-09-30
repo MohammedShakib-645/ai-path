@@ -1,14 +1,15 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import ThemeToggle from "../../components/ThemeToggle";
 import SearchBox from "../../components/SearchBox";
+import ProfileName from "../../components/ProfileName";
 import { PYTHON_QUIZ, PYTHON_QUIZ_MEDIUM, QuizQ } from "../../lib/data";
 import { useProgress, recordQuiz, recordMistakes, avgScore, learnerLevel } from "../../lib/store";
 import { toast } from "../../components/Toaster";
 import {
   Search, Sun, ArrowLeft, ArrowRight, Clock,
-  CheckCircle2, XCircle, ClipboardList, Info, Lightbulb, BarChart3,
+  CheckCircle2, XCircle, ClipboardList, Info, Lightbulb, BarChart3, Lock, Eye,
 } from "lucide-react";
 
 export default function QuizzesPage() {
@@ -20,8 +21,13 @@ export default function QuizzesPage() {
   const BANK = tier === "easy" ? PYTHON_QUIZ : tier === "medium" ? PYTHON_QUIZ_MEDIUM : aiBank;
 
   const [idx, setIdx] = useState(0);
-  const [picked, setPicked] = useState<number | null>(null);
   const [answers, setAnswers] = useState<Record<number, number>>({});
+  // security: an answer locks the moment it is picked (no peeking, no changing)
+  const [locked, setLocked] = useState<Record<number, boolean>>({});
+  const [showPreview, setShowPreview] = useState(false);
+  const advTimer = useRef<number | null>(null);
+  // real measured time on this quiz attempt (start → submit)
+  const startedAt = useRef(Date.now());
   const [secs, setSecs] = useState(300);
   const [submitted, setSubmitted] = useState(false);
   const [genTopic, setGenTopic] = useState("Python Functions");
@@ -42,9 +48,12 @@ export default function QuizzesPage() {
     reset();
   };
   const reset = () => {
+    if (advTimer.current) window.clearTimeout(advTimer.current);
+    startedAt.current = Date.now();
     setIdx(0);
-    setPicked(null);
     setAnswers({});
+    setLocked({});
+    setShowPreview(false);
     setSecs(300);
     setSubmitted(false);
     setAnalysis(null);
@@ -81,25 +90,34 @@ export default function QuizzesPage() {
   const ss = String(secs % 60).padStart(2, "0");
   const q = BANK[idx];
   const total = BANK.length;
+  const picked = answers[idx] ?? null;
   const correct = Object.entries(answers).filter(([k, v]) => BANK[Number(k)].answer === v).length;
   const answered = Object.keys(answers).length;
   const incorrect = answered - correct;
   const skipped = total - answered;
-  const scorePct = answered === 0 ? 0 : Math.round((correct / answered) * 100);
+  // during the quiz the ring tracks answered progress (no answer leaking!),
+  // after submit it becomes the real score
+  const ringPct = submitted ? Math.round((correct / total) * 100) : Math.round((answered / total) * 100);
 
   const choose = (o: number) => {
-    setPicked(o);
+    if (submitted || locked[idx]) return; // one shot: once picked the answer is locked
     setAnswers((a) => ({ ...a, [idx]: o }));
-    setSubmitted(false);
+    setLocked((l) => ({ ...l, [idx]: true }));
+    if (idx < total - 1) {
+      // brief pause so the user sees the lock, then move to the next question
+      if (advTimer.current) window.clearTimeout(advTimer.current);
+      advTimer.current = window.setTimeout(() => setIdx((i) => (i === idx ? i + 1 : i)), 700);
+    }
   };
   const go = (n: number) => {
+    if (advTimer.current) window.clearTimeout(advTimer.current);
     setIdx(n);
-    setPicked(answers[n] ?? null);
-    setSubmitted(false);
   };
   const submit = async () => {
     const label = tier === "ai" ? `AI Quiz: ${genTopic}` : `Python Basics Quiz (${tier})`;
-    recordQuiz(label, correct, total);
+    // honest study time: seconds actually spent on this attempt (capped at 10 min)
+    const spent = Math.min(600, Math.max(1, Math.round((Date.now() - startedAt.current) / 1000)));
+    recordQuiz(label, correct, total, spent);
     // mistake analysis feeds the LearningEngine (weak topics, tutor context)
     recordMistakes(
       Object.entries(answers)
@@ -148,7 +166,7 @@ export default function QuizzesPage() {
           <div className="flex items-center gap-2">
             <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-lg">👤</div>
             <div className="hidden lg:block">
-              <div className="text-[13px] font-bold text-[#101a3f]">Mohammed Shakib</div>
+              <div className="text-[13px] font-bold text-[#101a3f]"><ProfileName /></div>
               <div className="text-[11px] text-slate-500 flex items-center gap-1">
                 <span className="w-2 h-2 rounded-full bg-green-500 inline-block" /> {learnerLevel(prog)}
               </div>
@@ -193,50 +211,71 @@ export default function QuizzesPage() {
 
           {/* Question */}
           <div className="card p-6">
-            <div className="flex gap-4 mb-4">
-              <span className="w-10 h-10 rounded-full bg-purple-100 text-purple-700 font-extrabold flex items-center justify-center text-[18px] shrink-0">{idx + 1}</span>
-              <h2 className="font-extrabold text-[17px] text-[#101a3f]">{q.q}</h2>
-            </div>
-            {q.code && (
-              <pre className="bg-slate-50 border border-slate-100 rounded-xl p-4 text-[13px] font-mono text-slate-700 mb-4 whitespace-pre-wrap ml-14">{q.code}</pre>
-            )}
-            <div className="space-y-3">
-              {q.options.map((op, o) => {
-                const isPick = picked === o;
-                const isAns = o === q.answer;
-                return (
-                  <button
-                    key={o}
-                    onClick={() => choose(o)}
-                    className={`w-full flex items-center gap-3 border rounded-xl px-4 py-3.5 text-left text-[14px] transition ${
-                      isPick ? (isAns ? "border-green-400 bg-green-50" : "border-red-300 bg-red-50") : "border-slate-200 hover:border-indigo-300 bg-white"
-                    }`}
-                  >
-                    <span className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 ${isPick ? (isAns ? "border-green-500 bg-green-500" : "border-red-400 bg-red-400") : "border-slate-300"}`}>
-                      {isPick && <span className="w-2 h-2 rounded-full bg-white" />}
-                    </span>
-                    <span className="font-semibold text-slate-500">{["A.", "B.", "C.", "D."][o]}</span>
-                    <span className={isPick && isAns ? "text-green-800 font-medium" : "text-slate-700"}>{op}</span>
-                    {isPick && isAns && <CheckCircle2 className="w-5 h-5 text-green-500 ml-auto shrink-0" />}
-                    {isPick && !isAns && <XCircle className="w-5 h-5 text-red-400 ml-auto shrink-0" />}
-                  </button>
-                );
-              })}
+            <div key={idx} className="pop-in">
+              <div className="flex gap-4 mb-4">
+                <span className="w-10 h-10 rounded-full bg-purple-100 text-purple-700 font-extrabold flex items-center justify-center text-[18px] shrink-0">{idx + 1}</span>
+                <h2 className="font-extrabold text-[17px] text-[#101a3f] flex-1">{q.q}</h2>
+                {locked[idx] && !submitted && (
+                  <span className="self-start flex items-center gap-1.5 text-[11px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-full px-2.5 py-1 shrink-0">
+                    <Lock className="w-3 h-3" /> Answer locked
+                  </span>
+                )}
+              </div>
+              {q.code && (
+                <pre className="bg-slate-50 border border-slate-100 rounded-xl p-4 text-[13px] font-mono text-slate-700 mb-4 whitespace-pre-wrap ml-14">{q.code}</pre>
+              )}
+              <div className="space-y-3">
+                {q.options.map((op, o) => {
+                  const isPick = picked === o;
+                  const isAns = o === q.answer;
+                  const reveal = submitted; // correctness only after the exam is submitted
+                  const isLocked = locked[idx] || submitted;
+                  const state = reveal
+                    ? isAns
+                      ? "border-green-400 bg-green-50"
+                      : isPick
+                        ? "border-red-300 bg-red-50"
+                        : "border-slate-200 bg-white hover:border-slate-300"
+                    : isPick
+                      ? "border-indigo-400 bg-indigo-50 ring-2 ring-indigo-200"
+                      : "border-slate-200 bg-white hover:border-indigo-300";
+                  return (
+                    <button
+                      key={o}
+                      onClick={() => choose(o)}
+                      disabled={isLocked}
+                      className={`w-full flex items-center gap-3 border rounded-xl px-4 py-3.5 text-left text-[14px] transition hover:-translate-y-0.5 hover:shadow-md disabled:hover:translate-y-0 disabled:hover:shadow-none ${state}`}
+                    >
+                      <span className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                        reveal && isAns ? "border-green-500 bg-green-500"
+                          : reveal && isPick ? "border-red-400 bg-red-400"
+                            : isPick ? "border-indigo-500 bg-indigo-500" : "border-slate-300"}`}>
+                        {isPick && <span className="w-2 h-2 rounded-full bg-white" />}
+                      </span>
+                      <span className="font-semibold text-slate-500">{["A.", "B.", "C.", "D."][o]}</span>
+                      <span className={reveal && isAns ? "text-green-800 font-medium" : isPick ? "font-semibold text-slate-700" : "text-slate-700"}>{op}</span>
+                      {reveal && isAns && <CheckCircle2 className="w-5 h-5 text-green-500 ml-auto shrink-0" />}
+                      {reveal && isPick && !isAns && <XCircle className="w-5 h-5 text-red-400 ml-auto shrink-0" />}
+                      {!reveal && isPick && <Lock className="w-4 h-4 text-indigo-500 ml-auto shrink-0" />}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
             <div className="flex justify-between mt-6 gap-3">
               <button
                 onClick={() => go(Math.max(0, idx - 1))}
                 disabled={idx === 0}
-                className="px-6 py-2.5 rounded-xl bg-slate-100 text-slate-500 text-[13px] font-bold flex items-center gap-2 disabled:opacity-60"
+                className="px-6 py-2.5 rounded-xl bg-slate-100 text-slate-500 text-[13px] font-bold flex items-center gap-2 disabled:opacity-60 hover:-translate-y-0.5 hover:shadow-md hover:text-slate-700"
               >
                 <ArrowLeft className="w-4 h-4" /> Previous
               </button>
               {idx === total - 1 ? (
-                <button onClick={submit} className="px-6 py-2.5 rounded-xl primary-gradient text-white text-[13px] font-bold flex items-center gap-2 shadow">
+                <button onClick={submit} className="px-6 py-2.5 rounded-xl primary-gradient text-white text-[13px] font-bold flex items-center gap-2 shadow hover:-translate-y-0.5 hover:shadow-lg">
                   Submit Exam ✓
                 </button>
               ) : (
-                <button onClick={() => go(idx + 1)} className="px-6 py-2.5 rounded-xl primary-gradient text-white text-[13px] font-bold flex items-center gap-2 shadow">
+                <button onClick={() => go(idx + 1)} className="px-6 py-2.5 rounded-xl primary-gradient text-white text-[13px] font-bold flex items-center gap-2 shadow hover:-translate-y-0.5 hover:shadow-lg">
                   Next Question <ArrowRight className="w-4 h-4" />
                 </button>
               )}
@@ -254,6 +293,44 @@ export default function QuizzesPage() {
                   <div className="whitespace-pre-wrap">{analysis}</div>
                 ) : (
                   <span className="text-slate-500">Analyzing your answers…</span>
+                )}
+              </div>
+            )}
+            {/* Answer Preview — full review of every question after submission */}
+            {submitted && (
+              <div className="mt-3 rounded-xl border border-indigo-200 bg-white overflow-hidden">
+                <button
+                  onClick={() => setShowPreview((v) => !v)}
+                  className="w-full flex items-center justify-between gap-3 px-4 py-3 text-[13px] font-extrabold text-indigo-700 hover:bg-indigo-50 transition text-left"
+                >
+                  <span className="flex items-center gap-2"><Eye className="w-4 h-4" /> Answer Preview — see every question with the correct answer</span>
+                  <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-indigo-50 border border-indigo-200 shrink-0">{showPreview ? "Hide" : "Show"}</span>
+                </button>
+                {showPreview && (
+                  <div className="stagger px-4 pb-4 space-y-3 max-h-[460px] overflow-y-auto">
+                    {BANK.map((qq, i) => {
+                      const yours = answers[i];
+                      return (
+                        <div key={i} className="rounded-xl border border-slate-200 p-3.5">
+                          <div className="text-[13px] font-bold text-[#101a3f] mb-2">Q{i + 1}. {qq.q}</div>
+                          <div className="space-y-1.5">
+                            {qq.options.map((op, o) => {
+                              const right = o === qq.answer;
+                              const mine = o === yours;
+                              return (
+                                <div key={o} className={`flex items-center gap-2 text-[12px] rounded-lg px-2.5 py-1.5 border ${right ? "border-green-300 bg-green-50 text-green-800 font-semibold" : mine ? "border-red-300 bg-red-50 text-red-700" : "border-slate-100 text-slate-500"}`}>
+                                  <span className="font-bold">{["A", "B", "C", "D"][o]}.</span>
+                                  <span>{op}</span>
+                                  {right && <span className="ml-auto text-[10px] font-extrabold uppercase tracking-wide text-green-600 shrink-0">{mine ? "Correct ✓" : "Correct answer"}</span>}
+                                  {mine && !right && <span className="ml-auto text-[10px] font-extrabold uppercase tracking-wide text-red-500 shrink-0">Your pick</span>}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 )}
               </div>
             )}
@@ -276,7 +353,7 @@ export default function QuizzesPage() {
         <div className="space-y-4">
           <div className="card p-5">
             <h3 className="font-bold text-[15px] text-[#101a3f] mb-2 flex items-center gap-2">✨ Generate AI Quiz</h3>
-            <input value={genTopic} onChange={(e) => setGenTopic(e.target.value)} placeholder="Topic (e.g. Python Functions)" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-[13px] outline-none focus:border-indigo-400 mb-2" />
+            <input value={genTopic} onChange={(e) => setGenTopic(e.target.value)} placeholder="Topic (e.g. Python Functions)" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-[13px] outline-none mb-2" />
             <div className="flex gap-2 mb-2">
               <select value={genDiff} onChange={(e) => setGenDiff(e.target.value)} className="flex-1 border border-slate-200 rounded-xl px-2 py-2 text-[12px] font-bold bg-white outline-none">
                 <option>Easy</option>
@@ -307,7 +384,8 @@ export default function QuizzesPage() {
                   <button
                     key={i}
                     onClick={() => go(i)}
-                    className={`w-8 h-8 rounded-full text-[12px] font-bold transition ${i === idx ? "bg-indigo-500 text-white ring-4 ring-indigo-100" : ans ? (ok ? "bg-green-500 text-white" : "bg-red-400 text-white") : "bg-slate-100 text-slate-500"}`}
+                    title={`Question ${i + 1}${ans ? (submitted ? (ok ? " — correct" : " — wrong") : " — answered") : " — not answered"}`}
+                    className={`w-8 h-8 rounded-full text-[12px] font-bold transition hover:scale-110 ${i === idx ? "bg-indigo-500 text-white ring-4 ring-indigo-100" : ans ? (submitted ? (ok ? "bg-green-500 text-white" : "bg-red-400 text-white") : "bg-indigo-500 text-white") : "bg-slate-100 text-slate-500"}`}
                   >
                     {i + 1}
                   </button>
@@ -341,26 +419,37 @@ export default function QuizzesPage() {
           </div>
 
           <div className="card p-5">
-            <h3 className="font-bold text-[15px] text-[#101a3f] mb-3 flex items-center gap-2"><BarChart3 className="w-4 h-4" /> Your Performance</h3>
+            <h3 className="font-bold text-[15px] text-[#101a3f] mb-3 flex items-center gap-2"><BarChart3 className="w-4 h-4" /> {submitted ? "Your Performance" : "Live Progress"}</h3>
             <div className="flex items-center gap-4">
               <div className="relative w-[96px] h-[96px] shrink-0">
                 <svg width="96" height="96" viewBox="0 0 96 96">
                   <circle cx="48" cy="48" r="40" fill="none" stroke="#eef1f7" strokeWidth="11" />
                   <circle
-                    cx="48" cy="48" r="40" fill="none" stroke="#22c55e" strokeWidth="11" strokeLinecap="round"
-                    strokeDasharray={2 * Math.PI * 40} strokeDashoffset={2 * Math.PI * 40 * (1 - scorePct / 100)}
+                    cx="48" cy="48" r="40" fill="none" stroke={submitted ? "#22c55e" : "#6366f1"} strokeWidth="11" strokeLinecap="round"
+                    strokeDasharray={2 * Math.PI * 40} strokeDashoffset={2 * Math.PI * 40 * (1 - ringPct / 100)}
                     transform="rotate(-90 48 48)"
+                    style={{ transition: "stroke-dashoffset 0.6s cubic-bezier(0.2,0.8,0.2,1)" }}
                   />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <b className="text-[18px] text-[#101a3f]">{scorePct}%</b>
-                  <span className="text-[10px] text-slate-500">Correct</span>
+                  <b className="text-[18px] text-[#101a3f]">{ringPct}%</b>
+                  <span className="text-[10px] text-slate-500">{submitted ? "Score" : "Answered"}</span>
                 </div>
               </div>
               <div className="text-[12px] space-y-1.5 text-slate-600 w-full">
-                <div className="flex justify-between"><span>✅ Correct</span><b className="text-[#101a3f]">{correct}</b></div>
-                <div className="flex justify-between"><span>❌ Incorrect</span><b className="text-[#101a3f]">{incorrect}</b></div>
-                <div className="flex justify-between"><span>⏭ Skipped</span><b className="text-[#101a3f]">{skipped}</b></div>
+                {submitted ? (
+                  <>
+                    <div className="flex justify-between"><span>✅ Correct</span><b className="text-[#101a3f]">{correct}</b></div>
+                    <div className="flex justify-between"><span>❌ Incorrect</span><b className="text-[#101a3f]">{incorrect}</b></div>
+                    <div className="flex justify-between"><span>⏭ Skipped</span><b className="text-[#101a3f]">{skipped}</b></div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex justify-between"><span>📌 Answered (locked)</span><b className="text-[#101a3f]">{answered}</b></div>
+                    <div className="flex justify-between"><span>⏭ Remaining</span><b className="text-[#101a3f]">{total - answered}</b></div>
+                    <p className="text-[11px] text-slate-400">Results stay hidden until you submit — pick carefully, answers lock instantly.</p>
+                  </>
+                )}
               </div>
             </div>
           </div>

@@ -1,0 +1,102 @@
+// POST /api/run — remote code execution proxy for C / C++ / Java ONLY.
+// Our server NEVER runs the code: it forwards to a self-hosted Piston-compatible
+// instance configured with RUNNER_URL (+ optional RUNNER_KEY). Python and JS do
+// not come here at all — they run in the learner's browser (see src/lib/runner.ts).
+//
+// GET  /api/run -> { languages: [...] }  (empty when RUNNER_URL is not configured)
+// POST /api/run -> { stdout, stderr, exitCode, timedOut, engine }
+
+const ALLOWED = ["c", "cpp", "c++", "java"];
+const MAX_CODE = 20 * 1024;
+const MAX_STDIN = 4 * 1024;
+const RATE_LIMIT = 20; // requests / minute / IP  (in-memory: serverless needs KV — see guard.ts)
+
+const hits = new Map<string, { n: number; t: number }>();
+
+function ipOf(req: Request): string {
+  return (req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "local").split(",")[0].trim();
+}
+
+function rateLimit(ip: string): boolean {
+  const now = Date.now();
+  const rec = hits.get(ip);
+  if (!rec || now - rec.t > 60000) {
+    hits.set(ip, { n: 1, t: now });
+    if (hits.size > 5000) hits.clear();
+    return false;
+  }
+  rec.n += 1;
+  return rec.n > RATE_LIMIT;
+}
+
+export async function GET() {
+  return Response.json({ languages: process.env.RUNNER_URL ? ["c", "cpp", "java"] : [] });
+}
+
+export async function POST(req: Request) {
+  const origin = req.headers.get("origin");
+  const host = req.headers.get("host");
+  if (origin && host && !origin.endsWith(host)) {
+    return Response.json({ error: "Cross-origin request rejected" }, { status: 403 });
+  }
+
+  const ip = ipOf(req);
+  if (rateLimit(ip)) {
+    return Response.json({ error: "Too many runs — wait a minute." }, { status: 429, headers: { "Retry-After": "60" } });
+  }
+
+  const raw = await req.text();
+  if (raw.length > 64 * 1024) return Response.json({ error: "Request too large" }, { status: 413 });
+
+  let body: any;
+  try {
+    body = JSON.parse(raw);
+  } catch {
+    return Response.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  const language = String(body.language ?? "").toLowerCase();
+  const code = String(body.code ?? "");
+  const stdin = String(body.stdin ?? "");
+  const timeoutMs = Math.max(1000, Math.min(15000, Number(body.timeoutMs) || 5000));
+
+  if (!ALLOWED.includes(language)) {
+    return Response.json({ error: `Language "${language}" is not allowed here.` }, { status: 400 });
+  }
+  if (!code.trim()) return Response.json({ error: "Empty code" }, { status: 400 });
+  if (code.length > MAX_CODE) return Response.json({ error: "Code exceeds 20 KB" }, { status: 413 });
+  if (stdin.length > MAX_STDIN) return Response.json({ error: "stdin exceeds 4 KB" }, { status: 413 });
+
+  const base = process.env.RUNNER_URL;
+  if (!base) {
+    return Response.json(
+      { error: "Remote runner not configured (set RUNNER_URL). Python and JavaScript run locally instead." },
+      { status: 503 }
+    );
+  }
+
+  try {
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (process.env.RUNNER_KEY) headers.Authorization = `Bearer ${process.env.RUNNER_KEY}`;
+
+    const res = await fetch(`${base.replace(/\/$/, "")}/execute`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ language, version: "*", files: [{ content: code }], stdin, run_timeout: timeoutMs }),
+      signal: AbortSignal.timeout(timeoutMs + 5000),
+    });
+    if (!res.ok) {
+      return Response.json({ error: `Runner HTTP ${res.status}` }, { status: 502 });
+    }
+    const j = await res.json();
+    return Response.json({
+      stdout: j.run?.stdout ?? "",
+      stderr: j.run?.stderr ?? "",
+      exitCode: Number(j.run?.code ?? 0),
+      timedOut: !!j.run?.timeout || String(j.run?.signal ?? "") === "SIGKILL" || Number(j.run?.code ?? 0) === 124,
+      engine: `${language}@${j.language?.version ?? "remote"}`,
+    });
+  } catch (e: any) {
+    return Response.json({ error: `Runner unreachable: ${e?.message ?? e}` }, { status: 502 });
+  }
+}

@@ -1,18 +1,21 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import TopHeader from "../../components/TopHeader";
 import { toast } from "../../components/Toaster";
-import { logActivity, useProgress } from "../../lib/store";
+import { logActivity, recordStudy, useProgress } from "../../lib/store";
+import { runCode, availableLanguages } from "../../lib/runner";
 import { Play, Send, Lightbulb, ScanSearch, Copy, Check } from "lucide-react";
 
 const LANGS = [
-  { id: "python", label: "Python", piston: "python", starter: "# Write your solution\ndef solve():\n    pass\n\nprint(solve())" },
-  { id: "javascript", label: "JavaScript", piston: "javascript", starter: "// Write your solution\nfunction solve() {\n}\nconsole.log(solve());" },
-  { id: "c", label: "C", piston: "c", starter: "#include <stdio.h>\nint main() {\n    return 0;\n}" },
-  { id: "cpp", label: "C++", piston: "c++", starter: "#include <bits/stdc++.h>\nusing namespace std;\nint main() {\n    return 0;\n}" },
-  { id: "java", label: "Java", piston: "java", starter: "public class Main {\n    public static void main(String[] args) {\n    }\n}" },
+  { id: "python", label: "Python", lang: "python", starter: "# Write your solution\ndef solve():\n    pass\n\nprint(solve())" },
+  { id: "javascript", label: "JavaScript", lang: "javascript", starter: "// Write your solution\nfunction solve() {\n}\nconsole.log(solve());" },
+  { id: "c", label: "C", lang: "c", starter: "#include <stdio.h>\nint main() {\n    return 0;\n}" },
+  { id: "cpp", label: "C++", lang: "c++", starter: "#include <bits/stdc++.h>\nusing namespace std;\nint main() {\n    return 0;\n}" },
+  { id: "java", label: "Java", lang: "java", starter: "public class Main {\n    public static void main(String[] args) {\n    }\n}" },
 ];
+
+/** C / C++ / Java only appear when the deployment has a RUNNER_URL configured. */
 
 const PROBLEMS = [
   { id: "p1", title: "Sum of list", topic: "Python Basics", desc: "Read n then n integers. Print their sum.", ex: "Input:\n3\n1 2 3\nOutput:\n6", tests: [{ stdin: "3\n1 2 3", out: "6" }, { stdin: "2\n10 20", out: "30" }] },
@@ -21,17 +24,28 @@ const PROBLEMS = [
   { id: "p4", title: "Reverse string", topic: "Data Structures", desc: "Read a line. Print it reversed.", ex: "Input:\nhello\nOutput:\nolleh", tests: [{ stdin: "hello", out: "olleh" }, { stdin: "AI", out: "IA" }] },
 ];
 
-async function piston(language: string, code: string, stdin = "") {
-  const res = await fetch("https://emkc.org/api/v2/piston/execute", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ language, version: "*", files: [{ content: code }], stdin }),
-  });
-  if (!res.ok) throw new Error(`Execution service HTTP ${res.status}`);
-  return res.json();
+export default function PracticePage() {
+  // useSearchParams must live under a Suspense boundary — otherwise the whole
+  // route stalls on the loading skeleton during streamed SSR (dev + prod).
+  return (
+    <Suspense
+      fallback={
+        <div className="animate-pulse space-y-4 py-5">
+          <div className="h-8 w-72 bg-slate-200 rounded-lg" />
+          <div className="h-4 w-48 bg-slate-100 rounded mt-2" />
+          <div className="grid grid-cols-1 xl:grid-cols-[1fr_1.4fr] gap-4">
+            <div className="h-52 bg-white rounded-[1.25rem] shadow-sm" />
+            <div className="h-72 bg-white rounded-[1.25rem] shadow-sm" />
+          </div>
+        </div>
+      }
+    >
+      <PracticeInner />
+    </Suspense>
+  );
 }
 
-export default function PracticePage() {
+function PracticeInner() {
   const topic = useSearchParams().get("topic") || "";
   const s = useProgress();
   const [tab, setTab] = useState<"solve" | "analyze">("solve");
@@ -45,6 +59,14 @@ export default function PracticePage() {
   const [analysis, setAnalysis] = useState<any>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [engine, setEngine] = useState("");
+  const [status, setStatus] = useState("");
+  const [supported, setSupported] = useState<string[]>(["python", "javascript"]);
+  const langs = LANGS.filter((l) => supported.includes(l.id));
+
+  useEffect(() => {
+    availableLanguages().then(setSupported).catch(() => setSupported(["python", "javascript"]));
+  }, []);
 
   useEffect(() => {
     if (topic) {
@@ -54,23 +76,32 @@ export default function PracticePage() {
   }, [topic]);
 
   const run = async (submit: boolean) => {
+    const t0 = Date.now();
     setRunning(true);
     setOut("");
     setResults(null);
+    setStatus("Starting…");
+    const exec = (stdinStr: string) =>
+      runCode({ language: lang.lang, code, stdin: stdinStr, timeoutMs: 5000, onStatus: setStatus });
+    const norm = (t: string) => t.replace(/\r\n/g, "\n").replace(/[ \t]+$/gm, "").trim();
     try {
       if (!submit) {
-        const r = await piston(lang.piston, code, stdin);
-        setOut((r.run?.output ?? "") || (r.run?.stderr ?? "(no output)"));
+        const r = await exec(stdin);
+        setEngine(r.engine);
+        setOut(r.timedOut ? r.stderr : r.stdout || r.stderr || "(no output)");
       } else {
-        const rows = [];
+        const rows: { pass: boolean; got: string; want: string }[] = [];
         for (const t of prob.tests) {
-          const r = await piston(lang.piston, code, t.stdin);
-          const got = (r.run?.output ?? "").trim();
-          rows.push({ pass: got === t.out.trim(), got, want: t.out });
+          setStatus("Running tests…");
+          const r = await exec(t.stdin);
+          setEngine(r.engine);
+          const got = norm(r.timedOut ? r.stderr : r.stdout || r.stderr);
+          rows.push({ pass: !r.timedOut && got === norm(t.out), got, want: t.out });
+          setResults([...rows]);
         }
         setResults(rows);
         const passed = rows.filter((x) => x.pass).length;
-        if (passed === rows.length) {
+        if (passed === rows.length && rows.length > 0) {
           logActivity(`Solved: ${prob.title}`, `${lang.label} • all tests passed`, "practice");
           toast("All tests passed ✓ logged to activity");
         } else {
@@ -79,8 +110,11 @@ export default function PracticePage() {
       }
     } catch (e: any) {
       setOut(`Execution failed: ${e.message}`);
-      toast("Execution service unavailable", "err");
+      toast("Execution failed", "err");
     }
+    setStatus("");
+    // honest study time: only the seconds this run actually took
+    recordStudy((Date.now() - t0) / 1000);
     setRunning(false);
   };
 
@@ -150,15 +184,15 @@ export default function PracticePage() {
 
           <div className="card p-0 overflow-hidden">
             <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100 flex-wrap">
-              <select value={lang.id} onChange={(e) => { const l = LANGS.find((x) => x.id === e.target.value)!; setLang(l); setCode(l.starter); }} className="border border-slate-200 rounded-lg px-2 py-1.5 text-[12px] font-bold bg-white outline-none">
-                {LANGS.map((l) => <option key={l.id} value={l.id}>{l.label}</option>)}
+              <select title={supported.length < LANGS.length ? "C, C++ and Java are hidden: this deployment has no hosted runner (RUNNER_URL). Python & JavaScript run locally in your browser." : "Language"} value={lang.id} onChange={(e) => { const l = LANGS.find((x) => x.id === e.target.value)!; setLang(l); setCode(l.starter); }} className="border border-slate-200 rounded-lg px-2 py-1.5 text-[12px] font-bold bg-white outline-none">
+                {langs.map((l) => <option key={l.id} value={l.id}>{l.label}</option>)}
               </select>
               <div className="ml-auto flex gap-2">
                 <button onClick={() => hint("hint")} disabled={analyzing} className="text-[12px] font-bold px-3 py-1.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 flex items-center gap-1">
                   <Lightbulb className="w-3.5 h-3.5" /> AI Hint
                 </button>
                 <button onClick={() => run(false)} disabled={running} className="text-[12px] font-bold px-3 py-1.5 rounded-lg bg-slate-900 text-white flex items-center gap-1 disabled:opacity-50">
-                  <Play className="w-3.5 h-3.5" /> {running ? "Running…" : "Run"}
+                  <Play className="w-3.5 h-3.5" /> {running ? status || "Running…" : "Run"}
                 </button>
                 <button onClick={() => run(true)} disabled={running} className="text-[12px] font-bold px-3 py-1.5 rounded-lg primary-gradient text-white flex items-center gap-1 disabled:opacity-50">
                   <Send className="w-3.5 h-3.5" /> Submit
@@ -172,8 +206,11 @@ export default function PracticePage() {
                 <textarea value={stdin} onChange={(e) => setStdin(e.target.value)} className="mt-1 w-full h-[70px] border border-slate-200 rounded-lg p-2 font-mono text-[12px] outline-none" placeholder="3&#10;1 2 3" />
               </div>
               <div>
-                <label className="text-[11px] font-bold text-slate-500">Output</label>
-                <pre className="mt-1 w-full h-[70px] bg-slate-50 border border-slate-100 rounded-lg p-2 font-mono text-[12px] overflow-auto whitespace-pre-wrap">{out || "—"}</pre>
+                <label className="text-[11px] font-bold text-slate-500 flex items-center justify-between">
+                  <span>Output</span>
+                  {engine && <span className="font-mono text-[10px] text-indigo-500">{engine}</span>}
+                </label>
+                <pre className="mt-1 w-full h-[70px] bg-slate-50 border border-slate-100 rounded-lg p-2 font-mono text-[12px] overflow-auto whitespace-pre-wrap">{out || status || "—"}</pre>
               </div>
             </div>
             {results && (
@@ -203,7 +240,7 @@ export default function PracticePage() {
           <div className="card p-5">
             <div className="flex items-center gap-2 mb-2">
               <select value={lang.id} onChange={(e) => setLang(LANGS.find((x) => x.id === e.target.value)!)} className="border border-slate-200 rounded-lg px-2 py-1.5 text-[12px] font-bold bg-white outline-none">
-                {LANGS.map((l) => <option key={l.id} value={l.id}>{l.label}</option>)}
+                {langs.map((l) => <option key={l.id} value={l.id}>{l.label}</option>)}
               </select>
               <button onClick={analyze} disabled={analyzing || !code.trim()} className="ml-auto text-[12px] font-bold px-4 py-2 rounded-lg primary-gradient text-white flex items-center gap-1.5 disabled:opacity-50">
                 <ScanSearch className="w-4 h-4" /> {analyzing ? "Analyzing…" : "Analyze"}

@@ -4,8 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Sidebar from "../components/Sidebar";
 import { MenuProvider } from "./MenuContext";
+import AiFab from "../components/AiFab";
 import { Home, BookOpen, BotMessageSquare, FlaskConical, BarChart3 } from "lucide-react";
-
 const TABS = [
   { href: "/", label: "Home", icon: Home },
   { href: "/learning-path", label: "Learn", icon: BookOpen },
@@ -21,7 +21,10 @@ export default function SidebarWrapper({ children }: { children: React.ReactNode
     <div className="flex min-h-screen">
       <Sidebar mobileOpen={open} onClose={() => setOpen(false)} />
       <main className="flex-1 min-w-0 px-4 md:px-8 py-5 pb-24 md:pb-8 max-w-[1400px] mx-auto w-full">
-        <MenuProvider onMenu={() => setOpen(true)}>{children}</MenuProvider>
+        {/* keyed by route: replays the page-enter animation on navigation */}
+        <div key={pathname} className="page-enter">
+          <MenuProvider onMenu={() => setOpen(true)}>{children}</MenuProvider>
+        </div>
       </main>
       {/* Mobile bottom navigation */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur border-t border-slate-200 px-2 py-1.5 flex justify-around">
@@ -40,6 +43,9 @@ export default function SidebarWrapper({ children }: { children: React.ReactNode
           );
         })}
       </nav>
+
+      {/* Floating AI bot — tap to open a small chat screen right here */}
+      <AiFab />
     </div>
   );
 }

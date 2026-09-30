@@ -2,13 +2,14 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Send, Bot, Copy, Check, RotateCcw, ArrowLeft, Cpu, Lightbulb, Plus, Search, Pin, Trash2, Pencil, Square, RefreshCw, Play, Bookmark } from "lucide-react";
+import { Send, Bot, Copy, Check, RotateCcw, ArrowLeft, Cpu, Lightbulb, Plus, Search, Pin, Trash2, Pencil, Square, RefreshCw, Play, Bookmark, Paperclip } from "lucide-react";
 import { toast } from "../../components/Toaster";
-import { piston } from "../../lib/piston";
+import { runCode as runSandbox } from "../../lib/runner";
 import {
   useProgress, newChat, saveChat, deleteChat, toggleBookmark, logActivity,
 } from "../../lib/store";
 import { nextAction, tutorContext } from "../../lib/engine";
+import { readAttachmentFiles, type Attachment } from "../../lib/attachments";
 import ThemeToggle from "../../components/ThemeToggle";
 import SearchBox from "../../components/SearchBox";
 
@@ -38,6 +39,10 @@ export default function AITutorPage() {
   const [online, setOnline] = useState<boolean | null>(null);
   const [copied, setCopied] = useState<number | null>(null);
   const [chatQ, setChatQ] = useState("");
+  // file attachments (paste Ctrl+V or upload): images & PDFs go multimodal,
+  // text files are inlined — data never touches localStorage history.
+  const [atts, setAtts] = useState<Attachment[]>([]);
+  const fileRef = useRef<HTMLInputElement>(null);
   const [showChats, setShowChats] = useState(false);
   const [renaming, setRenaming] = useState<string | null>(null);
   const [runOut, setRunOut] = useState<Record<string, string>>({});
@@ -95,16 +100,27 @@ export default function AITutorPage() {
     return [...f].sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.updatedAt - a.updatedAt);
   }, [prog.chats, chatQ]);
 
+  const addFiles = async (files: FileList | File[]) => {
+    const { atts: got, errors } = await readAttachmentFiles(files);
+    if (got.length) setAtts((a) => [...a, ...got]);
+    for (const g of got) toast(`${g.name} attached ✓`, "info");
+    for (const e of errors) toast(e, "err");
+  };
+
   const send = async (text?: string, regen = false) => {
     const q = (text ?? input).trim();
-    if (!q || loading || !chat) return;
+    const pending = regen ? [] : atts;
+    const markers = pending.map((a) => `[📎 ${a.name}]`).join(" ");
+    const qFinal = [q, markers].filter(Boolean).join(" ").trim();
+    if ((!q && !pending.length) || loading || !chat) return;
     setInput("");
+    if (pending.length) setAtts([]);
     const t0 = Date.now();
-    const base = regen ? msgs.filter((m, i) => !(i === msgs.length - 1 && m.role === "assistant")) : [...msgs, { role: "user" as const, content: q, time: now() }];
-    const history = (regen ? base : [...msgs, { role: "user" as const, content: q, time: now() }]).map((m) => ({ role: m.role, content: m.content }));
+    const base = regen ? msgs.filter((m, i) => !(i === msgs.length - 1 && m.role === "assistant")) : [...msgs, { role: "user" as const, content: qFinal, time: now() }];
+    const history = (regen ? base : [...msgs, { role: "user" as const, content: qFinal, time: now() }]).map((m) => ({ role: m.role, content: m.content }));
     if (!regen) {
-      const titled = chat.msgs.length === 0 ? q.slice(0, 42) : chat.title;
-      saveChat(chat.id, { msgs: [...chat.msgs, { role: "user", content: q, time: now() }], title: titled, mode });
+      const titled = chat.msgs.length === 0 ? (q || pending[0]?.name || "File").slice(0, 42) : chat.title;
+      saveChat(chat.id, { msgs: [...chat.msgs, { role: "user", content: qFinal, time: now() }], title: titled, mode });
     } else {
       saveChat(chat.id, { msgs: base as any });
     }
@@ -120,6 +136,7 @@ export default function AITutorPage() {
           profile: tutorContext(prog),
           prefs: prog.prefs,
           messages: history,
+          attachments: pending.map((a) => ({ name: a.name, mime: a.mime, kind: a.kind, data: a.data })),
         }),
         signal: ctl.signal,
       });
@@ -155,7 +172,9 @@ export default function AITutorPage() {
   // fresh read to avoid stale closures
   const snapshot = () => {
     try {
-      return JSON.parse(localStorage.getItem("ai-path-progress-v1") || "{}");
+      const raw = localStorage.getItem("ai-path-progress-v2") || localStorage.getItem("ai-path-progress-v1") || "{}";
+      const p = JSON.parse(raw);
+      return { ...p, chats: Array.isArray(p.chats) ? p.chats : [] };
     } catch {
       return { chats: [] };
     }
@@ -166,8 +185,8 @@ export default function AITutorPage() {
   const runCode = async (code: string, key: string) => {
     setRunOut((r) => ({ ...r, [key]: "Running in sandbox…" }));
     try {
-      const r = await piston("python", code);
-      setRunOut((x) => ({ ...x, [key]: String(r.run?.output ?? r.run?.stderr ?? "(no output)") }));
+      const r = await runSandbox({ language: "python", code, stdin: "", timeoutMs: 5000 });
+      setRunOut((x) => ({ ...x, [key]: r.timedOut ? r.stderr : r.stdout || r.stderr || "(no output)" }));
     } catch (e: any) {
       setRunOut((x) => ({ ...x, [key]: `Run failed: ${e.message}` }));
     }
@@ -226,7 +245,7 @@ export default function AITutorPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-[240px_1.7fr_1fr] gap-4">
+      <div className="grid grid-cols-1 xl:grid-cols-[220px_3fr_1.2fr] gap-4">
         {/* conversations */}
         <div className={`card p-3 ${showChats ? "" : "hidden"} xl:block`}>
           <button onClick={() => { const id = newChat(mode); setActiveId(id); setShowChats(false); }} className="w-full py-2 rounded-xl primary-gradient text-white text-[12px] font-bold flex items-center justify-center gap-1.5 mb-2">
@@ -277,11 +296,11 @@ export default function AITutorPage() {
 
           <div className="px-4 py-2 bg-slate-50/70 border-b border-slate-100 flex items-center gap-2 overflow-x-auto">
             {["Explain what I should learn next", "Why am I struggling?", "Quiz me on my weak topics"].map((x, i) => (
-              <button key={i} onClick={() => send(x)} disabled={loading} className="text-[11px] font-medium bg-white border border-slate-200 rounded-full px-3 py-1.5 whitespace-nowrap hover:border-indigo-300 disabled:opacity-50">{x}</button>
+              <button key={i} onClick={() => send(x)} disabled={loading} className="text-[11px] font-medium bg-white border border-slate-200 rounded-full px-3 py-1.5 whitespace-nowrap hover:border-indigo-300 hover:bg-indigo-50 hover:-translate-y-0.5 hover:shadow-md transition disabled:opacity-50">{x}</button>
             ))}
           </div>
 
-          <div className="h-[400px] overflow-y-auto p-4 space-y-4 bg-white">
+          <div className="h-[560px] overflow-y-auto p-4 space-y-4 bg-white">
             {msgs.length === 0 && (
               <div className="text-center text-slate-400 text-sm py-12">
                 <div className="w-14 h-14 mx-auto rounded-full bg-indigo-100 flex items-center justify-center text-[28px] mb-2">🤖</div>
@@ -294,7 +313,7 @@ export default function AITutorPage() {
               return (
                 <div key={i} className={`flex ${user ? "justify-end" : "justify-start"}`}>
                   {!user && <span className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-[16px] shrink-0 mr-2">🤖</span>}
-                  <div className={`max-w-[80%] px-4 py-3 rounded-2xl text-[13px] leading-relaxed ${user ? "primary-gradient text-white rounded-br-md" : "bg-slate-50 border border-slate-100 text-slate-700 rounded-bl-md"}`}>
+                  <div className={`pop-in max-w-[85%] px-4 py-3 rounded-2xl text-[13.5px] leading-relaxed ${user ? "primary-gradient text-white rounded-br-md" : "bg-slate-50 border border-slate-100 text-slate-700 rounded-bl-md"}`}>
                     {user ? <div className="whitespace-pre-wrap">{m.content}</div> : renderBody(m.content, i)}
                     {!user && m.content !== "" && (
                       <div className="mt-2 pt-2 border-t border-slate-200/70 flex items-center justify-between text-[10px] text-slate-400 gap-2">
@@ -314,12 +333,56 @@ export default function AITutorPage() {
           </div>
 
           <div className="p-3 border-t border-slate-100 bg-white">
-            <form onSubmit={(e) => { e.preventDefault(); send(); }} className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-full pl-4 pr-1.5 py-1.5 focus-within:border-indigo-400">
-              <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask, paste code, or request a quiz…" disabled={loading} className="flex-1 bg-transparent outline-none text-[13px] placeholder:text-slate-400" />
+            {atts.length > 0 && (
+              <div className="flex gap-1.5 flex-wrap mb-2 px-1">
+                {atts.map((a, i) => (
+                  <span key={i} className="pop-in flex items-center gap-1.5 text-[10.5px] font-bold bg-indigo-50 border border-indigo-100 text-indigo-700 rounded-full pl-1.5 pr-1 py-1 max-w-[190px]">
+                    {a.preview ? <img src={a.preview} alt="" className="w-4 h-4 rounded object-cover shrink-0" /> : <span className="shrink-0">📄</span>}
+                    <span className="truncate">{a.name}</span>
+                    <button type="button" aria-label={`Remove ${a.name}`} onClick={() => setAtts((x) => x.filter((_, j) => j !== i))} className="w-4 h-4 rounded-full hover:bg-indigo-200 flex items-center justify-center text-indigo-500 shrink-0">×</button>
+                  </span>
+                ))}
+              </div>
+            )}
+            <form onSubmit={(e) => { e.preventDefault(); send(); }} className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-full pl-1.5 pr-1.5 py-1.5">
+              <button type="button" aria-label="Attach a file" onClick={() => fileRef.current?.click()} disabled={loading} title="Upload image / PDF / text" className="w-9 h-9 rounded-full border border-slate-200 text-slate-500 flex items-center justify-center hover:border-indigo-400 hover:text-indigo-600 hover:-translate-y-0.5 transition disabled:opacity-50 shrink-0">
+                <Paperclip className="w-4 h-4" />
+              </button>
+              <input
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onPaste={(e) => {
+                  const files: File[] = [];
+                  for (const it of Array.from(e.clipboardData?.items ?? [])) {
+                    if (it.kind === "file") {
+                      const f = it.getAsFile();
+                      if (f) files.push(f);
+                    }
+                  }
+                  if (files.length) {
+                    e.preventDefault();
+                    addFiles(files);
+                  }
+                }}
+                placeholder="Ask anything — text, code, images (Ctrl+V) or a file…"
+                disabled={loading}
+                className="flex-1 bg-transparent outline-none text-[13px] placeholder:text-slate-400"
+              />
+              <input
+                ref={fileRef}
+                type="file"
+                multiple
+                accept="image/*,.pdf,.txt,.md,.csv,.json,.py"
+                className="hidden"
+                onChange={(e) => {
+                  if (e.target.files?.length) addFiles(e.target.files);
+                  e.target.value = "";
+                }}
+              />
               {loading ? (
                 <button type="button" onClick={() => abortRef.current?.abort()} title="Stop" className="w-10 h-10 rounded-full bg-red-500 text-white flex items-center justify-center shrink-0"><Square className="w-4 h-4" /></button>
               ) : (
-                <button aria-label="Send message" disabled={!input.trim()} className="w-10 h-10 rounded-full primary-gradient text-white flex items-center justify-center disabled:opacity-50 shrink-0"><Send className="w-4 h-4" /></button>
+                <button aria-label="Send message" disabled={!input.trim() && atts.length === 0} className="w-10 h-10 rounded-full primary-gradient text-white flex items-center justify-center disabled:opacity-50 shrink-0 hover:scale-105 active:scale-95 transition"><Send className="w-4 h-4" /></button>
               )}
             </form>
           </div>

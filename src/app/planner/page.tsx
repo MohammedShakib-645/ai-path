@@ -45,7 +45,7 @@ export default function PlannerPage() {
         <div className="card p-5 space-y-3 self-start">
           <div>
             <label className="text-[13px] font-bold">Goal</label>
-            <input value={goal} onChange={(e) => setGoal(e.target.value)} className="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2 text-[13px] outline-none focus:border-indigo-400" />
+            <input value={goal} onChange={(e) => setGoal(e.target.value)} className="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2 text-[13px] outline-none" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>

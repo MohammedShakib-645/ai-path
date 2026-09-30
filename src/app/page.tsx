@@ -41,6 +41,7 @@ function Ring({ pct, size = 112 }: { pct: number; size?: number }) {
 export default function Dashboard() {
   const s = useProgress();
   const [rec, setRec] = useState<{ focus: string; why: string } | null>(null);
+  const [recEngine, setRecEngine] = useState("");
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
 
@@ -63,7 +64,10 @@ export default function Dashboard() {
     })
       .then((r) => r.json())
       .then((d) => {
-        if (d.recommendation?.focus) setRec(d.recommendation);
+        if (d.recommendation?.focus) {
+          setRec(d.recommendation);
+          setRecEngine(String(d.engine ?? ""));
+        }
       })
       .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -101,7 +105,14 @@ export default function Dashboard() {
         <div className="flex-1 min-w-[240px] relative z-10">
           <div className="text-[11px] font-bold uppercase tracking-wider text-white/80">Continue Learning</div>
           <h2 className="text-[22px] font-extrabold mt-0.5">{act.title}</h2>
-          <p className="text-[13px] text-white/90 mt-1">{rec ? rec.why : act.why}</p>
+          <p className="text-[13px] text-white/90 mt-1">
+            {rec ? rec.why : act.why}
+            {recEngine.includes("offline") && (
+              <span className="ml-2 inline-flex items-center gap-1 text-[10px] font-bold bg-white/25 border border-white/40 rounded-full px-2 py-0.5 align-middle">
+                ⚡ Offline — from your real progress
+              </span>
+            )}
+          </p>
           <div className="flex gap-2 mt-4 flex-wrap">
             <Link href={act.href} className="inline-flex items-center gap-2 bg-white text-indigo-700 px-5 py-2.5 rounded-full text-[13px] font-bold shadow">
               {act.cta} <ArrowRight className="w-4 h-4" />
@@ -114,7 +125,7 @@ export default function Dashboard() {
         <Ring pct={pct} />
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-[1.5fr_1fr] gap-4 mb-4">
+      <div className="stagger grid grid-cols-1 xl:grid-cols-[1.5fr_1fr] gap-4 mb-4">
         {/* Today's briefing */}
         <div className="card p-5">
           <h3 className="font-bold text-[15px] mb-1 flex items-center gap-2"><Sparkles className="w-4 h-4 text-indigo-500" /> Today&apos;s Briefing</h3>

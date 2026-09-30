@@ -2,7 +2,7 @@
 // Pool: GROQ_KEYS (primary) -> GEMINI_KEYS (backup), round-robin + 90s cooldown.
 import { cloudChat } from "./llm";
 
-export interface ChatMsg { role: "system" | "user" | "assistant"; content: string }
+export interface ChatMsg { role: "system" | "user" | "assistant"; content: string | Array<{ type: string; [k: string]: any }> }
 
 export const TUTOR_MODES: Record<string, { label: string; system: string }> = {
   explain: { label: "Explain", system: "Explain the concept simply with one short example. End with a check question." },
@@ -21,10 +21,21 @@ export const TUTOR_MODES: Record<string, { label: string; system: string }> = {
 export async function aiChat(mode: string, profile: string, messages: ChatMsg[]) {
   const m = TUTOR_MODES[mode] ?? TUTOR_MODES.explain;
   return cloudChat([
-    { role: "system", content: `${m.system}\n\nLearner context (adapt depth/tone): ${profile}` },
+    { role: "system", content: `${m.system}\n\nLearner context (adapt depth/tone): ${profile}${STRUCTURE}` },
     ...messages,
   ]);
 }
+
+// Hard output rules — the tutor NEVER dumps a wall of text.
+const STRUCTURE = `
+
+OUTPUT RULES (always follow):
+1. First line = the direct answer or definition in one sentence.
+2. Then structure with short sections: **Why it matters**, **How it works**, **Example**, **Quick recap** — only the ones that fit.
+3. Use bullet points or numbered steps for anything with 2+ items. Never long paragraphs.
+4. Bold key terms. Put code in \`\`\` blocks with a one-line comment.
+5. End with one check question (one line).
+6. Plain English, max ~150 words unless the learner asks for depth. No filler, no repeating the question.`;
 
 /** Ask for strict JSON; repairs markdown fences; validates with fallback. NEVER throws. */
 export async function aiJSON<T>(system: string, user: string, fallback: T): Promise<{ data: T; engine: string }> {

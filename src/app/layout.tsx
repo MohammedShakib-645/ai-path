@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import SidebarWrapper from "./SidebarWrapper";
 import Toaster from "../components/Toaster";
+import KeyInjector from "../components/KeyInjector";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -35,6 +36,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-full">
         <SidebarWrapper>{children}</SidebarWrapper>
         <Toaster />
+        <KeyInjector />
       </body>
     </html>
   );

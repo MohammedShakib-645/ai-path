@@ -2,6 +2,7 @@
 import Link from "next/link";
 import ThemeToggle from "../../components/ThemeToggle";
 import SearchBox from "../../components/SearchBox";
+import ProfileName from "../../components/ProfileName";
 import {
   useProgress, completionInt, avgScore, streakCount, CATEGORIES, catPct,
   UNITS, nextUnit, relTime, learnerLevel,
@@ -19,13 +20,16 @@ export default function ProgressPage() {
   const upcoming = nextUnit(s);
   const level = learnerLevel(s);
 
-  // Real chart: last 7 quiz scores, padded at the left
-  const scores = s.attempts.slice(-7).map((a) => Math.round((a.score / Math.max(1, a.total)) * 100));
-  const points = [...Array(Math.max(0, 7 - scores.length)).fill(Math.max(5, (scores[0] ?? 60) - 10)), ...scores].slice(-7);
+  // Real chart: only actual quiz scores — never a padded/fake point.
+  const chartAttempts = s.attempts.slice(-7);
+  const points = chartAttempts.map((a) => Math.round((a.score / Math.max(1, a.total)) * 100));
+  const dayLabels = chartAttempts.map((a) => new Date(a.at).toLocaleDateString(undefined, { month: "numeric", day: "numeric" }));
   const W = 520, H = 180;
-  const coords = points.map((p, i) => `${(30 + i * ((W - 30) / 6)).toFixed(1)},${(H - (p / 100) * H).toFixed(1)}`);
+  const nPts = points.length;
+  const xAt = (i: number) => (nPts <= 1 ? 30 + (W - 30) / 2 : 30 + i * ((W - 30) / (nPts - 1)));
+  const coords = points.map((p, i) => `${xAt(i).toFixed(1)},${(H - (p / 100) * H).toFixed(1)}`);
   const line = `M ${coords.join(" L ")}`;
-  const area = `M 30,${H} L ${coords.join(" L ")} L ${W},${H} Z`;
+  const area = nPts ? `M 30,${H} L ${coords.join(" L ")} L ${W},${H} Z` : "";
 
   const weak = [...CATEGORIES].sort((a, b) => catPct(s, a) - catPct(s, b)).slice(0, 3);
 
@@ -56,7 +60,7 @@ export default function ProgressPage() {
           <div className="flex items-center gap-2">
             <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-lg">👤</div>
             <div className="hidden lg:block">
-              <div className="text-[13px] font-bold text-[#101a3f]">Mohammed Shakib</div>
+              <div className="text-[13px] font-bold text-[#101a3f]"><ProfileName /></div>
               <div className="text-[11px] text-slate-500 flex items-center gap-1">
                 <span className="w-2 h-2 rounded-full bg-green-500 inline-block" /> {level}
               </div>
@@ -65,15 +69,15 @@ export default function ProgressPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-[1.7fr_1fr] gap-4">
+      <div className="stagger grid grid-cols-1 xl:grid-cols-[1.7fr_1fr] gap-4">
         <div className="space-y-4">
           {/* Stat cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="stagger grid grid-cols-2 lg:grid-cols-4 gap-3">
             {[
               { t: "Total Topics", v: "12", sub: `Completed ${s.done.length} / 12`, w: pct, icon: <BookOpen className="w-5 h-5 text-white" />, bg: "bg-indigo-500" },
               { t: "Quizzes Taken", v: `${s.attempts.length}`, sub: s.attempts.length ? `Avg. Score ${avg}%` : "No quizzes yet", w: avg, icon: <CheckCircle2 className="w-5 h-5 text-white" />, bg: "bg-green-500" },
-              { t: "Study Time", v: `${s.labHours} hrs`, sub: "This Week", w: Math.min(100, Math.round((s.labHours / 20) * 100)), icon: <Clock className="w-5 h-5 text-white" />, bg: "bg-blue-500" },
-              { t: "Current Streak", v: `${streak} days`, sub: "Keep it up!", w: Math.min(100, streak * 20), icon: <Flame className="w-5 h-5 text-white" />, bg: "bg-orange-400" },
+              { t: "Study Time", v: `${s.labHours} hrs`, sub: "Real time studied", w: Math.min(100, Math.round((s.labHours / 20) * 100)), icon: <Clock className="w-5 h-5 text-white" />, bg: "bg-blue-500" },
+              { t: "Current Streak", v: `${streak} days`, sub: streak === 0 ? "Start with any task" : "Keep it up!", w: Math.min(100, streak * 20), icon: <Flame className="w-5 h-5 text-white" />, bg: "bg-orange-400" },
             ].map((c, i) => (
               <div key={i} className="card p-4">
                 <div className="flex gap-2 items-center">
@@ -90,12 +94,20 @@ export default function ProgressPage() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-[1.4fr_1fr] gap-4">
-            {/* Chart */}
+            {/* Chart — real quiz scores only; honest empty state before the first quiz */}
             <div className="card p-5">
               <div className="flex justify-between items-center mb-2">
                 <h3 className="font-bold text-[15px] text-[#101a3f]">Learning Progress Overview</h3>
-                <span className="text-[11px] bg-slate-50 border border-slate-100 px-2 py-1 rounded-lg text-slate-500">Last 7 Days ▾</span>
+                <span className="text-[11px] bg-slate-50 border border-slate-100 px-2 py-1 rounded-lg text-slate-500">{nPts ? `Last ${nPts} Quiz${nPts > 1 ? "zes" : ""}` : "No quiz data yet"}</span>
               </div>
+              {nPts === 0 ? (
+                <div className="flex flex-col items-center justify-center py-9 text-center">
+                  <span className="w-11 h-11 rounded-full bg-indigo-50 flex items-center justify-center mb-2"><BookOpen className="w-5 h-5 text-indigo-400" /></span>
+                  <p className="text-[12.5px] text-slate-500 max-w-[240px]">Your trend appears here after your first real quiz — nothing is shown before you actually use it.</p>
+                  <Link href="/quizzes" className="mt-3 text-[12px] font-bold text-white bg-gradient-to-r from-indigo-600 to-blue-500 px-4 py-2 rounded-lg hover:-translate-y-0.5 transition">Take a quiz →</Link>
+                </div>
+              ) : (
+                <>
               <svg viewBox={`0 0 ${W} ${H + 22}`} className="w-full">
                 <defs>
                   <linearGradient id="pgrad" x1="0" y1="0" x2="0" y2="1">
@@ -110,19 +122,21 @@ export default function ProgressPage() {
                   </g>
                 ))}
                 <path d={area} fill="url(#pgrad)" />
-                <polyline points={coords.join(" ")} fill="none" stroke="#6366f1" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                {nPts > 1 && <polyline points={coords.join(" ")} fill="none" stroke="#6366f1" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />}
                 {coords.map((pt, i) => {
                   const [cx, cy] = pt.split(",");
                   return <circle key={i} cx={cx} cy={cy} r="4.5" fill="#6366f1" stroke="white" strokeWidth="2" />;
                 })}
                 <g>
-                  <rect x={W - 52} y={H - (points[6] / 100) * H - 30} width="46" height="22" rx="6" fill="#4f46e5" />
-                  <text x={W - 29} y={H - (points[6] / 100) * H - 15} fontSize="11" fontWeight="bold" fill="white" textAnchor="middle">{points[6]}%</text>
+                  <rect x={Math.max(30, W - 52)} y={Math.max(4, H - (points[nPts - 1] / 100) * H - 30)} width="46" height="22" rx="6" fill="#4f46e5" />
+                  <text x={Math.max(30, W - 52) + 23} y={Math.max(4, H - (points[nPts - 1] / 100) * H - 30) + 15} fontSize="11" fontWeight="bold" fill="white" textAnchor="middle">{points[nPts - 1]}%</text>
                 </g>
               </svg>
               <div className="flex justify-between text-[10px] text-slate-400 px-7">
-                {["Day 1", "Day 2", "Day 3", "Day 4", "Day 5", "Day 6", "Day 7"].map((d) => <span key={d}>{d}</span>)}
+                {dayLabels.map((d, i) => <span key={i}>{d}</span>)}
               </div>
+                </>
+              )}
             </div>
 
             {/* Ring */}
@@ -142,9 +156,15 @@ export default function ProgressPage() {
                 </div>
               </div>
               <div className="bg-blue-50/60 rounded-xl p-3 mt-4 text-left text-[12px] text-slate-600 w-full">
-                🚀 <b className="text-[#101a3f]">Great Progress!</b>
-                <br />
-                {s.done.length} of {UNITS.length} units done — keep the streak alive!
+                {s.done.length === 0 ? (
+                  <>🚀 <b className="text-[#101a3f]">Just getting started!</b>
+                  <br />
+                  Complete your first unit and it will show up here — nothing is faked before you do.</>
+                ) : (
+                  <>🚀 <b className="text-[#101a3f]">Great Progress!</b>
+                  <br />
+                  {s.done.length} of {UNITS.length} units done — keep it up!</>
+                )}
               </div>
             </div>
           </div>
@@ -181,7 +201,9 @@ export default function ProgressPage() {
                 </h3>
                 <span className="text-[11px] text-indigo-600 font-medium">View All</span>
               </div>
-              {weak.map((c) => {
+              {s.done.length === 0 && s.attempts.length === 0 ? (
+                <p className="text-[12px] text-slate-500">No evidence yet — finish a unit or take a quiz and your weak areas appear here (computed only from real results).</p>
+              ) : weak.map((c) => {
                 const p = catPct(s, c);
                 const d = c.units.filter((u) => s.done.includes(u)).length;
                 return (
@@ -201,7 +223,7 @@ export default function ProgressPage() {
           </div>
 
           {/* Quote bar */}
-          <div className="card p-4 flex items-center gap-3 !bg-gradient-to-r !from-indigo-50 !to-blue-50">
+          <div className="card quote-bar p-4 flex items-center gap-3">
             <span className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center shrink-0"><Lightbulb className="w-5 h-5 text-indigo-600" /></span>
             <div>
               <b className="text-[13px] text-[#101a3f]">&ldquo;Progress, not perfection. Keep going!&rdquo;</b>
@@ -218,7 +240,7 @@ export default function ProgressPage() {
             <div className="font-extrabold text-[20px] text-[#101a3f]">{level}</div>
             <div className="text-[11px] text-slate-400">Keep learning, you&apos;re doing great!</div>
             <div className="h-[10px] bg-slate-100 rounded-full mt-3 overflow-hidden">
-              <div className="h-full bg-gradient-to-r from-purple-500 to-blue-400 rounded-full transition-all" style={{ width: `${Math.max(8, pct)}%` }} />
+              <div className="h-full bg-gradient-to-r from-purple-500 to-blue-400 rounded-full transition-all" style={{ width: `${pct}%` }} />
             </div>
             <div className="flex justify-between text-[11px] text-slate-400 mt-1"><span>Level 1</span><span>Next Level</span></div>
           </div>
@@ -229,6 +251,9 @@ export default function ProgressPage() {
               <span className="text-[11px] text-indigo-600 font-medium">View All</span>
             </div>
             <div className="space-y-3 text-[12px]">
+              {s.activity.length === 0 && (
+                <p className="text-[12px] text-slate-500">No activity yet — every action you take shows up here in real time.</p>
+              )}
               {s.activity.slice(0, 4).map((a, i) => {
                 const ic = actIcon(a.kind);
                 return (
