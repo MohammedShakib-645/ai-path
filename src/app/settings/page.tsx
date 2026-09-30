@@ -5,10 +5,9 @@ import { User, Sliders, Cpu, Bell, Check } from "lucide-react";
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<"profile" | "track" | "engine" | "notices">("profile");
-  const [name, setName] = useState("Mohammed Shakib");
-  const [email, setEmail] = useState("mohammed.shakib@student.path.edu");
-  const [track, setTrack] = useState("Python Systems & Machine Learning");
-  const [provider, setProvider] = useState<"auto" | "groq" | "ollama">("auto");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [track, setTrack] = useState("");
   const [digest, setDigest] = useState(true);
   const [saved, setSaved] = useState(false);
 
@@ -21,15 +20,12 @@ export default function SettingsPage() {
         if (parsed.email) setEmail(parsed.email);
         if (parsed.track) setTrack(parsed.track);
       }
-      const pv = localStorage.getItem("ai-path-provider");
-      if (pv === "groq" || pv === "ollama" || pv === "auto") setProvider(pv);
     } catch { /* ignore */ }
   }, []);
 
   const save = () => {
     try {
       localStorage.setItem("ai-path-profile", JSON.stringify({ name, email, track }));
-      localStorage.setItem("ai-path-provider", provider);
     } catch { /* ignore */ }
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
@@ -68,17 +64,17 @@ export default function SettingsPage() {
               <div className="flex items-center gap-4">
                 <div className="w-14 h-14 rounded-full bg-indigo-100 flex items-center justify-center text-[26px]">👤</div>
                 <div>
-                  <div className="text-[14px] font-bold text-[#101a3f]">{name}</div>
-                  <div className="text-[11px] text-slate-500 flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500 inline-block" /> Beginner • AI-Path Learner</div>
+                  <div className="text-[14px] font-bold text-[#101a3f]">{name || "Add your name"}</div>
+                  <div className="text-[11px] text-slate-500 flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500 inline-block" /> AI-Path Learner</div>
                 </div>
               </div>
               <div>
                 <label className="text-[13px] font-bold text-[#101a3f] block mb-1">Full Name</label>
-                <input value={name} onChange={(e) => setName(e.target.value)} className="w-full text-[13px] border border-slate-200 rounded-xl px-4 py-2.5 outline-none focus:border-indigo-400" />
+                <input value={name} placeholder="Your name" onChange={(e) => setName(e.target.value)} className="w-full text-[13px] border border-slate-200 rounded-xl px-4 py-2.5 outline-none focus:border-indigo-400" />
               </div>
               <div>
                 <label className="text-[13px] font-bold text-[#101a3f] block mb-1">Email</label>
-                <input value={email} onChange={(e) => setEmail(e.target.value)} className="w-full text-[13px] border border-slate-200 rounded-xl px-4 py-2.5 outline-none focus:border-indigo-400" />
+                <input value={email} placeholder="you@example.com" onChange={(e) => setEmail(e.target.value)} className="w-full text-[13px] border border-slate-200 rounded-xl px-4 py-2.5 outline-none focus:border-indigo-400" />
               </div>
             </>
           )}
@@ -88,6 +84,7 @@ export default function SettingsPage() {
               <div>
                 <label className="text-[13px] font-bold text-[#101a3f] block mb-1">Enrolled Track</label>
                 <select value={track} onChange={(e) => setTrack(e.target.value)} className="w-full text-[13px] border border-slate-200 rounded-xl px-4 py-2.5 outline-none bg-white focus:border-indigo-400">
+                  <option value="">Select your track</option>
                   <option>Python Systems & Machine Learning</option>
                   <option>Data Structures & Algorithms</option>
                   <option>Deep Learning Specialization</option>
@@ -101,21 +98,11 @@ export default function SettingsPage() {
 
           {activeTab === "engine" && (
             <>
-              <div className="text-[13px] font-bold text-[#101a3f]">AI Engine — who answers the tutor?</div>
-              <div className="space-y-2">
-                {[
-                  { id: "groq", title: "Cloud (Groq) — recommended", desc: "Works for EVERY user of your app, on any device. Owner sets one free key on the server." },
-                  { id: "auto", title: "Auto — local first, cloud fallback", desc: "Uses your Ollama on this PC when running, otherwise cloud. Best of both." },
-                  { id: "ollama", title: "Local Ollama only", desc: "Only this PC. Other users see an offline message — browsers can't reach your localhost." },
-                ].map((o) => (
-                  <label key={o.id} className={`flex items-start gap-2.5 p-3.5 rounded-xl border cursor-pointer transition ${provider === o.id ? "border-indigo-500 bg-indigo-50/50" : "border-slate-200 hover:border-slate-300"}`}>
-                    <input type="radio" name="ai-provider" checked={provider === o.id} onChange={() => setProvider(o.id as any)} className="mt-0.5 accent-indigo-600" />
-                    <span>
-                      <span className="block text-[13px] font-bold text-[#101a3f]">{o.title}</span>
-                      <span className="block text-[12px] text-slate-500 mt-0.5">{o.desc}</span>
-                    </span>
-                  </label>
-                ))}
+              <div className="text-[13px] font-bold text-[#101a3f]">AI Engine — cloud key pools (automatic failover)</div>
+              <div className="p-4 bg-indigo-50/60 border border-indigo-100 rounded-xl text-[12px] text-slate-600 space-y-1.5">
+                <p><b className="text-[#101a3f]">Groq pool</b> (llama-3.3-70b) answers first. A key hitting its limit cools down 90s and the next key takes over instantly.</p>
+                <p><b className="text-[#101a3f]">Gemini pool</b> (2.0-flash) is the backup if all Groq keys are busy.</p>
+                <p className="font-mono text-[11px]">Owner: Vercel → Settings → Environment Variables → GROQ_KEYS=gsk_...,gsk_... and GEMINI_KEYS=AI...,AI...</p>
               </div>
             </>
           )}

@@ -1,6 +1,7 @@
 "use client";
 import { Search, Menu } from "lucide-react";
 import ThemeToggle from "./ThemeToggle";
+import SearchBox from "./SearchBox";
 import { useMenu } from "../app/MenuContext";
 import { greeting, useProgress, learnerLevel } from "../lib/store";
 
@@ -39,13 +40,7 @@ export default function TopHeader({ title, subtitle }: { title?: string; subtitl
       </div>
 
       <div className="flex items-center gap-3">
-        <div className="hidden sm:flex items-center gap-2 bg-white border border-slate-100 rounded-full px-4 py-2.5 w-[300px] shadow-sm">
-          <Search className="w-4 h-4 text-slate-400 shrink-0" />
-          <input
-            placeholder="Search topics, concepts, or ask anything..."
-            className="outline-none text-[13px] w-full bg-transparent text-slate-700 placeholder:text-slate-400"
-          />
-        </div>
+        <SearchBox />
         <ThemeToggle />
         <div className="flex items-center gap-2">
           <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-lg">👤</div>

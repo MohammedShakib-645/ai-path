@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import ThemeToggle from "../../components/ThemeToggle";
+import SearchBox from "../../components/SearchBox";
 import {
   useProgress, completionInt, avgScore, streakCount, CATEGORIES, catPct,
   UNITS, nextUnit, relTime, learnerLevel,
@@ -50,10 +51,7 @@ export default function ProgressPage() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <div className="hidden sm:flex items-center gap-2 bg-white border border-slate-100 rounded-full px-4 py-2.5 w-[300px] shadow-sm">
-            <Search className="w-4 h-4 text-slate-400 shrink-0" />
-            <input placeholder="Search topics, concepts, or ask anything..." className="outline-none text-[13px] w-full bg-transparent" />
-          </div>
+          <SearchBox />
           <ThemeToggle />
           <div className="flex items-center gap-2">
             <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-lg">👤</div>

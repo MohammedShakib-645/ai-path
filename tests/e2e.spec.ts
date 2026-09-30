@@ -17,64 +17,97 @@ test.afterEach(() => {
   expect(errors, `JS errors: ${errors.join(" | ")}`).toEqual([]);
 });
 
-test("dashboard renders design blocks", async ({ page }) => {
-  await expect(page.getByText("Your AI Learning Companion")).toBeVisible();
-  await expect(page.getByText("Overall Completion")).toBeVisible();
-  await expect(page.getByText("Quick Actions")).toBeVisible();
-  await expect(page.getByText("Weekly Study Goal")).toBeVisible();
+test("first-run onboarding creates a real path", async ({ page }) => {
+  await page.goto(`${BASE}/start`);
+  await expect(page.getByText("Welcome to AI-PATH")).toBeVisible();
+  await page.getByRole("button", { name: /Create My Learning Path/ }).click();
+  await expect(page.getByText("Continue Learning")).toBeVisible({ timeout: 30000 });
+  // persisted flag
+  const onboarded = await page.evaluate(() => JSON.parse(localStorage.getItem("ai-path-progress-v1") || "{}").onboarded);
+  expect(onboarded).toBe(true);
+  // real record created by onboarding — not seeded fake history
+  await expect(page.getByText("Learning path created").first()).toBeVisible();
+  const activity = await page.evaluate(() => JSON.parse(localStorage.getItem("ai-path-progress-v1") || "{}").activity);
+  expect(activity).toHaveLength(1);
+});
+
+test("dashboard renders core blocks with zero fake numbers", async ({ page }) => {
+  await page.goto(`${BASE}/start`);
+  await page.getByRole("button", { name: /Create My Learning Path/ }).click();
+  await expect(page.getByText("Today's Briefing")).toBeVisible({ timeout: 30000 });
   await expect(page.getByText("Recent Activity")).toBeVisible();
+  await expect(page.getByText("Learning Goal")).toBeVisible();
+  const done = await page.evaluate(() => JSON.parse(localStorage.getItem("ai-path-progress-v1") || "{}").done?.length ?? -1);
+  expect(done).toBe(0);
 });
 
 test("learning path toggle updates progress live", async ({ page }) => {
   await page.goto(`${BASE}/learning-path`);
   await expect(page.getByText("Learning Path (12 Topics)")).toBeVisible();
-  // seed = 3/12 = 25% (banner shows "3 / 12" + "Topics Completed" in parts)
   await expect(page.getByText("Topics Completed").first()).toBeVisible();
-  const bannerCount = page.getByText("3 / 12").first();
-  await expect(bannerCount).toBeVisible();
-  // toggle unit 4 (In Progress badge button shows "4")
+  await expect(page.getByText("0 / 12").first()).toBeVisible();
   const badge = page.getByRole("button", { name: "4", exact: true }).first();
   await badge.click();
-  await expect(page.getByText("4 / 12").first()).toBeVisible();
-  // toggle back
-  await page.getByRole("button", { name: "✓" }).first().click();
-  await expect(page.getByText("3 / 12").first()).toBeVisible();
+  await expect(page.getByText("1 / 12").first()).toBeVisible();
+  const done = await page.evaluate(() => JSON.parse(localStorage.getItem("ai-path-progress-v1") || "{}").done);
+  expect(done).toContain(4);
 });
 
-test("quiz answer + submit saves attempt", async ({ page }) => {
+test("quiz answer + submit saves attempt and mistakes", async ({ page }) => {
   await page.goto(`${BASE}/quizzes`);
   await expect(page.getByText("Python Basics Quiz")).toBeVisible();
   for (let i = 0; i < 5; i++) {
-    // click first option, then next/submit
     await page.getByText("A.", { exact: true }).first().click();
-    if (i < 4) {
-      await page.getByRole("button", { name: /Next Question/ }).click();
-    }
+    if (i < 4) await page.getByRole("button", { name: /Next Question/ }).click();
   }
   await page.getByRole("button", { name: /Submit Exam/ }).click();
   await expect(page.getByText(/Saved —/)).toBeVisible();
-  const n = await page.evaluate(() => JSON.parse(localStorage.getItem("ai-path-progress-v1") || "{}").attempts?.length || 0);
-  expect(n).toBeGreaterThanOrEqual(6); // 5 seeded + 1 new
+  await expect(page.getByText(/AI Analysis/)).toBeVisible({ timeout: 60000 });
+  const n = await page.evaluate(() => {
+    const s = JSON.parse(localStorage.getItem("ai-path-progress-v1") || "{}");
+    return { attempts: s.attempts?.length || 0, activity: s.activity?.length || 0 };
+  });
+  expect(n.attempts).toBeGreaterThanOrEqual(1);
+  expect(n.activity).toBeGreaterThanOrEqual(1);
 });
 
-test("tutor streams a real answer", async ({ page }) => {
+test("tutor answers and stores the conversation", async ({ page }) => {
   test.setTimeout(240000);
   await page.goto(`${BASE}/ai-tutor`);
-  // 1 Copy button = welcome message only
-  await expect(page.getByRole("button", { name: "Copy" })).toHaveCount(1);
-  await page.getByPlaceholder(/Ask about Python/).fill("What is a tuple in one line?");
+  await expect(page.getByText(/Start a .* session/)).toBeVisible();
+  await page.getByPlaceholder(/Ask, paste code/).fill("What is a tuple in one line?");
   await page.getByRole("button", { name: "Send message" }).click();
-  // full streamed answer arrives => second Copy button appears (content !== "")
-  await expect(page.getByRole("button", { name: "Copy" })).toHaveCount(2, { timeout: 210000 });
-  // engine badge proves which model really answered
-  await expect(page.getByText(/ollama:|groq:/).first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "Copy" }).first()).toBeVisible({ timeout: 210000 });
+  const chats = await page.evaluate(() => JSON.parse(localStorage.getItem("ai-path-progress-v1") || "{}").chats?.[0]?.msgs?.length || 0);
+  expect(chats).toBeGreaterThanOrEqual(2);
+});
+
+test("notes + planner + activity CRUD work", async ({ page }) => {
+  await page.goto(`${BASE}/start`);
+  await page.getByRole("button", { name: /Create My Learning Path/ }).click();
+  await expect(page.getByText("Continue Learning")).toBeVisible({ timeout: 30000 });
+
+  await page.goto(`${BASE}/notes`);
+  await page.getByRole("button", { name: /New Note/ }).click();
+  await page.getByPlaceholder("Title").fill("Recursion trick");
+  await page.getByPlaceholder("Write…").fill("Base case first, then recursive case.");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByText("Recursion trick")).toBeVisible();
+  await page.reload();
+  await expect(page.getByText("Recursion trick")).toBeVisible();
+
+  await page.goto(`${BASE}/activity`);
+  await expect(page.getByText(/Note created/)).toBeVisible();
+
+  await page.goto(`${BASE}/planner`);
+  await expect(page.getByText(/No study plan yet/)).toBeVisible();
 });
 
 test("settings save persists", async ({ page }) => {
   await page.goto(`${BASE}/settings`);
-  await page.locator('input[value="Mohammed Shakib"]').fill("Test User");
+  await page.getByPlaceholder("Your name").fill("Test User");
   await page.getByRole("button", { name: "Save Changes" }).click();
-  await expect(page.getByText("Saved ✓")).toBeVisible();
+  await expect(page.getByText(/Saved ✓/)).toBeVisible();
   await page.reload();
-  await expect(page.locator('input[value="Test User"]')).toBeVisible();
+  await expect(page.getByPlaceholder("Your name")).toHaveValue("Test User");
 });

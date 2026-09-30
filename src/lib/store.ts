@@ -6,15 +6,30 @@ import { useSyncExternalStore, useEffect } from "react";
 
 export interface Unit { id: number; title: string; hours: string; icon: string }
 export interface QuizAttempt { quiz: string; score: number; total: number; at: number }
-export interface ActivityItem { text: string; detail: string; at: number; kind: "quiz" | "unit" | "lab" | "tutor" | "started" }
+export interface ActivityItem { text: string; detail: string; at: number; kind: "quiz" | "unit" | "lab" | "tutor" | "started" | "lesson" | "practice" | "note" | "plan" }
+export interface Chat { id: string; title: string; pinned: boolean; mode: string; msgs: { role: "user" | "assistant"; content: string; time?: string; engine?: string; ms?: number }[]; updatedAt: number }
+export interface Note { id: string; title: string; body: string; tag: string; topic: string; pinned: boolean; updatedAt: number }
+export interface Bookmark { id: string; kind: string; ref: string; title: string; snippet: string; at: number }
+export interface StudyTask { id: string; text: string; done: boolean }
+export interface StudyDay { date: string; tasks: StudyTask[] }
+export interface StudyPlan { goal: string; days: StudyDay[]; createdAt: number }
+export interface Prefs { level: string; language: string; goal: string; dailyMins: number; difficulty: string; respLength: string; style: string; codeLang: string }
+export interface Mistake { q: string; picked: string; correct: string; topic: string; at: number }
 export interface ProgressState {
+  onboarded: boolean;
   done: number[];
   attempts: QuizAttempt[];
+  mistakes: Mistake[];
   activity: ActivityItem[];
   streak: string[]; // YYYY-MM-DD
   labHours: number;
   studyMins: number;
   goal: string;
+  chats: Chat[];
+  notes: Note[];
+  bookmarks: Bookmark[];
+  plan: StudyPlan | null;
+  prefs: Prefs;
 }
 
 export const UNITS: Unit[] = [
@@ -53,29 +68,47 @@ function todayKey(d = new Date()) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+// RULE: no fake data. Brand-new users start EMPTY with honest empty states.
+// First-run onboarding (/start) creates the first real records.
 function seed(): ProgressState {
-  const now = Date.now();
-  const day = 86400e3; // 24h in ms (NOT 864e3 — that's only 14.4 minutes!)
   return {
-    done: [1, 2, 3],
-    attempts: [
-      { quiz: "Python Basics Quiz", score: 4, total: 5, at: now - 2 * 36e5 },
-      { quiz: "Data Types Quiz", score: 4, total: 5, at: now - 5 * 36e5 },
-      { quiz: "Control Flow Quiz", score: 3, total: 5, at: now - 1 * day },
-      { quiz: "Functions Quiz", score: 5, total: 5, at: now - 1 * day - 36e5 },
-      { quiz: "Python Basics Quiz", score: 4, total: 5, at: now - 2 * day },
-    ],
-    activity: [
-      { text: "Completed: Python Basics - Variables", detail: "Unit 1 finished", at: now - 2 * 36e5, kind: "unit" },
-      { text: "Quiz: Data Types", detail: "Scored 4/5 (80%)", at: now - 5 * 36e5, kind: "quiz" },
-      { text: "Started: Control Flow", detail: "Current topic", at: now - 1 * day, kind: "started" },
-      { text: "Completed: Python Basics - Hello World", detail: "Unit 1 finished", at: now - 1 * day - 2 * 36e5, kind: "unit" },
-    ],
-    streak: [todayKey(), todayKey(new Date(now - day)), todayKey(new Date(now - 2 * day))],
-    labHours: 4.5,
-    studyMins: 105,
-    goal: "Learn AI and build real projects",
+    onboarded: false,
+    done: [],
+    attempts: [],
+    mistakes: [],
+    activity: [],
+    streak: [],
+    labHours: 0,
+    studyMins: 0,
+    goal: "",
+    chats: [],
+    notes: [],
+    bookmarks: [],
+    plan: null,
+    prefs: { level: "Beginner", language: "Python", goal: "", dailyMins: 30, difficulty: "Adaptive", respLength: "Short", style: "Examples first", codeLang: "Python" },
   };
+}
+
+export function completeOnboarding(profile: { name: string; goal: string; level: string; language: string; dailyMins: number }) {
+  const s = ensure();
+  touchStreak(s);
+  set({
+    ...s,
+    onboarded: true,
+    goal: profile.goal,
+    prefs: { ...s.prefs, level: profile.level, language: profile.language, goal: profile.goal, dailyMins: profile.dailyMins },
+    activity: [{ text: "Learning path created", detail: `${profile.goal} • ${profile.level}`, at: Date.now(), kind: "started" as const }],
+  });
+  try {
+    const p = JSON.parse(localStorage.getItem("ai-path-profile") || "{}");
+    localStorage.setItem("ai-path-profile", JSON.stringify({ ...p, name: profile.name }));
+  } catch { /* ignore */ }
+}
+
+export function recordMistakes(items: { q: string; picked: string; correct: string; topic: string }[]) {
+  if (!items.length) return;
+  const s = ensure();
+  set({ ...s, mistakes: [...items.map((m) => ({ ...m, at: Date.now() })), ...s.mistakes].slice(0, 50) });
 }
 
 function load(): ProgressState {
@@ -91,7 +124,7 @@ function load(): ProgressState {
 let cache: ProgressState | null = null;
 // Deterministic first-render snapshot: identical on server and client,
 // so React hydration never mismatches. Real data loads after mount.
-const SSR_SNAPSHOT: ProgressState = { done: [], attempts: [], activity: [], streak: [], labHours: 0, studyMins: 0, goal: "Learn AI and build real projects" };
+const SSR_SNAPSHOT: ProgressState = { onboarded: false, done: [], attempts: [], mistakes: [], activity: [], streak: [], labHours: 0, studyMins: 0, goal: "", chats: [], notes: [], bookmarks: [], plan: null, prefs: { level: "Beginner", language: "Python", goal: "", dailyMins: 30, difficulty: "Adaptive", respLength: "Short", style: "Examples first", codeLang: "Python" } };
 let hydrated = false;
 const listeners = new Set<() => void>();
 function get(): ProgressState {
@@ -182,6 +215,75 @@ export function recordQuiz(quiz: string, score: number, total: number) {
 export function setGoal(goal: string) {
   const s = ensure();
   set({ ...s, goal });
+}
+
+const uid = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+
+export function logActivity(text: string, detail: string, kind: ActivityItem["kind"]) {
+  const s = ensure();
+  touchStreak(s);
+  set({ ...s, activity: [{ text, detail, at: Date.now(), kind }, ...s.activity].slice(0, 30) });
+}
+
+// ---- chats ----
+export function newChat(mode = "explain"): string {
+  const s = ensure();
+  const id = uid();
+  set({ ...s, chats: [{ id, title: "New chat", pinned: false, mode, msgs: [], updatedAt: Date.now() }, ...s.chats].slice(0, 30) });
+  return id;
+}
+export function saveChat(id: string, patch: Partial<Chat>) {
+  const s = ensure();
+  set({ ...s, chats: s.chats.map((c) => (c.id === id ? { ...c, ...patch, updatedAt: Date.now() } : c)) });
+}
+export function deleteChat(id: string) {
+  const s = ensure();
+  set({ ...s, chats: s.chats.filter((c) => c.id !== id) });
+}
+
+// ---- notes ----
+export function saveNote(n: Partial<Note> & { id?: string }): string {
+  const s = ensure();
+  if (n.id) {
+    set({ ...s, notes: s.notes.map((x) => (x.id === n.id ? { ...x, ...n, updatedAt: Date.now() } as Note : x)) });
+    return n.id;
+  }
+  const id = uid();
+  set({ ...s, notes: [{ id, title: n.title || "Untitled", body: n.body || "", tag: n.tag || "General", topic: n.topic || "", pinned: false, updatedAt: Date.now() }, ...s.notes].slice(0, 100) });
+  return id;
+}
+export function deleteNote(id: string) {
+  const s = ensure();
+  set({ ...s, notes: s.notes.filter((x) => x.id !== id) });
+}
+
+// ---- bookmarks ----
+export function toggleBookmark(kind: string, ref: string, title: string, snippet: string): boolean {
+  const s = ensure();
+  const has = s.bookmarks.some((b) => b.kind === kind && b.ref === ref);
+  set({ ...s, bookmarks: has ? s.bookmarks.filter((b) => !(b.kind === kind && b.ref === ref)) : [{ id: uid(), kind, ref, title, snippet, at: Date.now() }, ...s.bookmarks].slice(0, 100) });
+  return !has;
+}
+
+// ---- study plan ----
+export function savePlan(plan: StudyPlan) {
+  const s = ensure();
+  set({ ...s, plan });
+}
+export function toggleTask(dayIdx: number, taskId: string) {
+  const s = ensure();
+  if (!s.plan) return;
+  const days = s.plan.days.map((d, i) =>
+    i !== dayIdx ? d : { ...d, tasks: d.tasks.map((t) => (t.id === taskId ? { ...t, done: !t.done } : t)) }
+  );
+  touchStreak(s);
+  set({ ...s, plan: { ...s.plan, days } });
+}
+
+// ---- prefs ----
+export function savePrefs(p: Partial<Prefs>) {
+  const s = ensure();
+  set({ ...s, prefs: { ...s.prefs, ...p } });
 }
 
 // ---- derived (computed live, never hardcoded) ----
