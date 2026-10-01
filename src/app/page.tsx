@@ -4,12 +4,14 @@ import Link from "next/link";
 import TopHeader from "../components/TopHeader";
 import { toast } from "../components/Toaster";
 import {
-  useProgress, completionInt, UNITS, nextUnit, relTime, setGoal,
+  useProgress, useHydrated, completionInt, UNITS, nextUnit, relTime, setGoal,
   streakCount, learnerLevel, avgScore,
 } from "../lib/store";
 import { nextAction, weakTopics, dailyBrief } from "../lib/engine";
+import { selectSkills } from "../lib/selectors";
+import { SkeletonStat } from "../components/ui";
 import {
-  SKILL_DOMAINS, domainPct, nextLesson, ALL_LESSONS, PROJECTS, ACHIEVEMENTS,
+  nextLesson, ALL_LESSONS, PROJECTS, ACHIEVEMENTS,
   unlockedIds, LEVELS, coursePct, totalDone, TOTAL_LESSONS,
 } from "../lib/curriculum";
 import {
@@ -45,6 +47,7 @@ function Ring({ pct, size = 112 }: { pct: number; size?: number }) {
 
 export default function Dashboard() {
   const s = useProgress();
+  const ready = useHydrated();
   const [rec, setRec] = useState<{ focus: string; why: string } | null>(null);
   const [recEngine, setRecEngine] = useState("");
   const [editing, setEditing] = useState(false);
@@ -77,6 +80,21 @@ export default function Dashboard() {
       .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [s.onboarded]);
+
+  // Hydration gate: render skeletons until localStorage state is loaded —
+  // never a flash of empty/0 values for returning users.
+  if (!ready) {
+    return (
+      <div>
+        <TopHeader />
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-4">
+          <SkeletonStat />
+          <SkeletonStat />
+          <SkeletonStat />
+        </div>
+      </div>
+    );
+  }
 
   if (!s.onboarded) {
     return (
@@ -208,19 +226,25 @@ export default function Dashboard() {
         {/* Topic mastery from real course progress */}
         <div className="card p-5">
           <h3 className="font-bold text-[15px] mb-1 flex items-center gap-2"><BarChart3 className="w-4 h-4 text-indigo-500" /> Topic Mastery</h3>
-          <p className="text-[11px] text-slate-500 mb-3">Weak & strong areas — computed from your completed lessons.</p>
+          <p className="text-[11px] text-slate-500 mb-3">Course completion per skill — computed only from lessons you actually finished.</p>
           <div className="space-y-2.5">
-            {SKILL_DOMAINS.slice(0, 6).map((d) => {
-              const pct = domainPct(s, d.levelIds);
+            {selectSkills(s).slice(0, 6).map((d) => {
+              const pct = d.pct;
               return (
                 <div key={d.id}>
                   <div className="flex justify-between text-[11.5px] mb-1">
                     <span className="font-semibold text-slate-600">{d.icon} {d.label}</span>
-                    <span className={`font-bold ${pct >= 60 ? "text-green-600" : pct > 0 ? "text-amber-600" : "text-slate-400"}`}>{pct}%</span>
+                    <span className={`font-bold ${pct >= 60 ? "text-green-600" : pct > 0 ? "text-amber-600" : "text-slate-400"}`}>
+                      {pct > 0 ? `${pct}%` : "Not started"}
+                    </span>
                   </div>
-                  <div className="h-[7px] bg-slate-100 rounded-full overflow-hidden">
-                    <div className={`h-full rounded-full transition-all ${pct >= 60 ? "bg-green-500" : pct > 0 ? "bg-amber-400" : "bg-slate-300"}`} style={{ width: `${Math.max(pct, 1.5)}%` }} />
-                  </div>
+                  {pct > 0 ? (
+                    <div className="h-[7px] bg-slate-100 rounded-full overflow-hidden">
+                      <div className={`h-full rounded-full transition-all ${pct >= 60 ? "bg-green-500" : "bg-amber-400"}`} style={{ width: `${pct}%` }} />
+                    </div>
+                  ) : (
+                    <div className="h-[7px] rounded-full border border-dashed border-slate-200 dark:border-white/10" />
+                  )}
                 </div>
               );
             })}

@@ -193,7 +193,7 @@ export default function AITutorPage() {
   // fresh read to avoid stale closures
   const snapshot = () => {
     try {
-      const raw = localStorage.getItem("ai-path-progress-v2") || localStorage.getItem("ai-path-progress-v1") || "{}";
+      const raw = localStorage.getItem("ai-path-progress-v3") || localStorage.getItem("ai-path-progress-v2") || localStorage.getItem("ai-path-progress-v1") || "{}";
       const p = JSON.parse(raw);
       return { ...p, chats: Array.isArray(p.chats) ? p.chats : [] };
     } catch {

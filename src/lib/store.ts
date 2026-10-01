@@ -2,7 +2,7 @@
 // Every page reads/writes here, so Dashboard, Path, Quiz, Tutor and
 // Progress always show the same live numbers — no mock constants.
 "use client";
-import { useSyncExternalStore, useEffect, useState } from "react";
+import { useSyncExternalStore, useEffect } from "react";
 
 export interface Unit { id: number; title: string; hours: string; icon: string }
 export interface QuizAttempt { quiz: string; score: number; total: number; at: number }
@@ -15,6 +15,8 @@ export interface StudyDay { date: string; tasks: StudyTask[] }
 export interface StudyPlan { goal: string; days: StudyDay[]; createdAt: number }
 export interface Prefs { level: string; language: string; goal: string; dailyMins: number; difficulty: string; respLength: string; style: string; codeLang: string }
 export interface Mistake { q: string; picked: string; correct: string; topic: string; at: number }
+/** SM-2 spaced repetition card state (populated in Phase 7; schema lives here). */
+export interface SRSState { ease: number; interval: number; due: string; reps: number }
 export interface ProgressState {
   onboarded: boolean;
   done: number[];
@@ -34,6 +36,11 @@ export interface ProgressState {
   bookmarks: Bookmark[];
   plan: StudyPlan | null;
   prefs: Prefs;
+  /** SM-2 revision queue: cardId → state. Empty until the user earns cards. */
+  srs?: Record<string, SRSState>;
+  /** Gamification counters — only ever incremented by real events. */
+  xp?: { points: number; freezes: number };
+  version?: 3;
 }
 
 export const UNITS: Unit[] = [
@@ -65,7 +72,8 @@ export function catPct(s: ProgressState, c: Category) {
   return Math.round((d / c.units.length) * 100);
 }
 
-const KEY = "ai-path-progress-v2";
+const KEY = "ai-path-progress-v3";
+const V2_KEY = "ai-path-progress-v2";
 const LEGACY_KEY = "ai-path-progress-v1";
 const EVT = "ai-path-update";
 
@@ -77,6 +85,9 @@ function todayKey(d = new Date()) {
 // First-run onboarding (/start) creates the first real records.
 function seed(): ProgressState {
   return {
+    version: 3,
+    srs: {},
+    xp: { points: 0, freezes: 0 },
     onboarded: false,
     done: [],
     lessons: [],
@@ -119,16 +130,37 @@ export function recordMistakes(items: { q: string; picked: string; correct: stri
   set({ ...s, mistakes: [...items.map((m) => ({ ...m, at: Date.now() })), ...s.mistakes].slice(0, 50) });
 }
 
+/** Shape any stored record into the v3 schema without touching real records. */
+function normalize(raw: Partial<ProgressState>): ProgressState {
+  const s: ProgressState = { ...seed(), ...raw };
+  return {
+    ...s,
+    lessons: s.lessons ?? [],
+    projects: s.projects ?? [],
+    srs: s.srs ?? {},
+    xp: s.xp ?? { points: 0, freezes: 0 },
+    version: 3,
+  };
+}
+
 function load(): ProgressState {
   try {
     const raw = localStorage.getItem(KEY);
     if (raw) return { ...seed(), ...JSON.parse(raw) };
+    // v2 → v3 migration: every real record is copied as-is. The v2 key is
+    // NEVER deleted — it stays as a rollback backup.
+    const v2 = localStorage.getItem(V2_KEY);
+    if (v2) {
+      const migrated = normalize(JSON.parse(v2));
+      localStorage.setItem(KEY, JSON.stringify(migrated));
+      return migrated;
+    }
     // One-time honest migration from v1: keep real records (quizzes, units,
     // notes, chats) but drop the stats that used to be seeded/inflated by
     // fake increments — streak and study time restart at a truthful zero.
     const legacy = localStorage.getItem(LEGACY_KEY);
     if (legacy) {
-      const migrated: ProgressState = { ...seed(), ...JSON.parse(legacy), streak: [], labHours: 0, studyMins: 0 };
+      const migrated = normalize({ ...JSON.parse(legacy), streak: [], labHours: 0, studyMins: 0 });
       localStorage.setItem(KEY, JSON.stringify(migrated));
       try { localStorage.removeItem(LEGACY_KEY); } catch { /* ignore */ }
       return migrated;
@@ -193,13 +225,11 @@ export function useProgress(): ProgressState {
   return s;
 }
 
-/** True once localStorage state has been read — pages show skeletons until then. */
+/** True once localStorage state has been read — pages show skeletons until then.
+ *  Subscribes to the store: when hydration (or any update) notifies listeners,
+ *  the snapshot flips false → true without a setState-in-effect. */
 export function useHydrated(): boolean {
-  const [h, setH] = useState(false);
-  useEffect(() => {
-    setH(true);
-  }, []);
-  return h;
+  return useSyncExternalStore(subscribe, () => hydrated, () => false);
 }
 
 // ---- profile name (onboarding/settings) — external store so no setState-in-effect ----

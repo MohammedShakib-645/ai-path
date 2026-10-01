@@ -1,4 +1,8 @@
 @import "tailwindcss";
+@import "../styles/tokens.css";
+
+/* dark: utilities follow the app's .dark class toggle (not OS preference) */
+@custom-variant dark (&:where(.dark, .dark *));
 
 :root {
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);

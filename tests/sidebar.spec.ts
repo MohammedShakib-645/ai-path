@@ -20,7 +20,7 @@ test.describe("sidebar", () => {
       await expect(aside).toHaveClass(/w-\[76px\]/, { timeout: 1500 });
     }).toPass({ timeout: 20000 });
     await page.waitForFunction(
-      () => (document.querySelector("aside.hidden") as HTMLElement | null)?.getBoundingClientRect().width! < 100,
+      () => ((document.querySelector("aside.hidden") as HTMLElement | null)?.getBoundingClientRect().width ?? 0) < 100,
       undefined,
       { timeout: 5000 }
     );
@@ -38,7 +38,7 @@ test.describe("sidebar", () => {
       await expect(aside).toHaveClass(/w-\[240px\]/, { timeout: 1500 });
     }).toPass({ timeout: 20000 });
     await page.waitForFunction(
-      () => (document.querySelector("aside.hidden") as HTMLElement | null)?.getBoundingClientRect().width! >= 238,
+      () => ((document.querySelector("aside.hidden") as HTMLElement | null)?.getBoundingClientRect().width ?? 0) >= 238,
       undefined,
       { timeout: 5000 }
     );
@@ -49,7 +49,7 @@ test.describe("sidebar", () => {
     await page.reload({ waitUntil: "domcontentloaded" });
     await expect(aside).toHaveClass(/w-\[240px\]/, { timeout: 10000 });
     await page.waitForFunction(
-      () => (document.querySelector("aside.hidden") as HTMLElement | null)?.getBoundingClientRect().width! >= 238,
+      () => ((document.querySelector("aside.hidden") as HTMLElement | null)?.getBoundingClientRect().width ?? 0) >= 238,
       undefined,
       { timeout: 5000 }
     );

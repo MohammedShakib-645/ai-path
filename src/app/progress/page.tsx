@@ -4,10 +4,12 @@ import ThemeToggle from "../../components/ThemeToggle";
 import SearchBox from "../../components/SearchBox";
 import ProfileName from "../../components/ProfileName";
 import {
-  useProgress, completionInt, avgScore, streakCount, CATEGORIES, catPct,
+  useProgress, useHydrated, completionInt, avgScore, streakCount, CATEGORIES, catPct,
   UNITS, nextUnit, relTime, learnerLevel,
 } from "../../lib/store";
-import { SKILL_DOMAINS, domainPct, totalDone, TOTAL_LESSONS, PROJECTS, ACHIEVEMENTS, unlockedIds } from "../../lib/curriculum";
+import { totalDone, TOTAL_LESSONS, PROJECTS, ACHIEVEMENTS, unlockedIds } from "../../lib/curriculum";
+import { selectSkills } from "../../lib/selectors";
+import { SkeletonStat } from "../../components/ui";
 import {
   Search, Sun, ArrowLeft, BookOpen, CheckCircle2, Clock, Flame,
   Lightbulb, AlertTriangle, Trophy, Folder,
@@ -15,6 +17,7 @@ import {
 
 export default function ProgressPage() {
   const s = useProgress();
+  const ready = useHydrated();
   const pct = completionInt(s);
   const avg = avgScore(s);
   const streak = streakCount(s);
@@ -32,10 +35,13 @@ export default function ProgressPage() {
   const line = `M ${coords.join(" L ")}`;
   const area = nPts ? `M 30,${H} L ${coords.join(" L ")} L ${W},${H} Z` : "";
 
-  const weakAll = SKILL_DOMAINS.map((d) => ({ ...d, pct: domainPct(s, d.levelIds) })).sort((a, b) => a.pct - b.pct);
+  const skills = selectSkills(s);
+  const weakAll = [...skills].sort((a, b) => a.pct - b.pct);
   const hasEvidence = totalDone(s) > 0 || s.attempts.length > 0;
-  // Weak = attempted but low (0<pct<60); untouched-but-progressed = 0%. Never random.
-  const weak = weakAll.filter((d) => d.pct < 60).slice(0, 3);
+  const skillsStarted = skills.filter((d) => d.pct > 0).length;
+  // Weak = STARTED but low (0 < pct < 60). Untouched skills are "Not Started" —
+  // no data is never labelled as weakness.
+  const weak = weakAll.filter((d) => d.pct > 0 && d.pct < 60).slice(0, 3);
   const projectsDone = (s.projects ?? []).length;
   const badges = unlockedIds(s).length;
 
@@ -47,6 +53,18 @@ export default function ProgressPage() {
       : kind === "tutor"
       ? { bg: "bg-yellow-100", icon: <span className="text-[14px]">⭐</span> }
       : { bg: "bg-blue-100", icon: <BookOpen className="w-5 h-5 text-blue-600" /> };
+
+  // Hydration gate — stat tiles show real values only after the store loads.
+  if (!ready) {
+    return (
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <SkeletonStat />
+        <SkeletonStat />
+        <SkeletonStat />
+        <SkeletonStat />
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -185,8 +203,8 @@ export default function ProgressPage() {
               {totalDone(s) === 0 ? (
                 <p className="text-[12.5px] text-slate-500 py-2">Complete your first course lesson and every skill bar below fills in from real progress — nothing is pre-filled.</p>
               ) : (
-                SKILL_DOMAINS.map((d) => {
-                  const p = domainPct(s, d.levelIds);
+                selectSkills(s).map((d) => {
+                  const p = d.pct;
                   const st = p === 100 ? "Completed" : p > 0 ? "In Progress" : "Not Started";
                   return (
                     <div key={d.id} className="flex items-center gap-3 mb-3">
@@ -216,7 +234,11 @@ export default function ProgressPage() {
               {!hasEvidence ? (
                 <p className="text-[12px] text-slate-500">No evidence yet — finish a lesson or take a quiz and your weak areas appear here (computed only from real results).</p>
               ) : weak.length === 0 ? (
-                <p className="text-[12px] text-green-600 font-semibold">🎉 No weak topics under 60% — every started skill is strong. Keep going!</p>
+                skillsStarted === 0 ? (
+                  <p className="text-[12px] text-slate-500">Skills are measured from completed lessons — finish your first lesson and every bar fills in from real progress.</p>
+                ) : (
+                  <p className="text-[12px] text-green-600 font-semibold">🎉 No weak topics under 60% — every started skill is strong. Keep going!</p>
+                )
               ) : weak.map((d) => (
                 <div key={d.id} className="flex items-center gap-3 mb-3">
                   <span className="w-9 h-9 rounded-full bg-red-50 flex items-center justify-center text-[16px] shrink-0">{d.icon}</span>

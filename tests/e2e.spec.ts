@@ -23,11 +23,11 @@ test("first-run onboarding creates a real path", async ({ page }) => {
   await page.getByRole("button", { name: /Create My Learning Path/ }).click();
   await expect(page.getByText("Continue Learning")).toBeVisible({ timeout: 30000 });
   // persisted flag
-  const onboarded = await page.evaluate(() => JSON.parse(localStorage.getItem("ai-path-progress-v2") || "{}").onboarded);
+  const onboarded = await page.evaluate(() => JSON.parse(localStorage.getItem("ai-path-progress-v3") || "{}").onboarded);
   expect(onboarded).toBe(true);
   // real record created by onboarding — not seeded fake history
   await expect(page.getByText("Learning path created").first()).toBeVisible();
-  const activity = await page.evaluate(() => JSON.parse(localStorage.getItem("ai-path-progress-v2") || "{}").activity);
+  const activity = await page.evaluate(() => JSON.parse(localStorage.getItem("ai-path-progress-v3") || "{}").activity);
   expect(activity).toHaveLength(1);
 });
 
@@ -37,19 +37,21 @@ test("dashboard renders core blocks with zero fake numbers", async ({ page }) =>
   await expect(page.getByText("Today's Briefing")).toBeVisible({ timeout: 30000 });
   await expect(page.getByText("Recent Activity")).toBeVisible();
   await expect(page.getByText("Learning Goal")).toBeVisible();
-  const done = await page.evaluate(() => JSON.parse(localStorage.getItem("ai-path-progress-v2") || "{}").done?.length ?? -1);
+  const done = await page.evaluate(() => JSON.parse(localStorage.getItem("ai-path-progress-v3") || "{}").done?.length ?? -1);
   expect(done).toBe(0);
 });
 
 test("learning path toggle updates progress live", async ({ page }) => {
   await page.goto(`${BASE}/learning-path`);
   await expect(page.getByText("Learning Path (12 Topics)")).toBeVisible();
-  await expect(page.getByText("Topics Completed").first()).toBeVisible();
-  await expect(page.getByText("0 / 12").first()).toBeVisible();
+  // Honest empty state first — stats only exist after real activity.
+  await expect(page.getByText("Start here — take your first lesson")).toBeVisible();
   const badge = page.getByRole("button", { name: "4", exact: true }).first();
   await badge.click();
+  // The first real record flips the page to live stats.
   await expect(page.getByText("1 / 12").first()).toBeVisible();
-  const done = await page.evaluate(() => JSON.parse(localStorage.getItem("ai-path-progress-v2") || "{}").done);
+  await expect(page.getByText("Topics Completed").first()).toBeVisible();
+  const done = await page.evaluate(() => JSON.parse(localStorage.getItem("ai-path-progress-v3") || "{}").done);
   expect(done).toContain(4);
 });
 
@@ -64,7 +66,7 @@ test("quiz answer + submit saves attempt and mistakes", async ({ page }) => {
   await expect(page.getByText(/Saved —/)).toBeVisible();
   await expect(page.getByText(/AI Analysis/)).toBeVisible({ timeout: 60000 });
   const n = await page.evaluate(() => {
-    const s = JSON.parse(localStorage.getItem("ai-path-progress-v2") || "{}");
+    const s = JSON.parse(localStorage.getItem("ai-path-progress-v3") || "{}");
     return { attempts: s.attempts?.length || 0, activity: s.activity?.length || 0 };
   });
   expect(n.attempts).toBeGreaterThanOrEqual(1);
@@ -78,7 +80,7 @@ test("tutor answers and stores the conversation", async ({ page }) => {
   await page.getByPlaceholder(/Ask anything/).fill("What is a tuple in one line?");
   await page.getByRole("button", { name: "Send message" }).click();
   await expect(page.getByRole("button", { name: "Copy" }).first()).toBeVisible({ timeout: 210000 });
-  const chats = await page.evaluate(() => JSON.parse(localStorage.getItem("ai-path-progress-v2") || "{}").chats?.[0]?.msgs?.length || 0);
+  const chats = await page.evaluate(() => JSON.parse(localStorage.getItem("ai-path-progress-v3") || "{}").chats?.[0]?.msgs?.length || 0);
   expect(chats).toBeGreaterThanOrEqual(2);
 });
 

@@ -95,7 +95,7 @@ export default function PlannerPage() {
                   </div>
                 </div>
               ))}
-              <Link href="/learning-path" className="text-[12px] font-bold text-indigo-600">Open a task's lesson in Learning Path →</Link>
+              <Link href="/learning-path" className="text-[12px] font-bold text-indigo-600">Open a task&apos;s lesson in Learning Path →</Link>
             </div>
           )}
         </div>

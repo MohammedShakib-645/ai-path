@@ -1,0 +1,83 @@
+/* AI-PATH design tokens — single source of truth for color, space, radius,
+   elevation and type. Light is default; .dark overrides neutrals only. */
+
+:root {
+  /* Brand */
+  --primary: #6366f1;
+  --primary-strong: #4f46e5;
+  --accent: #8b5cf6;
+  --accent-cyan: #22d3ee;
+  --gradient-brand: linear-gradient(135deg, #6366f1, #8b5cf6);
+
+  /* Semantic */
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --info: #3b82f6;
+
+  /* Neutrals — light */
+  --bg: #f7f8fb;
+  --surface: #ffffff;
+  --elevated: #ffffff;
+  --border: #e7e9f0;
+  --text: #0f1220;
+  --muted: #5f6578;
+
+  /* Radius scale */
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-xl: 24px;
+
+  /* Spacing scale (4 pt) */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-6: 24px;
+  --s-8: 32px;
+
+  /* Elevation (3 levels) */
+  --shadow-1: 0 1px 2px rgba(15, 18, 32, 0.05);
+  --shadow-2: 0 4px 12px rgba(15, 18, 32, 0.07);
+  --shadow-3: 0 12px 32px rgba(15, 18, 32, 0.1);
+
+  /* Type scale */
+  --t-caption: 12px;
+  --t-sm: 13px;
+  --t-base: 14px;
+  --t-md: 16px;
+  --t-lg: 18px;
+  --t-xl: 20px;
+  --t-2xl: 24px;
+  --t-3xl: 32px;
+  --t-hero: 44px;
+}
+
+.dark {
+  /* Neutrals — dark */
+  --bg: #0b0d14;
+  --surface: #11141d;
+  --elevated: #171b27;
+  --border: rgba(255, 255, 255, 0.07);
+  --text: #e6e8ef;
+  --muted: #8b90a0;
+
+  /* In dark mode: borders + subtle highlights instead of big shadows */
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-2: 0 4px 12px rgba(0, 0, 0, 0.45);
+  --shadow-3: 0 12px 32px rgba(0, 0, 0, 0.5);
+}
+
+/* Type helpers */
+h1,
+.font-display {
+  font-family: var(--font-display), var(--font-inter), system-ui, sans-serif;
+  line-height: 1.15;
+}
+
+/* Tabular numbers on every stat so digits never jitter */
+.tabular,
+.stat-num {
+  font-variant-numeric: tabular-nums;
+}

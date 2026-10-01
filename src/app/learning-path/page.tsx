@@ -5,11 +5,13 @@ import ThemeToggle from "../../components/ThemeToggle";
 import SearchBox from "../../components/SearchBox";
 import ProfileName from "../../components/ProfileName";
 import {
-  useProgress, toggleUnit, completionInt, UNITS, nextUnit,
+  useProgress, useHydrated, toggleUnit, completionInt, UNITS, nextUnit,
   studyTimeLabel, learnerLevel, setGoal, streakCount,
 } from "../../lib/store";
 import { UNIT_EXTRAS, LIBRARY_LINKS } from "../../lib/unitExtras";
 import { relTime } from "../../lib/engine";
+import { selectUnitEtaWeeks, isNewUser } from "../../lib/selectors";
+import { EmptyState, Skeleton } from "../../components/ui";
 import {
   Search, Sun, ArrowLeft, BookOpen, Clock, ChevronDown,
   Target, Star, Zap, Flame, Crown, Lightbulb, ExternalLink, FileText, Library, History,
@@ -17,6 +19,8 @@ import {
 
 export default function LearningPathPage() {
   const s = useProgress();
+  const ready = useHydrated();
+  const eta = selectUnitEtaWeeks(s);
   const pct = completionInt(s);
   const upcoming = nextUnit(s);
   const level = learnerLevel(s);
@@ -73,7 +77,7 @@ export default function LearningPathPage() {
                 Based on your current level ({level}), we&apos;ve created a personalized roadmap to help you learn AI step by step.
               </p>
               <div className="flex gap-2 mt-3 flex-wrap">
-                { [`${level} Level`, "Estimated: 4 Weeks", "12 Topics"].map((t) => (
+                { [`${level} Level`, UNITS.length - s.done.length <= 0 ? "All topics done" : `Estimated: ${eta} Week${eta === 1 ? "" : "s"}`, `${UNITS.length} Topics`].map((t) => (
                   <span key={t} className="bg-white/85 text-indigo-700 text-[11px] font-bold px-3 py-1.5 rounded-full">{t}</span>
                 ))}
               </div>
@@ -84,7 +88,25 @@ export default function LearningPathPage() {
             <div className="hidden md:flex w-[90px] h-[90px] rounded-full bg-white/25 border border-white/40 items-center justify-center text-[56px] shrink-0 relative z-10">🤖</div>
           </div>
 
-          {/* Stats */}
+          {/* Stats — skeleton while hydrating; honest "Start here" for new users */}
+          {!ready ? (
+            <div className="card p-4 flex items-center gap-3 flex-wrap">
+              <Skeleton className="h-[72px] w-[72px] rounded-full" />
+              <Skeleton className="h-[54px] flex-1 min-w-[140px]" />
+              <Skeleton className="h-[54px] flex-1 min-w-[140px]" />
+              <Skeleton className="h-[54px] flex-1 min-w-[140px]" />
+            </div>
+          ) : isNewUser(s) ? (
+            <div className="card p-4">
+              <EmptyState
+                icon="🎯"
+                title="Start here — take your first lesson"
+                body="Your progress numbers fill in from real activity. Nothing is shown before you actually learn."
+                cta={{ label: "Open the roadmap", href: "/roadmap" }}
+                className="py-6"
+              />
+            </div>
+          ) : (
           <div className="card p-4 flex items-center gap-3 flex-wrap">
             <div className="flex items-center gap-3">
               <div className="relative w-[72px] h-[72px] shrink-0">
@@ -104,7 +126,7 @@ export default function LearningPathPage() {
               </div>
             </div>
             {[
-              { v: `${s.done.length} / 12`, l: "Topics Completed", icon: <BookOpen className="w-5 h-5 text-blue-600" /> },
+              { v: `${s.done.length} / ${UNITS.length}`, l: "Topics Completed", icon: <BookOpen className="w-5 h-5 text-blue-600" /> },
               { v: studyTimeLabel(s.studyMins), l: "Study Time", icon: <Clock className="w-5 h-5 text-indigo-600" /> },
               { v: level, l: "Current Level", icon: <Star className="w-5 h-5 text-amber-500" /> },
             ].map((x, i) => (
@@ -117,11 +139,12 @@ export default function LearningPathPage() {
               </div>
             ))}
           </div>
+          )}
 
           {/* Topics list */}
           <div className="card p-5">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="font-extrabold text-[16px] text-[#101a3f]">Learning Path (12 Topics)</h3>
+              <h3 className="font-extrabold text-[16px] text-[#101a3f]">Learning Path ({UNITS.length} Topics)</h3>
               <button onClick={() => setExpanded(expanded === -1 ? null : -1)} className="text-[12px] text-indigo-600 font-semibold">
                 Expand All ›
               </button>

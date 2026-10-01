@@ -68,14 +68,16 @@ export function selectEtaWeeks(s: ProgressState): number | null {
   return Math.max(1, Math.ceil(hoursLeft / Math.max(1, weeklyHours)));
 }
 
-/** True before localStorage has real data — drives skeletons, never fake 0s. */
+/** True when the account has NO learning records yet — drives empty states.
+ *  Purely activity-based: onboarding alone does not count (it only writes one
+ *  "path created" event), so a brand-new onboarded user still sees Start here. */
 export function isNewUser(s: ProgressState): boolean {
   return (
-    !s.onboarded ||
-    (s.done.length === 0 &&
-      (s.lessons ?? []).length === 0 &&
-      s.attempts.length === 0 &&
-      s.activity.length === 0)
+    s.done.length === 0 &&
+    (s.lessons ?? []).length === 0 &&
+    (s.projects ?? []).length === 0 &&
+    s.attempts.length === 0 &&
+    s.studyMins === 0
   );
 }
 
