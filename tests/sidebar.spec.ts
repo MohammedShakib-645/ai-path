@@ -9,15 +9,15 @@ test.describe("sidebar", () => {
     await page.goto(`${BASE}/`, { waitUntil: "domcontentloaded" });
     const aside = page.locator("aside.hidden").first();
 
-    // all 17 grouped nav links present (Settings lives in the pinned footer)
-    await expect(aside.locator("nav a")).toHaveCount(17);
+    // all 14 grouped nav links present (Settings lives in the pinned footer)
+    await expect(aside.locator("nav a")).toHaveCount(14);
 
     const wide = (await aside.boundingBox())!.width;
     const toggle = aside.getByRole("button", { name: /Collapse sidebar|Expand sidebar/ });
     // in dev the first click can land before React hydrates — retry until it takes
     await expect(async () => {
       await toggle.click();
-      await expect(aside).toHaveClass(/w-\[76px\]/, { timeout: 1500 });
+      await expect(aside).toHaveClass(/w-\[72px\]/, { timeout: 1500 });
     }).toPass({ timeout: 20000 });
     await page.waitForFunction(
       () => ((document.querySelector("aside.hidden") as HTMLElement | null)?.getBoundingClientRect().width ?? 0) < 100,
@@ -28,17 +28,17 @@ test.describe("sidebar", () => {
     expect(narrow).toBeLessThan(wide);
 
     // every item still reachable in rail mode (icons with titles)
-    await expect(aside.locator("nav a")).toHaveCount(17);
+    await expect(aside.locator("nav a")).toHaveCount(14);
     await expect(aside.locator('a[title="Settings"]')).toHaveCount(1);
 
     // expands back
     const toggle2 = aside.getByRole("button", { name: /Expand sidebar/ });
     await expect(async () => {
       await toggle2.click();
-      await expect(aside).toHaveClass(/w-\[240px\]/, { timeout: 1500 });
+      await expect(aside).toHaveClass(/w-\[248px\]/, { timeout: 1500 });
     }).toPass({ timeout: 20000 });
     await page.waitForFunction(
-      () => ((document.querySelector("aside.hidden") as HTMLElement | null)?.getBoundingClientRect().width ?? 0) >= 238,
+      () => ((document.querySelector("aside.hidden") as HTMLElement | null)?.getBoundingClientRect().width ?? 0) >= 246,
       undefined,
       { timeout: 5000 }
     );
@@ -47,9 +47,9 @@ test.describe("sidebar", () => {
     // persists across reload (wait for the width transition to settle too)
     const before = (await aside.boundingBox())!.width;
     await page.reload({ waitUntil: "domcontentloaded" });
-    await expect(aside).toHaveClass(/w-\[240px\]/, { timeout: 10000 });
+    await expect(aside).toHaveClass(/w-\[248px\]/, { timeout: 10000 });
     await page.waitForFunction(
-      () => ((document.querySelector("aside.hidden") as HTMLElement | null)?.getBoundingClientRect().width ?? 0) >= 238,
+      () => ((document.querySelector("aside.hidden") as HTMLElement | null)?.getBoundingClientRect().width ?? 0) >= 246,
       undefined,
       { timeout: 5000 }
     );

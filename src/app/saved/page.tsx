@@ -22,7 +22,7 @@ export default function SavedPage() {
           <div className="text-[40px] mb-2">🔖</div>
           <b className="text-[15px] text-[#101a3f]">Nothing saved yet</b>
           <p className="text-[13px] text-slate-500 mt-1">Bookmark lessons, AI answers and code examples to find them here.</p>
-          <Link href="/learning-path" className="inline-block mt-4 px-5 py-2.5 rounded-xl primary-gradient text-white text-[13px] font-bold">Browse lessons</Link>
+          <Link href="/learn" className="inline-block mt-4 px-5 py-2.5 rounded-xl primary-gradient text-white text-[13px] font-bold">Browse lessons</Link>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -21,7 +21,7 @@ export default function LevelPage() {
           <div className="text-[46px] mb-2">🧭</div>
           <b className="text-[16px] text-[#101a3f]">We couldn&apos;t find that level</b>
           <p className="text-[13px] text-slate-500 mt-1">It may have been renamed. Browse all 10 levels in the course catalog.</p>
-          <Link href="/courses" className="inline-flex items-center gap-2 mt-5 px-6 py-3 rounded-xl primary-gradient text-white font-bold text-[14px]">
+          <Link href="/learn?view=catalog" className="inline-flex items-center gap-2 mt-5 px-6 py-3 rounded-xl primary-gradient text-white font-bold text-[14px]">
             <ArrowLeft className="w-4 h-4" /> Back to Courses
           </Link>
         </div>
@@ -42,7 +42,7 @@ export default function LevelPage() {
   return (
     <div>
       <div className="flex items-center gap-3 mb-5">
-        <Link href="/courses" className="text-[#101a3f] hover:text-indigo-600" aria-label="Back to courses">
+        <Link href="/learn?view=catalog" className="text-[#101a3f] hover:text-indigo-600" aria-label="Back to courses">
           <ArrowLeft className="w-6 h-6" />
         </Link>
         <div className="flex-1">
@@ -79,7 +79,7 @@ export default function LevelPage() {
             <div className={`h-full rounded-full bg-gradient-to-br ${level.grad} transition-all`} style={{ width: `${pct}%` }} />
           </div>
         </div>
-        <Link href="/courses" className="text-[12px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-4 py-2 rounded-xl hover:bg-indigo-100 transition">
+        <Link href="/learn?view=catalog" className="text-[12px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-4 py-2 rounded-xl hover:bg-indigo-100 transition">
           All courses
         </Link>
       </div>

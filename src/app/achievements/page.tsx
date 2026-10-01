@@ -10,7 +10,7 @@ function badgeLink(id: string): { href: string; label: string } {
   if (id.startsWith("streak")) return { href: "/activity", label: "Open activity" };
   if (id === "quiz-master") return { href: "/quizzes", label: "Go to quizzes" };
   if (id === "first-project") return { href: "/projects", label: "Open projects" };
-  return { href: "/courses", label: "Start learning" };
+  return { href: "/learn?view=catalog", label: "Start learning" };
 }
 
 function badgeIcon(id: string, href: string) {
@@ -72,7 +72,7 @@ export default function AchievementsPage() {
             each badge flips the moment your real progress crosses its threshold.
           </p>
           <div className="flex items-center justify-center gap-2 mt-4 flex-wrap">
-            <Link href="/courses" className="px-5 py-2.5 rounded-xl primary-gradient text-white text-[13px] font-bold hover:-translate-y-0.5 transition">
+            <Link href="/learn?view=catalog" className="px-5 py-2.5 rounded-xl primary-gradient text-white text-[13px] font-bold hover:-translate-y-0.5 transition">
               Start a course
             </Link>
             <Link href="/quizzes" className="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-[13px] font-bold hover:border-indigo-300 transition">

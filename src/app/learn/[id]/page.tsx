@@ -15,6 +15,49 @@ interface Lesson {
   challenge: string; summary: string;
 }
 
+/** AI JSON can miss fields — normalize so the page never crashes on `.map`
+ *  (returns null → honest "engine offline" state instead of a white screen). */
+function normalizeLesson(raw: unknown): Lesson | null {
+  if (!raw || typeof raw !== "object") return null;
+  const l = raw as Partial<Lesson>;
+  const strArr = (v: unknown): string[] =>
+    Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
+  const n: Lesson = {
+    topic: typeof l.topic === "string" ? l.topic : "",
+    intro: typeof l.intro === "string" ? l.intro : "",
+    analogy: typeof l.analogy === "string" ? l.analogy : "",
+    syntax: typeof l.syntax === "string" ? l.syntax : "",
+    examples: Array.isArray(l.examples)
+      ? l.examples
+          .filter((e) => !!e && typeof e === "object")
+          .map((e) => ({
+            title: typeof e.title === "string" ? e.title : "",
+            code: typeof e.code === "string" ? e.code : "",
+            explain: typeof e.explain === "string" ? e.explain : "",
+          }))
+      : [],
+    mistakes: strArr(l.mistakes),
+    points: strArr(l.points),
+    practice: strArr(l.practice),
+    quiz: Array.isArray(l.quiz)
+      ? l.quiz
+          .filter((q) => !!q && typeof q === "object")
+          .map((q) => ({
+            q: typeof q.q === "string" ? q.q : "",
+            options: Array.isArray(q.options)
+              ? q.options.filter((o): o is string => typeof o === "string")
+              : [],
+            answer: typeof q.answer === "number" ? q.answer : 0,
+            tip: typeof q.tip === "string" ? q.tip : "",
+          }))
+      : [],
+    challenge: typeof l.challenge === "string" ? l.challenge : "",
+    summary: typeof l.summary === "string" ? l.summary : "",
+  };
+  if (!n.topic && !n.intro && n.quiz.length === 0 && n.examples.length === 0) return null;
+  return n;
+}
+
 export default function LearnPage() {
   const params = useParams();
   const router = useRouter();
@@ -40,7 +83,7 @@ export default function LearnPage() {
       body: JSON.stringify({ topic: unit.title, level: learnerLevel(s) }),
     })
       .then((r) => r.json())
-      .then((d) => setLesson(d.lesson))
+      .then((d) => setLesson(normalizeLesson(d?.lesson)))
       .catch(() => setLesson(null))
       .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -64,7 +107,7 @@ export default function LearnPage() {
   return (
     <div>
       <div className="flex items-center gap-3 mb-5">
-        <Link href="/learning-path" className="text-[#101a3f] hover:text-indigo-600">
+        <Link href="/learn" className="text-[#101a3f] hover:text-indigo-600">
           <ArrowLeft className="w-6 h-6" />
         </Link>
         <div className="flex-1">

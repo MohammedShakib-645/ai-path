@@ -63,7 +63,7 @@ export default function LessonPage() {
           <p className="text-[13px] text-slate-500 mt-1">
             The link may be outdated or the lesson id is wrong. Browse the full catalog to pick up where you left off.
           </p>
-          <Link href="/courses" className="inline-flex items-center gap-2 mt-5 px-6 py-3 rounded-xl primary-gradient text-white font-bold text-[14px]">
+          <Link href="/learn?view=catalog" className="inline-flex items-center gap-2 mt-5 px-6 py-3 rounded-xl primary-gradient text-white font-bold text-[14px]">
             <ArrowLeft className="w-4 h-4" /> Back to Courses
           </Link>
         </div>
@@ -97,7 +97,7 @@ export default function LessonPage() {
     <div>
       {/* Breadcrumb + header */}
       <div className="flex items-center gap-3 mb-4 flex-wrap text-[12px] text-slate-500">
-        <Link href="/courses" className="font-semibold hover:text-indigo-600">Courses</Link>
+        <Link href="/learn?view=catalog" className="font-semibold hover:text-indigo-600">Courses</Link>
         <ChevronRight className="w-3.5 h-3.5" />
         <Link href={`/courses/${level.id}`} className="font-semibold hover:text-indigo-600">{level.icon} {level.title}</Link>
         <ChevronRight className="w-3.5 h-3.5" />
@@ -232,7 +232,7 @@ export default function LessonPage() {
                   Next Lesson: {next.lesson.title} <ArrowRight className="w-4 h-4" />
                 </Link>
               ) : (
-                <Link href="/courses" className="flex items-center justify-center gap-1.5 w-full py-2.5 rounded-xl text-[13px] font-bold bg-slate-900 text-white">
+                <Link href="/learn?view=catalog" className="flex items-center justify-center gap-1.5 w-full py-2.5 rounded-xl text-[13px] font-bold bg-slate-900 text-white">
                   Curriculum finished — back to Courses <ArrowRight className="w-4 h-4" />
                 </Link>
               )}

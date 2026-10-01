@@ -333,7 +333,7 @@ export default function Dashboard() {
       <div className="card p-5 mb-4">
         <div className="flex justify-between items-center mb-3">
           <h3 className="font-bold text-[15px] flex items-center gap-2"><BookOpen className="w-4 h-4 text-indigo-500" /> My Courses <span className="text-[11px] font-normal text-slate-400">({totalDone(s)}/{TOTAL_LESSONS} lessons)</span></h3>
-          <Link href="/courses" className="text-[12px] text-indigo-600 font-medium">All courses →</Link>
+          <Link href="/learn?view=catalog" className="text-[12px] text-indigo-600 font-medium">All courses →</Link>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-2.5">
           {LEVELS.map((lv) => {

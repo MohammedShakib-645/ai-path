@@ -8,7 +8,7 @@ import AiFab from "../components/AiFab";
 import { Home, BookOpen, BotMessageSquare, FlaskConical, BarChart3 } from "lucide-react";
 const TABS = [
   { href: "/", label: "Home", icon: Home },
-  { href: "/learning-path", label: "Learn", icon: BookOpen },
+  { href: "/learn", label: "Learn", icon: BookOpen },
   { href: "/ai-tutor", label: "Tutor", icon: BotMessageSquare },
   { href: "/practice", label: "Code", icon: FlaskConical },
   { href: "/progress", label: "Stats", icon: BarChart3 },

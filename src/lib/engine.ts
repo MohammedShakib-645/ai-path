@@ -45,7 +45,7 @@ export function nextAction(s: ProgressState): { kind: string; title: string; why
   const weak = weakTopics(s, 1)[0];
   const up = nextUnit(s);
   if (s.done.length === 0 && s.attempts.length === 0 && (s.lessons?.length ?? 0) === 0) {
-    return { kind: "start", title: "Start your first lesson", why: "Your path is ready — one small lesson begins everything.", href: "/courses", cta: "Start Learning" };
+    return { kind: "start", title: "Start your first lesson", why: "Your path is ready — one small lesson begins everything.", href: "/learn", cta: "Start Learning" };
   }
   if (weak && weak.mastery < 40 && weak.done > 0) {
     return { kind: "review", title: `Review ${weak.label}`, why: `Mastery is ${weak.mastery}% — short revision beats moving on.`, href: "/quizzes", cta: "Practice Now" };
@@ -79,7 +79,7 @@ export function ruleRecommendations(s: ProgressState): RuleRec[] {
 
   if (attempts.length > 0) {
     if (avg < 50) {
-      recs.push({ type: "practice", title: "Rebuild fundamentals", why: `Your average is ${avg}% (<50%) — re-read the lesson, then retry.`, href: "/courses" });
+      recs.push({ type: "practice", title: "Rebuild fundamentals", why: `Your average is ${avg}% (<50%) — re-read the lesson, then retry.`, href: "/learn" });
     } else if (avg <= 75) {
       recs.push({ type: "practice", title: "More practice questions", why: `${avg}% average (50–75%) — targeted drills move this to 80%.`, href: "/practice" });
     } else if (avg > 80 && attempts.length >= 3) {

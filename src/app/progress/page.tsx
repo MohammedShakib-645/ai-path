@@ -315,7 +315,7 @@ export default function ProgressPage() {
           <div className="card p-5">
             <div className="flex justify-between mb-3 items-center">
               <h3 className="font-bold text-[15px] text-[#101a3f]">🕐 Recent Activity</h3>
-              <span className="text-[11px] text-indigo-600 font-medium">View All</span>
+              <Link href="/activity" className="text-[11px] text-indigo-600 font-medium hover:underline">View All →</Link>
             </div>
             <div className="space-y-3 text-[12px]">
               {s.activity.length === 0 && (
@@ -339,7 +339,7 @@ export default function ProgressPage() {
             <div className="bg-purple-50/70 rounded-xl p-3 text-[13px]">
               <b className="text-[#101a3f]">{upcoming.title}</b>
               <p className="text-slate-500 text-[12px]">Unit {upcoming.id} of 12 — picked from your live progress.</p>
-              <Link href="/learning-path" className="mt-2 inline-flex items-center gap-1 bg-gradient-to-r from-purple-600 to-indigo-500 text-white text-[12px] font-bold px-4 py-2 rounded-lg">
+              <Link href="/learn" className="mt-2 inline-flex items-center gap-1 bg-gradient-to-r from-purple-600 to-indigo-500 text-white text-[12px] font-bold px-4 py-2 rounded-lg">
                 Continue Learning →
               </Link>
             </div>

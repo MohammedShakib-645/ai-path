@@ -1,110 +1,117 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Home,
-  GraduationCap,
-  BookOpen,
   Map,
   BotMessageSquare,
+  FlaskConical,
+  ClipboardList,
+  Folder,
   Mic,
   Lightbulb,
   FileCode,
-  ClipboardList,
-  FlaskConical,
-  Folder,
-  BarChart3,
-  Trophy,
-  Activity,
   FileText,
   Bookmark,
+  BarChart3,
+  Trophy,
   CalendarCheck,
   Settings,
   Brain,
-  Sparkles,
+  Flame,
   PanelLeftClose,
   PanelLeftOpen,
 } from "lucide-react";
+import { useProgress, streakCount, learnerLevel } from "../lib/store";
 
 interface NavItem { href: string; label: string; icon: typeof Home }
 interface NavGroup { label: string; items: NavItem[] }
 
+/** 14 links in 4 grouped sections (Courses/Learning Path/Roadmap merged into Learn). */
 const GROUPS: NavGroup[] = [
   {
     label: "Learn",
     items: [
       { href: "/", label: "Dashboard", icon: Home },
-      { href: "/courses", label: "Courses", icon: GraduationCap },
-      { href: "/learning-path", label: "Learning Path", icon: BookOpen },
-      { href: "/roadmap", label: "AI Roadmap", icon: Map },
-    ],
-  },
-  {
-    label: "AI Tutor",
-    items: [
+      { href: "/learn", label: "Learn", icon: Map },
       { href: "/ai-tutor", label: "AI Tutor", icon: BotMessageSquare },
-      { href: "/interview", label: "AI Interview", icon: Mic },
-      { href: "/doubt", label: "Doubt Solver", icon: Lightbulb },
-      { href: "/code-explainer", label: "Code Explainer", icon: FileCode },
     ],
   },
   {
     label: "Practice",
     items: [
-      { href: "/quizzes", label: "Quizzes", icon: ClipboardList },
       { href: "/practice", label: "Practice", icon: FlaskConical },
+      { href: "/quizzes", label: "Quizzes", icon: ClipboardList },
       { href: "/projects", label: "Projects", icon: Folder },
+      { href: "/interview", label: "AI Interview", icon: Mic },
     ],
   },
   {
-    label: "Track",
+    label: "Tools",
+    items: [
+      { href: "/doubt", label: "Doubt Solver", icon: Lightbulb },
+      { href: "/code-explainer", label: "Code Explainer", icon: FileCode },
+      { href: "/notes", label: "Notes", icon: FileText },
+      { href: "/saved", label: "Saved", icon: Bookmark },
+    ],
+  },
+  {
+    label: "Progress",
     items: [
       { href: "/progress", label: "Progress", icon: BarChart3 },
       { href: "/achievements", label: "Achievements", icon: Trophy },
-      { href: "/activity", label: "Activity", icon: Activity },
-      { href: "/notes", label: "Notes", icon: FileText },
-      { href: "/saved", label: "Saved", icon: Bookmark },
       { href: "/planner", label: "Study Planner", icon: CalendarCheck },
     ],
   },
 ];
 
+/** Rail (collapsed) state = persisted UI state in localStorage (an external system),
+ *  so it lives in useSyncExternalStore — SSR-safe, no setState-in-effect. */
 const RAIL_KEY = "ai-path-ui-rail";
+const RAIL_EVENT = "ai-path-rail-changed";
+
+function readRail(): boolean {
+  try {
+    const stored = localStorage.getItem(RAIL_KEY);
+    if (stored !== null) return stored === "1";
+  } catch { /* ignore */ }
+  // First visit: auto-rail between 768–1100px so content keeps its width.
+  return window.innerWidth >= 768 && window.innerWidth < 1100;
+}
+
+function subscribeRail(onChange: () => void): () => void {
+  const notify = () => onChange();
+  window.addEventListener("resize", notify);
+  window.addEventListener(RAIL_EVENT, notify);
+  return () => {
+    window.removeEventListener("resize", notify);
+    window.removeEventListener(RAIL_EVENT, notify);
+  };
+}
+
+/** Explicit choice: persist it (even the first click, which leaves auto-mode). */
+function toggleRail(): void {
+  try {
+    localStorage.setItem(RAIL_KEY, readRail() ? "0" : "1");
+    window.dispatchEvent(new Event(RAIL_EVENT));
+  } catch { /* ignore */ }
+}
 
 export default function Sidebar({ mobileOpen, onClose }: { mobileOpen?: boolean; onClose?: () => void }) {
   const pathname = usePathname();
-  const [rail, setRail] = useState(false);
+  const rail = useSyncExternalStore(subscribeRail, readRail, () => false);
 
   useEffect(() => {
-    // Stored preference wins; otherwise auto-rail between 768–1100px so content keeps its width.
-    const autoRail = () => window.innerWidth >= 768 && window.innerWidth < 1100;
-    try {
-      const stored = localStorage.getItem(RAIL_KEY);
-      setRail(stored === null ? autoRail() : stored === "1");
-    } catch { /* first visit */ }
-    const onResize = () => {
-      try {
-        if (localStorage.getItem(RAIL_KEY) !== null) return; // user chose explicitly
-      } catch { /* ignore */ }
-      setRail(autoRail());
-    };
-    window.addEventListener("resize", onResize);
+    // Ctrl/Cmd+B toggles the rail (writes localStorage → store notifies → re-render)
     const onKey = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "b") {
         e.preventDefault();
-        setRail((r) => {
-          const next = !r;
-          try { localStorage.setItem(RAIL_KEY, next ? "1" : "0"); } catch { /* ignore */ }
-          return next;
-        });
+        toggleRail();
       }
     };
     window.addEventListener("keydown", onKey);
-    return () => {
-      window.removeEventListener("resize", onResize);
-      window.removeEventListener("keydown", onKey);
-    };
+    return () => window.removeEventListener("keydown", onKey);
   }, []);
 
   // mobile drawer: Esc + close on navigation
@@ -120,19 +127,14 @@ export default function Sidebar({ mobileOpen, onClose }: { mobileOpen?: boolean;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
-  const toggle = () =>
-    setRail((r) => {
-      const next = !r;
-      try { localStorage.setItem(RAIL_KEY, next ? "1" : "0"); } catch { /* ignore */ }
-      return next;
-    });
+  const toggle = toggleRail;
 
   return (
     <>
-      {/* desktop */}
+      {/* desktop — 248px expanded / 72px collapsed (state persisted) */}
       <aside
         className={`hidden md:flex sidebar-gradient text-white flex-col h-dvh sticky top-0 p-4 shrink-0 overflow-x-hidden transition-[width] duration-[250ms] ease-[cubic-bezier(.2,.8,.2,1)] ${
-          rail ? "w-[76px]" : "w-[240px]"
+          rail ? "w-[72px]" : "w-[248px]"
         }`}
       >
         <SidebarContent pathname={pathname} rail={rail} onToggle={toggle} />
@@ -162,8 +164,11 @@ function SidebarContent({
   onToggle?: () => void;
   onNavigate?: () => void;
 }) {
+  const s = useProgress();
+
   return (
     <>
+      {/* Header row: logo + product name + collapse, aligned in one row */}
       <div className={`flex items-center gap-2.5 mb-4 mt-0.5 ${rail ? "justify-center" : ""}`}>
         <div className="w-9 h-9 shrink-0 rounded-xl bg-cyan-400/20 flex items-center justify-center border border-cyan-300/30">
           <Brain className="w-5 h-5 text-cyan-300" />
@@ -188,6 +193,7 @@ function SidebarContent({
         )}
       </div>
 
+      {/* Grouped nav: 40px items, 4px gaps, active = tinted bg + 3px left accent */}
       <nav className={`space-y-1 flex-1 min-h-0 overflow-y-auto overflow-x-hidden py-1 ${rail ? "flex flex-col items-center" : ""}`}>
         {GROUPS.map((group) => (
           <div key={group.label} className={rail ? "contents" : "mb-2"}>
@@ -206,12 +212,12 @@ function SidebarContent({
                   onClick={onNavigate}
                   title={rail ? item.label : undefined}
                   aria-current={active ? "page" : undefined}
-                  className={`flex items-center gap-3 rounded-xl text-[14px] font-medium transition-all ${
-                    rail ? "w-11 h-11 justify-center px-0 my-0.5" : "px-4 py-2"
+                  className={`flex items-center gap-3 rounded-xl text-[14px] font-medium transition-all border-l-[3px] ${
+                    rail ? "w-11 h-11 justify-center px-0 my-0.5" : "min-h-10 px-3.5"
                   } ${
                     active
-                      ? "bg-gradient-to-r from-indigo-600/80 to-indigo-500/50 text-white shadow-lg shadow-indigo-900/40 border border-indigo-400/20"
-                      : "text-slate-300 hover:bg-white/5 hover:text-white"
+                      ? "bg-indigo-500/25 text-white border-indigo-300/90 shadow-sm"
+                      : "border-transparent text-slate-300 hover:bg-white/5 hover:text-white"
                   }`}
                 >
                   <Icon className="w-5 h-5 shrink-0" />
@@ -230,12 +236,12 @@ function SidebarContent({
           onClick={onNavigate}
           title={rail ? "Settings" : undefined}
           aria-current={pathname.startsWith("/settings") ? "page" : undefined}
-          className={`flex items-center gap-3 rounded-xl text-[14px] font-medium transition-all ${
-            rail ? "w-11 h-11 justify-center" : "px-4 py-2"
+          className={`flex items-center gap-3 rounded-xl text-[14px] font-medium transition-all border-l-[3px] ${
+            rail ? "w-11 h-11 justify-center" : "min-h-10 px-3.5"
           } ${
             pathname.startsWith("/settings")
-              ? "bg-gradient-to-r from-indigo-600/80 to-indigo-500/50 text-white shadow-lg shadow-indigo-900/40 border border-indigo-400/20"
-              : "text-slate-300 hover:bg-white/5 hover:text-white"
+              ? "bg-indigo-500/25 text-white border-indigo-300/90 shadow-sm"
+              : "border-transparent text-slate-300 hover:bg-white/5 hover:text-white"
           }`}
         >
           <Settings className="w-5 h-5 shrink-0" />
@@ -243,14 +249,20 @@ function SidebarContent({
         </Link>
       </div>
 
-      {!rail && (
-        <div className="mt-3 shrink-0 rounded-2xl p-3 bg-black/40 border border-indigo-500/20 relative overflow-hidden [@media(max-height:640px)]:hidden">
-          <Sparkles className="w-4 h-4 text-indigo-300 mb-1.5" />
-          <p className="text-[12px] leading-snug text-slate-200">
-            Small steps every day lead to big achievements!
-          </p>
+      {/* Footer: avatar + level + streak — real state only */}
+      <div className={`mt-3 pt-3 border-t border-white/10 shrink-0 flex items-center gap-2.5 ${rail ? "justify-center" : ""}`}>
+        <div className="w-9 h-9 shrink-0 rounded-full bg-indigo-500/30 border border-indigo-400/30 flex items-center justify-center text-[15px]">
+          👤
         </div>
-      )}
+        {!rail && (
+          <div className="min-w-0 flex-1 leading-tight">
+            <div className="text-[12.5px] font-bold text-white truncate">{learnerLevel(s)}</div>
+            <div className="text-[11px] text-slate-400 flex items-center gap-1">
+              <Flame className="w-3 h-3 text-orange-400 shrink-0" /> {streakCount(s)} day streak
+            </div>
+          </div>
+        )}
+      </div>
     </>
   );
 }
