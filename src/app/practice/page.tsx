@@ -3,9 +3,10 @@ import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import TopHeader from "../../components/TopHeader";
 import { toast } from "../../components/Toaster";
-import { logActivity, recordStudy, useProgress } from "../../lib/store";
+import { logActivity, recordStudy, useProgress, recordQuiz } from "../../lib/store";
 import { runCode, availableLanguages } from "../../lib/runner";
-import { Play, Send, Lightbulb, ScanSearch, Copy, Check } from "lucide-react";
+import { PRACTICE_CATS, PRACTICE_BANK, PracticeQ } from "../../lib/curriculum";
+import { Play, Send, Lightbulb, ScanSearch, Copy, Check, ListChecks } from "lucide-react";
 
 const LANGS = [
   { id: "python", label: "Python", lang: "python", starter: "# Write your solution\ndef solve():\n    pass\n\nprint(solve())" },
@@ -48,7 +49,7 @@ export default function PracticePage() {
 function PracticeInner() {
   const topic = useSearchParams().get("topic") || "";
   const s = useProgress();
-  const [tab, setTab] = useState<"solve" | "analyze">("solve");
+  const [tab, setTab] = useState<"solve" | "analyze" | "drill">("solve");
   const [prob, setProb] = useState(PROBLEMS[0]);
   const [lang, setLang] = useState(LANGS[0]);
   const [code, setCode] = useState(LANGS[0].starter);
@@ -63,6 +64,35 @@ function PracticeInner() {
   const [status, setStatus] = useState("");
   const [supported, setSupported] = useState<string[]>(["python", "javascript"]);
   const langs = LANGS.filter((l) => supported.includes(l.id));
+
+  // ── Concept drill (§9): category × difficulty, real scoring ──
+  const [drillCat, setDrillCat] = useState("python");
+  const [drillDiff, setDrillDiff] = useState<"Easy" | "Medium" | "Hard">("Easy");
+  const [drillIdx, setDrillIdx] = useState(0);
+  const [drillPicks, setDrillPicks] = useState<Record<number, number>>({});
+  const drillSet: PracticeQ[] = PRACTICE_BANK.filter((q) => q.cat === drillCat && q.diff === drillDiff);
+  const drillQ = drillSet[drillIdx];
+  const drillRight = Object.entries(drillPicks).filter(([i, p]) => drillSet[Number(i)]?.answer === p).length;
+  const drillDone = Object.keys(drillPicks).length;
+
+  const drillAnswer = (o: number) => {
+    if (!drillQ || drillPicks[drillIdx] !== undefined) return;
+    setDrillPicks((p) => ({ ...p, [drillIdx]: o }));
+  };
+  const drillNext = () => {
+    if (drillIdx < drillSet.length - 1) setDrillIdx(drillIdx + 1);
+    else if (drillSet.length > 0 && drillDone === drillSet.length) {
+      // session finished → record the real score once
+      recordQuiz(`Practice: ${PRACTICE_CATS.find((c) => c.id === drillCat)?.label} (${drillDiff})`, drillRight, drillSet.length, 0);
+      logActivity(`Practice drill: ${PRACTICE_CATS.find((c) => c.id === drillCat)?.label}`, `${drillRight}/${drillSet.length} correct • ${drillDiff}`, "practice");
+      toast(`Drill complete: ${drillRight}/${drillSet.length} ✓`);
+      setDrillIdx(0);
+      setDrillPicks({});
+    }
+  };
+  const drillSwitch = (cat: string, diff: "Easy" | "Medium" | "Hard") => {
+    setDrillCat(cat); setDrillDiff(diff); setDrillIdx(0); setDrillPicks({});
+  };
 
   useEffect(() => {
     availableLanguages().then(setSupported).catch(() => setSupported(["python", "javascript"]));
@@ -158,15 +188,102 @@ function PracticeInner() {
   return (
     <div>
       <TopHeader title="Coding Practice" subtitle="Real execution (Piston sandbox) + AI analyzer — never runs on our server" />
-      <div className="flex gap-2 mb-4">
-        {(["solve", "analyze"] as const).map((t) => (
+      <div className="flex gap-2 mb-4 flex-wrap">
+        {([["solve", "🧩 Solve Problems"], ["analyze", "🔍 AI Code Analyzer"], ["drill", "📚 Concept Drill"]] as const).map(([t, label]) => (
           <button key={t} onClick={() => setTab(t)} className={`px-5 py-2 rounded-xl text-[13px] font-bold transition ${tab === t ? "primary-gradient text-white shadow" : "card text-slate-500"}`}>
-            {t === "solve" ? "🧩 Solve Problems" : "🔍 AI Code Analyzer"}
+            {label}
           </button>
         ))}
       </div>
 
-      {tab === "solve" ? (
+      {tab === "drill" ? (
+        <div className="grid grid-cols-1 xl:grid-cols-[240px_1fr] gap-4">
+          {/* Category + difficulty selector */}
+          <div className="space-y-3">
+            <div className="card p-4">
+              <b className="text-[13px] text-[#101a3f] flex items-center gap-1.5 mb-2"><ListChecks className="w-4 h-4 text-indigo-500" /> Category</b>
+              <div className="space-y-1">
+                {PRACTICE_CATS.map((c) => (
+                  <button key={c.id} onClick={() => drillSwitch(c.id, drillDiff)} className={`w-full text-left px-3 py-2 rounded-lg text-[12.5px] font-semibold transition ${drillCat === c.id ? "bg-indigo-600 text-white" : "bg-slate-50 text-slate-600 hover:bg-slate-100"}`}>
+                    {c.icon} {c.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="card p-4">
+              <b className="text-[13px] text-[#101a3f] block mb-2">Difficulty</b>
+              <div className="flex gap-1.5">
+                {(["Easy", "Medium", "Hard"] as const).map((d) => (
+                  <button key={d} onClick={() => drillSwitch(drillCat, d)} className={`flex-1 py-2 rounded-lg text-[12px] font-bold transition ${drillDiff === d ? "bg-slate-900 text-white" : "bg-slate-50 text-slate-600 hover:bg-slate-100"}`}>{d}</button>
+                ))}
+              </div>
+              <p className="text-[11px] text-slate-400 mt-2">{drillSet.length} question{drillSet.length === 1 ? "" : "s"} in this set • attempts are logged.</p>
+            </div>
+          </div>
+
+          {/* Question card */}
+          <div className="card p-6">
+            {drillSet.length === 0 ? (
+              <div className="text-center py-10">
+                <div className="text-[36px] mb-2">🗂️</div>
+                <b className="text-[15px] text-[#101a3f]">No questions in this set yet</b>
+                <p className="text-[13px] text-slate-500 mt-1">Pick another category or difficulty — the bank grows as the curriculum expands.</p>
+              </div>
+            ) : !drillQ ? (
+              <div className="text-center py-10">
+                <div className="text-[36px] mb-2">🎉</div>
+                <b className="text-[15px] text-[#101a3f]">Drill finished: {drillRight}/{drillSet.length} correct</b>
+                <p className="text-[13px] text-slate-500 mt-1">Score saved to your progress. Retry or switch categories.</p>
+                <button onClick={() => { setDrillIdx(0); setDrillPicks({}); }} className="mt-4 px-5 py-2.5 rounded-xl primary-gradient text-white text-[13px] font-bold">Retry this set</button>
+              </div>
+            ) : (
+              <>
+                <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
+                  <span className="text-[11px] font-bold bg-indigo-50 border border-indigo-100 text-indigo-700 px-3 py-1 rounded-full">
+                    {PRACTICE_CATS.find((c) => c.id === drillCat)?.icon} {PRACTICE_CATS.find((c) => c.id === drillCat)?.label} • {drillDiff}
+                  </span>
+                  <span className="text-[12px] text-slate-500">Q {drillIdx + 1} / {drillSet.length} {drillDone > 0 && `• ${drillRight} correct`}</span>
+                </div>
+                <div className="h-[7px] bg-slate-100 rounded-full overflow-hidden mb-4">
+                  <div className="h-full bg-gradient-to-r from-indigo-500 to-blue-400 rounded-full transition-all" style={{ width: `${((drillIdx + 1) / drillSet.length) * 100}%` }} />
+                </div>
+                <div key={drillQ.id} className="pop-in">
+                  <h2 className="font-extrabold text-[16px] text-[#101a3f] mb-3">{drillQ.q}</h2>
+                  {drillQ.code && <pre className="bg-slate-50 border border-slate-100 rounded-xl p-3.5 text-[12.5px] font-mono text-slate-700 mb-4 whitespace-pre-wrap">{drillQ.code}</pre>}
+                  <div className="space-y-2.5">
+                    {drillQ.options.map((op, o) => {
+                      const pick = drillPicks[drillIdx];
+                      const revealed = pick !== undefined;
+                      const state = revealed
+                        ? o === drillQ.answer ? "border-green-400 bg-green-50" : o === pick ? "border-red-300 bg-red-50" : "border-slate-200"
+                        : "border-slate-200 hover:border-indigo-300 hover:-translate-y-0.5 hover:shadow-md";
+                      return (
+                        <button key={o} onClick={() => drillAnswer(o)} disabled={revealed} className={`w-full flex items-center gap-3 border rounded-xl px-4 py-3 text-left text-[13.5px] transition ${state}`}>
+                          <span className={`w-6 h-6 rounded-full border-2 flex items-center justify-center text-[11px] font-bold shrink-0 ${revealed && o === drillQ.answer ? "border-green-500 bg-green-500 text-white" : revealed && o === pick ? "border-red-400 bg-red-400 text-white" : "border-slate-300 text-slate-500"}`}>
+                            {["A", "B", "C", "D"][o]}
+                          </span>
+                          <span className="text-slate-700">{op}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {drillPicks[drillIdx] !== undefined && (
+                    <div className="mt-4 rounded-xl p-3.5 bg-indigo-50/70 border border-indigo-100 text-[13px] text-slate-700 pop-in">
+                      <b className="text-indigo-700">💡 Why: </b>{drillQ.why}
+                    </div>
+                  )}
+                  <div className="flex justify-between mt-5">
+                    <button onClick={() => setDrillIdx(Math.max(0, drillIdx - 1))} disabled={drillIdx === 0} className="px-5 py-2.5 rounded-xl bg-slate-100 text-slate-500 text-[13px] font-bold disabled:opacity-50">← Previous</button>
+                    <button onClick={drillNext} disabled={drillPicks[drillIdx] === undefined} className="px-5 py-2.5 rounded-xl primary-gradient text-white text-[13px] font-bold disabled:opacity-50">
+                      {drillIdx === drillSet.length - 1 ? "Finish & Save ✓" : "Next →"}
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      ) : tab === "solve" ? (
         <div className="grid grid-cols-1 xl:grid-cols-[1fr_1.4fr] gap-4">
           <div className="space-y-3">
             {PROBLEMS.map((p) => (

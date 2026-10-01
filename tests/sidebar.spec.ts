@@ -9,8 +9,8 @@ test.describe("sidebar", () => {
     await page.goto(`${BASE}/`, { waitUntil: "domcontentloaded" });
     const aside = page.locator("aside.hidden").first();
 
-    // all 11 nav links present, including Settings
-    await expect(aside.locator("nav a")).toHaveCount(11);
+    // all 17 grouped nav links present (Settings lives in the pinned footer)
+    await expect(aside.locator("nav a")).toHaveCount(17);
 
     const wide = (await aside.boundingBox())!.width;
     const toggle = aside.getByRole("button", { name: /Collapse sidebar|Expand sidebar/ });
@@ -28,8 +28,8 @@ test.describe("sidebar", () => {
     expect(narrow).toBeLessThan(wide);
 
     // every item still reachable in rail mode (icons with titles)
-    await expect(aside.locator("nav a")).toHaveCount(11);
-    await expect(aside.locator('nav a[title="Settings"]')).toHaveCount(1);
+    await expect(aside.locator("nav a")).toHaveCount(17);
+    await expect(aside.locator('a[title="Settings"]')).toHaveCount(1);
 
     // expands back
     const toggle2 = aside.getByRole("button", { name: /Expand sidebar/ });

@@ -4,11 +4,18 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Home,
+  GraduationCap,
   BookOpen,
+  Map,
   BotMessageSquare,
+  Mic,
+  Lightbulb,
+  FileCode,
   ClipboardList,
   FlaskConical,
+  Folder,
   BarChart3,
+  Trophy,
   Activity,
   FileText,
   Bookmark,
@@ -20,18 +27,47 @@ import {
   PanelLeftOpen,
 } from "lucide-react";
 
-const NAV = [
-  { href: "/", label: "Dashboard", icon: Home },
-  { href: "/learning-path", label: "Learning Path", icon: BookOpen },
-  { href: "/ai-tutor", label: "AI Tutor", icon: BotMessageSquare },
-  { href: "/quizzes", label: "Quizzes", icon: ClipboardList },
-  { href: "/practice", label: "Practice", icon: FlaskConical },
-  { href: "/progress", label: "Progress", icon: BarChart3 },
-  { href: "/activity", label: "Activity", icon: Activity },
-  { href: "/notes", label: "Notes", icon: FileText },
-  { href: "/saved", label: "Saved", icon: Bookmark },
-  { href: "/planner", label: "Study Planner", icon: CalendarCheck },
-  { href: "/settings", label: "Settings", icon: Settings },
+interface NavItem { href: string; label: string; icon: typeof Home }
+interface NavGroup { label: string; items: NavItem[] }
+
+const GROUPS: NavGroup[] = [
+  {
+    label: "Learn",
+    items: [
+      { href: "/", label: "Dashboard", icon: Home },
+      { href: "/courses", label: "Courses", icon: GraduationCap },
+      { href: "/learning-path", label: "Learning Path", icon: BookOpen },
+      { href: "/roadmap", label: "AI Roadmap", icon: Map },
+    ],
+  },
+  {
+    label: "AI Tutor",
+    items: [
+      { href: "/ai-tutor", label: "AI Tutor", icon: BotMessageSquare },
+      { href: "/interview", label: "AI Interview", icon: Mic },
+      { href: "/doubt", label: "Doubt Solver", icon: Lightbulb },
+      { href: "/code-explainer", label: "Code Explainer", icon: FileCode },
+    ],
+  },
+  {
+    label: "Practice",
+    items: [
+      { href: "/quizzes", label: "Quizzes", icon: ClipboardList },
+      { href: "/practice", label: "Practice", icon: FlaskConical },
+      { href: "/projects", label: "Projects", icon: Folder },
+    ],
+  },
+  {
+    label: "Track",
+    items: [
+      { href: "/progress", label: "Progress", icon: BarChart3 },
+      { href: "/achievements", label: "Achievements", icon: Trophy },
+      { href: "/activity", label: "Activity", icon: Activity },
+      { href: "/notes", label: "Notes", icon: FileText },
+      { href: "/saved", label: "Saved", icon: Bookmark },
+      { href: "/planner", label: "Study Planner", icon: CalendarCheck },
+    ],
+  },
 ];
 
 const RAIL_KEY = "ai-path-ui-rail";
@@ -65,7 +101,10 @@ export default function Sidebar({ mobileOpen, onClose }: { mobileOpen?: boolean;
       }
     };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("resize", onResize);
+      window.removeEventListener("keydown", onKey);
+    };
   }, []);
 
   // mobile drawer: Esc + close on navigation
@@ -150,47 +189,66 @@ function SidebarContent({
       </div>
 
       <nav className={`space-y-1 flex-1 ${rail ? "flex flex-col items-center" : ""}`}>
-        {NAV.map((item) => {
-          const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
-          const Icon = item.icon;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={onNavigate}
-              title={rail ? item.label : undefined}
-              aria-current={active ? "page" : undefined}
-              className={`flex items-center gap-3 rounded-xl text-[14px] font-medium transition-all ${
-                rail ? "w-11 h-11 justify-center px-0" : "px-4 py-2.5"
-              } ${
-                active
-                  ? "bg-gradient-to-r from-indigo-600/80 to-indigo-500/50 text-white shadow-lg shadow-indigo-900/40 border border-indigo-400/20"
-                  : "text-slate-300 hover:bg-white/5 hover:text-white"
-              }`}
-            >
-              <Icon className="w-5 h-5 shrink-0" />
-              {!rail && <span className="truncate">{item.label}</span>}
-            </Link>
-          );
-        })}
+        {GROUPS.map((group) => (
+          <div key={group.label} className={rail ? "contents" : "mb-2"}>
+            {!rail && (
+              <div className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-slate-400 px-4 pt-3 pb-1.5">
+                {group.label}
+              </div>
+            )}
+            {group.items.map((item) => {
+              const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={onNavigate}
+                  title={rail ? item.label : undefined}
+                  aria-current={active ? "page" : undefined}
+                  className={`flex items-center gap-3 rounded-xl text-[14px] font-medium transition-all ${
+                    rail ? "w-11 h-11 justify-center px-0 my-0.5" : "px-4 py-2"
+                  } ${
+                    active
+                      ? "bg-gradient-to-r from-indigo-600/80 to-indigo-500/50 text-white shadow-lg shadow-indigo-900/40 border border-indigo-400/20"
+                      : "text-slate-300 hover:bg-white/5 hover:text-white"
+                  }`}
+                >
+                  <Icon className="w-5 h-5 shrink-0" />
+                  {!rail && <span className="truncate">{item.label}</span>}
+                </Link>
+              );
+            })}
+          </div>
+        ))}
       </nav>
 
+      {/* Settings pinned so it is always reachable without scrolling */}
+      <div className={`pt-3 mt-2 border-t border-white/10 shrink-0 ${rail ? "flex justify-center" : ""}`}>
+        <Link
+          href="/settings"
+          onClick={onNavigate}
+          title={rail ? "Settings" : undefined}
+          aria-current={pathname.startsWith("/settings") ? "page" : undefined}
+          className={`flex items-center gap-3 rounded-xl text-[14px] font-medium transition-all ${
+            rail ? "w-11 h-11 justify-center" : "px-4 py-2"
+          } ${
+            pathname.startsWith("/settings")
+              ? "bg-gradient-to-r from-indigo-600/80 to-indigo-500/50 text-white shadow-lg shadow-indigo-900/40 border border-indigo-400/20"
+              : "text-slate-300 hover:bg-white/5 hover:text-white"
+          }`}
+        >
+          <Settings className="w-5 h-5 shrink-0" />
+          {!rail && <span className="truncate">Settings</span>}
+        </Link>
+      </div>
+
       {!rail && (
-        <div className="mt-4 shrink-0 rounded-2xl p-4 bg-black/40 border border-indigo-500/20 relative overflow-hidden [@media(max-height:700px)]:hidden">
-          <Sparkles className="w-4 h-4 text-indigo-300 mb-2" />
-          <p className="text-[13px] leading-snug text-slate-200">
-            Small steps
-            <br />
-            every day lead to
-            <br />
-            big achievements!
+        <div className="mt-3 shrink-0 rounded-2xl p-3 bg-black/40 border border-indigo-500/20 relative overflow-hidden [@media(max-height:640px)]:hidden">
+          <Sparkles className="w-4 h-4 text-indigo-300 mb-1.5" />
+          <p className="text-[12px] leading-snug text-slate-200">
+            Small steps every day lead to big achievements!
           </p>
-          <div className="mt-3 flex justify-end opacity-80">
-            <svg width="90" height="46" viewBox="0 0 90 46" fill="none" aria-hidden>
-              <path d="M5 42 L28 12 L45 30 L65 8 L85 42 Z" fill="#4f46e5" opacity="0.7" />
-              <path d="M65 8 L65 2 L71 4 L65 6" fill="#a5b4fc" />
-            </svg>
-          </div>
         </div>
       )}
     </>

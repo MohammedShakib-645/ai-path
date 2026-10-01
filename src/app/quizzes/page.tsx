@@ -4,7 +4,7 @@ import Link from "next/link";
 import ThemeToggle from "../../components/ThemeToggle";
 import SearchBox from "../../components/SearchBox";
 import ProfileName from "../../components/ProfileName";
-import { PYTHON_QUIZ, PYTHON_QUIZ_MEDIUM, QuizQ } from "../../lib/data";
+import { PYTHON_QUIZ, PYTHON_QUIZ_MEDIUM, PYTHON_QUIZ_HARD, QuizQ } from "../../lib/data";
 import { useProgress, recordQuiz, recordMistakes, avgScore, learnerLevel } from "../../lib/store";
 import { toast } from "../../components/Toaster";
 import {
@@ -16,12 +16,16 @@ export default function QuizzesPage() {
   const prog = useProgress();
   const avg = avgScore(prog);
   const mediumUnlocked = avg >= 60 || learnerLevel(prog) !== "Beginner";
-  const [tier, setTier] = useState<"easy" | "medium" | "ai">("easy");
+  const hardUnlocked = avg >= 80 || learnerLevel(prog) === "Advanced";
+  const [tier, setTier] = useState<"easy" | "medium" | "hard" | "ai">("easy");
   const [aiBank, setAiBank] = useState<QuizQ[]>([]);
-  const BANK = tier === "easy" ? PYTHON_QUIZ : tier === "medium" ? PYTHON_QUIZ_MEDIUM : aiBank;
+  const BANK = tier === "easy" ? PYTHON_QUIZ : tier === "medium" ? PYTHON_QUIZ_MEDIUM : tier === "hard" ? PYTHON_QUIZ_HARD : aiBank;
 
   const [idx, setIdx] = useState(0);
   const [answers, setAnswers] = useState<Record<number, number>>({});
+  // mixed question types: multi-select answers + typed (fill-in-the-blank) answers
+  const [multiAnswers, setMultiAnswers] = useState<Record<number, number[]>>({});
+  const [fillAnswers, setFillAnswers] = useState<Record<number, string>>({});
   // security: an answer locks the moment it is picked (no peeking, no changing)
   const [locked, setLocked] = useState<Record<number, boolean>>({});
   const [showPreview, setShowPreview] = useState(false);
@@ -41,8 +45,9 @@ export default function QuizzesPage() {
     return () => clearInterval(t);
   }, []);
 
-  const switchTier = (t: "easy" | "medium" | "ai") => {
+  const switchTier = (t: "easy" | "medium" | "hard" | "ai") => {
     if (t === "medium" && !mediumUnlocked) return;
+    if (t === "hard" && !hardUnlocked) return;
     if (t === "ai" && aiBank.length === 0) return;
     setTier(t);
     reset();
@@ -52,11 +57,36 @@ export default function QuizzesPage() {
     startedAt.current = Date.now();
     setIdx(0);
     setAnswers({});
+    setMultiAnswers({});
+    setFillAnswers({});
     setLocked({});
     setShowPreview(false);
     setSecs(300);
     setSubmitted(false);
     setAnalysis(null);
+  };
+
+  // ── mixed-type scoring: mcq/tf index, multi all-indexes, fill accepted text ──
+  const isCorrectAt = (i: number): boolean => {
+    const q = BANK[i];
+    if (!q) return false;
+    if (q.type === "multi") {
+      const picked = (multiAnswers[i] ?? []).slice().sort((a, b) => a - b).join(",");
+      const want = (q.answers ?? [q.answer]).slice().sort((a, b) => a - b).join(",");
+      return picked !== "" && picked === want;
+    }
+    if (q.type === "fill") {
+      const typed = (fillAnswers[i] ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+      return typed !== "" && (q.accept ?? []).map((a) => a.trim().toLowerCase().replace(/\s+/g, " ")).includes(typed);
+    }
+    return answers[i] === q.answer;
+  };
+  const isAnsweredAt = (i: number): boolean => {
+    const q = BANK[i];
+    if (!q) return false;
+    if (q.type === "multi") return (multiAnswers[i] ?? []).length > 0;
+    if (q.type === "fill") return (fillAnswers[i] ?? "").trim().length > 0;
+    return answers[i] !== undefined;
   };
 
   const generate = async () => {
@@ -90,9 +120,9 @@ export default function QuizzesPage() {
   const ss = String(secs % 60).padStart(2, "0");
   const q = BANK[idx];
   const total = BANK.length;
-  const picked = answers[idx] ?? null;
-  const correct = Object.entries(answers).filter(([k, v]) => BANK[Number(k)].answer === v).length;
-  const answered = Object.keys(answers).length;
+  const picked = q && (q.type === "multi" || q.type === "fill") ? null : answers[idx] ?? null;
+  const correct = BANK.reduce((n, _, i) => (isCorrectAt(i) ? n + 1 : n), 0);
+  const answered = BANK.reduce((n, _, i) => (isAnsweredAt(i) ? n + 1 : n), 0);
   const incorrect = answered - correct;
   const skipped = total - answered;
   // during the quiz the ring tracks answered progress (no answer leaking!),
@@ -101,10 +131,35 @@ export default function QuizzesPage() {
 
   const choose = (o: number) => {
     if (submitted || locked[idx]) return; // one shot: once picked the answer is locked
+    const qt = BANK[idx]?.type;
+    if (qt === "multi") {
+      // multi-select: toggle freely, lock only on Confirm below
+      setMultiAnswers((m) => {
+        const cur = m[idx] ?? [];
+        return { ...m, [idx]: cur.includes(o) ? cur.filter((x) => x !== o) : [...cur, o] };
+      });
+      return;
+    }
     setAnswers((a) => ({ ...a, [idx]: o }));
     setLocked((l) => ({ ...l, [idx]: true }));
     if (idx < total - 1) {
       // brief pause so the user sees the lock, then move to the next question
+      if (advTimer.current) window.clearTimeout(advTimer.current);
+      advTimer.current = window.setTimeout(() => setIdx((i) => (i === idx ? i + 1 : i)), 700);
+    }
+  };
+  const confirmMulti = () => {
+    if (submitted || locked[idx] || !(multiAnswers[idx] ?? []).length) return;
+    setLocked((l) => ({ ...l, [idx]: true }));
+    if (idx < total - 1) {
+      if (advTimer.current) window.clearTimeout(advTimer.current);
+      advTimer.current = window.setTimeout(() => setIdx((i) => (i === idx ? i + 1 : i)), 700);
+    }
+  };
+  const confirmFill = () => {
+    if (submitted || locked[idx] || !(fillAnswers[idx] ?? "").trim()) return;
+    setLocked((l) => ({ ...l, [idx]: true }));
+    if (idx < total - 1) {
       if (advTimer.current) window.clearTimeout(advTimer.current);
       advTimer.current = window.setTimeout(() => setIdx((i) => (i === idx ? i + 1 : i)), 700);
     }
@@ -114,25 +169,31 @@ export default function QuizzesPage() {
     setIdx(n);
   };
   const submit = async () => {
-    const label = tier === "ai" ? `AI Quiz: ${genTopic}` : `Python Basics Quiz (${tier})`;
+    const label = tier === "ai" ? `AI Quiz: ${genTopic}` : tier === "easy" ? "Python Basics Quiz (easy)" : tier === "medium" ? "Python Basics Quiz (medium)" : "Python Advanced Quiz (hard)";
     // honest study time: seconds actually spent on this attempt (capped at 10 min)
     const spent = Math.min(600, Math.max(1, Math.round((Date.now() - startedAt.current) / 1000)));
     recordQuiz(label, correct, total, spent);
     // mistake analysis feeds the LearningEngine (weak topics, tutor context)
     recordMistakes(
-      Object.entries(answers)
-        .filter(([k, v]) => BANK[Number(k)].answer !== v)
-        .map(([k, v]) => ({
-          q: BANK[Number(k)].q,
-          picked: BANK[Number(k)].options[v] ?? "?",
-          correct: BANK[Number(k)].options[BANK[Number(k)].answer] ?? "?",
+      BANK.map((qq, i) => ({ qq, i }))
+        .filter(({ qq, i }) => isAnsweredAt(i) && !isCorrectAt(i))
+        .map(({ qq, i }) => ({
+          q: qq.q,
+          picked: qq.type === "fill"
+            ? (fillAnswers[i] ?? "")
+            : qq.type === "multi"
+              ? (multiAnswers[i] ?? []).map((x) => qq.options[x] ?? "?").join(", ")
+              : qq.options[answers[i] ?? -1] ?? "?",
+          correct: qq.type === "fill"
+            ? (qq.accept?.[0] ?? "?")
+            : (qq.options[qq.type === "multi" ? (qq.answers?.[0] ?? qq.answer) : qq.answer] ?? "?"),
           topic: label,
         }))
     );
     setSubmitted(true);
     setAnalysis(null);
     try {
-      const wrong = Object.entries(answers).filter(([k, v]) => BANK[Number(k)].answer !== v).length;
+      const wrong = BANK.reduce((n, _, i) => (isAnsweredAt(i) && !isCorrectAt(i) ? n + 1 : n), 0);
       const res = await fetch("/api/ai/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -185,19 +246,20 @@ export default function QuizzesPage() {
             <div className="flex-1 min-w-[200px]">
               <div className="font-extrabold text-[18px]">Python Basics Quiz</div>
               <div className="text-[12px] text-white/90">Answer the following questions. Each question has 1 mark.</div>
-              <div className="flex gap-1.5 mt-2">
-                {(["easy", "medium", "ai"] as const).map((t) => {
-                  const locked = t === "medium" && !mediumUnlocked;
+              <div className="flex gap-1.5 mt-2 flex-wrap">
+                {(["easy", "medium", "hard", "ai"] as const).map((t) => {
+                  const lockedT = t === "medium" && !mediumUnlocked;
+                  const lockedH = t === "hard" && !hardUnlocked;
                   const aiLocked = t === "ai" && aiBank.length === 0;
                   return (
                     <button
                       key={t}
                       onClick={() => switchTier(t)}
-                      disabled={locked || aiLocked}
-                      title={locked ? `Unlocks at 60% average (now ${avg}%)` : aiLocked ? "Generate an AI quiz below first" : ""}
-                      className={`text-[11px] font-bold px-3 py-1 rounded-full transition ${tier === t ? "bg-white text-indigo-700" : "bg-white/20 text-white hover:bg-white/30"} ${locked || aiLocked ? "opacity-70" : ""}`}
+                      disabled={lockedT || lockedH || aiLocked}
+                      title={lockedT ? `Unlocks at 60% average (now ${avg}%)` : lockedH ? `Unlocks at 80% average or Advanced level (now ${avg}%)` : aiLocked ? "Generate an AI quiz below first" : ""}
+                      className={`text-[11px] font-bold px-3 py-1 rounded-full transition ${tier === t ? "bg-white text-indigo-700" : "bg-white/20 text-white hover:bg-white/30"} ${lockedT || lockedH || aiLocked ? "opacity-70" : ""}`}
                     >
-                      {t === "easy" ? "Easy" : t === "medium" ? `Medium ${locked ? "🔒" : ""}` : `AI ${aiLocked ? "🔒" : ""}`}
+                      {t === "easy" ? "Easy" : t === "medium" ? `Medium ${lockedT ? "🔒" : ""}` : t === "hard" ? `Hard ${lockedH ? "🔒" : ""}` : `AI ${aiLocked ? "🔒" : ""}`}
                     </button>
                   );
                 })}
@@ -221,13 +283,48 @@ export default function QuizzesPage() {
                   </span>
                 )}
               </div>
+              {q.scenario && (
+                <div className="mb-4 ml-14 rounded-xl border border-amber-200 bg-amber-50/70 p-3 text-[12.5px] text-amber-900">
+                  <b className="block text-[11px] uppercase tracking-wide text-amber-600 mb-0.5">Scenario</b>
+                  {q.scenario}
+                </div>
+              )}
               {q.code && (
                 <pre className="bg-slate-50 border border-slate-100 rounded-xl p-4 text-[13px] font-mono text-slate-700 mb-4 whitespace-pre-wrap ml-14">{q.code}</pre>
               )}
+              {q.type === "fill" ? (
+                <div className="ml-14 space-y-3">
+                  <p className="text-[12px] text-slate-500">Type your answer — not case-sensitive.</p>
+                  <div className="flex gap-2">
+                    <input
+                      value={fillAnswers[idx] ?? ""}
+                      onChange={(e) => !locked[idx] && !submitted && setFillAnswers((f) => ({ ...f, [idx]: e.target.value }))}
+                      onKeyDown={(e) => { if (e.key === "Enter") confirmFill(); }}
+                      disabled={locked[idx] || submitted}
+                      placeholder="Your answer…"
+                      className="flex-1 border border-slate-200 rounded-xl px-4 py-3 text-[14px] outline-none disabled:bg-slate-50"
+                    />
+                    <button
+                      onClick={confirmFill}
+                      disabled={locked[idx] || submitted || !(fillAnswers[idx] ?? "").trim()}
+                      className="px-5 py-3 rounded-xl primary-gradient text-white text-[13px] font-bold disabled:opacity-50"
+                    >
+                      Submit
+                    </button>
+                  </div>
+                  {submitted && (
+                    <p className="text-[12.5px] rounded-lg border px-3 py-2 bg-green-50 border-green-200 text-green-800">
+                      <b>Correct answer:</b> {q.accept?.[0]} — {q.tip}
+                    </p>
+                  )}
+                </div>
+              ) : (
               <div className="space-y-3">
                 {q.options.map((op, o) => {
-                  const isPick = picked === o;
-                  const isAns = o === q.answer;
+                  const isMulti = q.type === "multi";
+                  const pickedSet = multiAnswers[idx] ?? [];
+                  const isPick = isMulti ? pickedSet.includes(o) : picked === o;
+                  const isAns = isMulti ? (q.answers ?? [q.answer]).includes(o) : o === q.answer;
                   const reveal = submitted; // correctness only after the exam is submitted
                   const isLocked = locked[idx] || submitted;
                   const state = reveal
@@ -246,13 +343,13 @@ export default function QuizzesPage() {
                       disabled={isLocked}
                       className={`w-full flex items-center gap-3 border rounded-xl px-4 py-3.5 text-left text-[14px] transition hover:-translate-y-0.5 hover:shadow-md disabled:hover:translate-y-0 disabled:hover:shadow-none ${state}`}
                     >
-                      <span className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                      <span className={`${isMulti ? "w-6 h-6 rounded-md" : "w-6 h-6 rounded-full"} border-2 flex items-center justify-center shrink-0 ${
                         reveal && isAns ? "border-green-500 bg-green-500"
                           : reveal && isPick ? "border-red-400 bg-red-400"
                             : isPick ? "border-indigo-500 bg-indigo-500" : "border-slate-300"}`}>
                         {isPick && <span className="w-2 h-2 rounded-full bg-white" />}
                       </span>
-                      <span className="font-semibold text-slate-500">{["A.", "B.", "C.", "D."][o]}</span>
+                      {!isMulti && <span className="font-semibold text-slate-500">{q.type === "tf" ? "" : ["A.", "B.", "C.", "D."][o]}</span>}
                       <span className={reveal && isAns ? "text-green-800 font-medium" : isPick ? "font-semibold text-slate-700" : "text-slate-700"}>{op}</span>
                       {reveal && isAns && <CheckCircle2 className="w-5 h-5 text-green-500 ml-auto shrink-0" />}
                       {reveal && isPick && !isAns && <XCircle className="w-5 h-5 text-red-400 ml-auto shrink-0" />}
@@ -260,7 +357,17 @@ export default function QuizzesPage() {
                     </button>
                   );
                 })}
+                {q.type === "multi" && !locked[idx] && !submitted && (
+                  <button
+                    onClick={confirmMulti}
+                    disabled={!(multiAnswers[idx] ?? []).length}
+                    className="w-full py-3 rounded-xl primary-gradient text-white text-[13px] font-bold disabled:opacity-50"
+                  >
+                    Confirm {multiAnswers[idx]?.length ?? 0} answer{(multiAnswers[idx]?.length ?? 0) === 1 ? "" : "s"}
+                  </button>
+                )}
               </div>
+              )}
             </div>
             <div className="flex justify-between mt-6 gap-3">
               <button
@@ -309,24 +416,38 @@ export default function QuizzesPage() {
                 {showPreview && (
                   <div className="stagger px-4 pb-4 space-y-3 max-h-[460px] overflow-y-auto">
                     {BANK.map((qq, i) => {
-                      const yours = answers[i];
+                      const okQ = isCorrectAt(i);
+                      const answeredQ = isAnsweredAt(i);
+                      const yours = qq.type === "fill" ? fillAnswers[i] : qq.type === "multi" ? (multiAnswers[i] ?? []).map((x) => qq.options[x]).join(", ") : answers[i] !== undefined ? qq.options[answers[i]] : undefined;
                       return (
                         <div key={i} className="rounded-xl border border-slate-200 p-3.5">
-                          <div className="text-[13px] font-bold text-[#101a3f] mb-2">Q{i + 1}. {qq.q}</div>
-                          <div className="space-y-1.5">
-                            {qq.options.map((op, o) => {
-                              const right = o === qq.answer;
-                              const mine = o === yours;
-                              return (
-                                <div key={o} className={`flex items-center gap-2 text-[12px] rounded-lg px-2.5 py-1.5 border ${right ? "border-green-300 bg-green-50 text-green-800 font-semibold" : mine ? "border-red-300 bg-red-50 text-red-700" : "border-slate-100 text-slate-500"}`}>
-                                  <span className="font-bold">{["A", "B", "C", "D"][o]}.</span>
-                                  <span>{op}</span>
-                                  {right && <span className="ml-auto text-[10px] font-extrabold uppercase tracking-wide text-green-600 shrink-0">{mine ? "Correct ✓" : "Correct answer"}</span>}
-                                  {mine && !right && <span className="ml-auto text-[10px] font-extrabold uppercase tracking-wide text-red-500 shrink-0">Your pick</span>}
-                                </div>
-                              );
-                            })}
+                          <div className="text-[13px] font-bold text-[#101a3f] mb-2 flex items-center gap-2">
+                            Q{i + 1}. {qq.q}
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${okQ ? "bg-green-100 text-green-700" : answeredQ ? "bg-red-100 text-red-600" : "bg-slate-100 text-slate-500"}`}>
+                              {okQ ? "Correct ✓" : answeredQ ? "Wrong ✗" : "Skipped"}
+                            </span>
                           </div>
+                          <div className="space-y-1.5">
+                            {qq.type === "fill" ? (
+                              <div className="text-[12px] rounded-lg px-2.5 py-1.5 border border-green-300 bg-green-50 text-green-800 font-semibold">
+                                <b>Accepted:</b> {qq.accept?.join(" / ")} {yours && <span className="text-slate-500 font-normal">— you typed: “{yours}”</span>}
+                              </div>
+                            ) : (
+                              qq.options.map((op, o) => {
+                                const right = qq.type === "multi" ? (qq.answers ?? [qq.answer]).includes(o) : o === qq.answer;
+                                const mine = qq.type === "multi" ? (multiAnswers[i] ?? []).includes(o) : answers[i] === o;
+                                return (
+                                  <div key={o} className={`flex items-center gap-2 text-[12px] rounded-lg px-2.5 py-1.5 border ${right ? "border-green-300 bg-green-50 text-green-800 font-semibold" : mine ? "border-red-300 bg-red-50 text-red-700" : "border-slate-100 text-slate-500"}`}>
+                                    <span className="font-bold">{["A", "B", "C", "D"][o]}.</span>
+                                    <span>{op}</span>
+                                    {right && <span className="ml-auto text-[10px] font-extrabold uppercase tracking-wide text-green-600 shrink-0">{mine ? "Correct ✓" : "Correct answer"}</span>}
+                                    {mine && !right && <span className="ml-auto text-[10px] font-extrabold uppercase tracking-wide text-red-500 shrink-0">Your pick</span>}
+                                  </div>
+                                );
+                              })
+                            )}
+                          </div>
+                          <p className="text-[11.5px] text-slate-500 mt-2 border-t border-slate-100 pt-2"><b className="text-indigo-600">Explanation:</b> {qq.tip}</p>
                         </div>
                       );
                     })}
@@ -378,8 +499,8 @@ export default function QuizzesPage() {
             </div>
             <div className="flex gap-2 mt-3 items-center">
               {BANK.map((_, i) => {
-                const ans = i in answers;
-                const ok = ans && answers[i] === BANK[i].answer;
+                const ans = isAnsweredAt(i);
+                const ok = ans && isCorrectAt(i);
                 return (
                   <button
                     key={i}
@@ -398,17 +519,20 @@ export default function QuizzesPage() {
           <div className="card p-5 text-[13px]">
             <h3 className="font-bold text-[15px] text-[#101a3f] mb-3 flex items-center gap-2">ⓘ Quiz Information</h3>
             <div className="space-y-2.5 text-slate-600">
-              <div className="flex justify-between items-center"><span>Topic</span><b className="text-[#101a3f]">{tier === "ai" ? `✨ ${genTopic}` : "🐍 Python Basics"}</b></div>
+              <div className="flex justify-between items-center"><span>Topic</span><b className="text-[#101a3f]">{tier === "ai" ? `✨ ${genTopic}` : tier === "hard" ? "🐍 Python Advanced" : "🐍 Python Basics"}</b></div>
               <div className="flex justify-between"><span>Total Questions</span><b className="text-[#101a3f]">{total}</b></div>
               <div className="flex justify-between"><span>Time per Question</span><b className="text-[#101a3f]">1 minute</b></div>
               <div className="flex justify-between items-center">
                 <span>Difficulty</span>
-                <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${tier === "easy" ? "bg-green-100 text-green-700" : tier === "medium" ? "bg-amber-100 text-amber-700" : "bg-indigo-100 text-indigo-700"}`}>
-                  {tier === "easy" ? "Easy" : tier === "medium" ? "Medium" : `AI ${genDiff}`}
+                <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${tier === "easy" ? "bg-green-100 text-green-700" : tier === "medium" ? "bg-amber-100 text-amber-700" : tier === "hard" ? "bg-red-100 text-red-700" : "bg-indigo-100 text-indigo-700"}`}>
+                  {tier === "easy" ? "Easy" : tier === "medium" ? "Medium" : tier === "hard" ? "Hard" : `AI ${genDiff}`}
                 </span>
               </div>
               {!mediumUnlocked && (
                 <p className="text-[11px] text-slate-400 bg-slate-50 rounded-lg p-2">Medium unlocks at 60% average — now {avg}%.</p>
+              )}
+              {mediumUnlocked && !hardUnlocked && (
+                <p className="text-[11px] text-slate-400 bg-slate-50 rounded-lg p-2">Hard unlocks at 80% average or Advanced level — now {avg}%.</p>
               )}
             </div>
           </div>

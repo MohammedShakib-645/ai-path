@@ -18,6 +18,10 @@ export interface Mistake { q: string; picked: string; correct: string; topic: st
 export interface ProgressState {
   onboarded: boolean;
   done: number[];
+  /** Completed course lesson ids (curriculum.ts lesson.id) — real course progress. */
+  lessons?: string[];
+  /** Completed project ids (curriculum.ts PROJECTS[].id). */
+  projects?: string[];
   attempts: QuizAttempt[];
   mistakes: Mistake[];
   activity: ActivityItem[];
@@ -75,6 +79,7 @@ function seed(): ProgressState {
   return {
     onboarded: false,
     done: [],
+    lessons: [],
     attempts: [],
     mistakes: [],
     activity: [],
@@ -137,7 +142,7 @@ function load(): ProgressState {
 let cache: ProgressState | null = null;
 // Deterministic first-render snapshot: identical on server and client,
 // so React hydration never mismatches. Real data loads after mount.
-const SSR_SNAPSHOT: ProgressState = { onboarded: false, done: [], attempts: [], mistakes: [], activity: [], streak: [], labHours: 0, studyMins: 0, goal: "", chats: [], notes: [], bookmarks: [], plan: null, prefs: { level: "Beginner", language: "Python", goal: "", dailyMins: 30, difficulty: "Adaptive", respLength: "Short", style: "Examples first", codeLang: "Python" } };
+const SSR_SNAPSHOT: ProgressState = { onboarded: false, done: [], lessons: [], attempts: [], mistakes: [], activity: [], streak: [], labHours: 0, studyMins: 0, goal: "", chats: [], notes: [], bookmarks: [], plan: null, prefs: { level: "Beginner", language: "Python", goal: "", dailyMins: 30, difficulty: "Adaptive", respLength: "Short", style: "Examples first", codeLang: "Python" } };
 let hydrated = false;
 const listeners = new Set<() => void>();
 function get(): ProgressState {
@@ -243,6 +248,39 @@ export function toggleUnit(id: number) {
     done,
     activity,
   });
+}
+
+/** Course lesson completion (id from curriculum.ts). Returns true = now completed. */
+export function toggleLesson(id: string): boolean {
+  const s = ensure();
+  const cur = s.lessons ?? [];
+  const has = cur.includes(id);
+  const lessons = has ? cur.filter((x) => x !== id) : [...cur, id];
+  touchStreak(s);
+  const lessonTitle = lessonTitleOf(id);
+  const activity: ActivityItem[] = has
+    ? s.activity
+    : [{ text: `Lesson: ${lessonTitle}`, detail: `Course lesson completed`, at: Date.now(), kind: "lesson" as const }, ...s.activity].slice(0, 20);
+  set({ ...s, lessons, activity });
+  return !has;
+}
+
+function lessonTitleOf(id: string): string {
+  try {
+    // lazy import avoided — map kept small here; full titles come from curriculum at call sites
+    return id.replace(/^lv\d+-/, "").replace(/-/g, " ");
+  } catch { return id; }
+}
+
+/** Project completion (id from curriculum PROJECTS). Returns true = now completed. */
+export function toggleProject(id: string): boolean {
+  const s = ensure();
+  const cur = s.projects ?? [];
+  const has = cur.includes(id);
+  const projects = has ? cur.filter((x) => x !== id) : [...cur, id];
+  touchStreak(s);
+  set({ ...s, projects, activity: has ? s.activity : [{ text: `Project completed: ${id.replace(/-/g, " ")}`, detail: "Portfolio project finished", at: Date.now(), kind: "unit" as const }, ...s.activity].slice(0, 20) });
+  return !has;
 }
 
 /**

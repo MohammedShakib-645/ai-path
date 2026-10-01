@@ -9,7 +9,7 @@ export default function StartPage() {
   const s = useProgress();
   const r = useRouter();
   const [name, setName] = useState("");
-  const [goal, setGoal] = useState("Learn Python and build real AI projects");
+  const [goal, setGoal] = useState("Learn AI from Python to AI Agents");
   const [level, setLevel] = useState("Beginner");
   const [language, setLanguage] = useState("Python");
   const [dailyMins, setDailyMins] = useState(45);
@@ -51,7 +51,7 @@ export default function StartPage() {
           </div>
           <div>
             <label className="text-[13px] font-bold">2. What do you want to achieve?</label>
-            <input value={goal} onChange={(e) => setGoal(e.target.value)} className={`${field} mt-1`} placeholder="e.g. Learn Python for AI/ML" />
+            <input value={goal} onChange={(e) => setGoal(e.target.value)} className={`${field} mt-1`} placeholder="e.g. Learn Machine Learning, Master Deep Learning, Build AI Agents" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>

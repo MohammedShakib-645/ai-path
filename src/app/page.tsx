@@ -5,12 +5,17 @@ import TopHeader from "../components/TopHeader";
 import { toast } from "../components/Toaster";
 import {
   useProgress, completionInt, UNITS, nextUnit, relTime, setGoal,
-  streakCount, learnerLevel,
+  streakCount, learnerLevel, avgScore,
 } from "../lib/store";
 import { nextAction, weakTopics, dailyBrief } from "../lib/engine";
 import {
+  SKILL_DOMAINS, domainPct, nextLesson, ALL_LESSONS, PROJECTS, ACHIEVEMENTS,
+  unlockedIds, LEVELS, coursePct, totalDone, TOTAL_LESSONS,
+} from "../lib/curriculum";
+import {
   BookOpen, BotMessageSquare, ClipboardList, FlaskConical,
   CheckCircle2, ArrowRight, Target, Zap, Clock, Flame, Sparkles,
+  Trophy, Folder, BarChart3,
 } from "lucide-react";
 
 function Ring({ pct, size = 112 }: { pct: number; size?: number }) {
@@ -195,6 +200,133 @@ export default function Dashboard() {
               <div className="text-right text-[11px] text-slate-500 mt-0.5">{Math.min(5, streak)}/5</div>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Skill mastery + quiz performance + achievements */}
+      <div className="stagger grid grid-cols-1 xl:grid-cols-3 gap-4 mb-4">
+        {/* Topic mastery from real course progress */}
+        <div className="card p-5">
+          <h3 className="font-bold text-[15px] mb-1 flex items-center gap-2"><BarChart3 className="w-4 h-4 text-indigo-500" /> Topic Mastery</h3>
+          <p className="text-[11px] text-slate-500 mb-3">Weak & strong areas — computed from your completed lessons.</p>
+          <div className="space-y-2.5">
+            {SKILL_DOMAINS.slice(0, 6).map((d) => {
+              const pct = domainPct(s, d.levelIds);
+              return (
+                <div key={d.id}>
+                  <div className="flex justify-between text-[11.5px] mb-1">
+                    <span className="font-semibold text-slate-600">{d.icon} {d.label}</span>
+                    <span className={`font-bold ${pct >= 60 ? "text-green-600" : pct > 0 ? "text-amber-600" : "text-slate-400"}`}>{pct}%</span>
+                  </div>
+                  <div className="h-[7px] bg-slate-100 rounded-full overflow-hidden">
+                    <div className={`h-full rounded-full transition-all ${pct >= 60 ? "bg-green-500" : pct > 0 ? "bg-amber-400" : "bg-slate-300"}`} style={{ width: `${Math.max(pct, 1.5)}%` }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Quiz performance + AI skill level */}
+        <div className="card p-5">
+          <h3 className="font-bold text-[15px] mb-3 flex items-center gap-2"><ClipboardList className="w-4 h-4 text-purple-500" /> Quiz Performance</h3>
+          {s.attempts.length === 0 ? (
+            <p className="text-[12.5px] text-slate-500">No quizzes yet — your first attempt sets the baseline.</p>
+          ) : (
+            <>
+              <div className="flex items-end gap-1.5 h-[70px] mb-2">
+                {s.attempts.slice(-8).map((a, i) => {
+                  const p = Math.round((a.score / Math.max(1, a.total)) * 100);
+                  return (
+                    <div key={i} className="flex-1 flex flex-col items-center gap-1" title={`${a.quiz}: ${p}%`}>
+                      <div className={`w-full rounded-t ${p >= 60 ? "bg-green-400" : "bg-amber-400"}`} style={{ height: `${Math.max(6, p * 0.66)}px` }} />
+                      <span className="text-[9px] text-slate-400">{p}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="flex justify-between text-[12.5px]">
+                <span className="text-slate-500">Average (last 5)</span>
+                <b className="text-[#101a3f]">{avgScore(s)}%</b>
+              </div>
+              <div className="flex justify-between text-[12.5px]">
+                <span className="text-slate-500">AI Skill Level</span>
+                <b className="text-indigo-600">{learnerLevel(s)}</b>
+              </div>
+            </>
+          )}
+          <div className="mt-3 rounded-xl bg-indigo-50/70 border border-indigo-100 p-3">
+            <div className="text-[11px] font-bold text-indigo-700 mb-1">🏆 Achievements</div>
+            <div className="flex flex-wrap gap-1.5">
+              {unlockedIds(s).length === 0 ? (
+                <span className="text-[11px] text-slate-500">None yet — finish lessons & streaks to earn badges.</span>
+              ) : (
+                unlockedIds(s).slice(0, 6).map((id) => {
+                  const a = ACHIEVEMENTS.find((x) => x.id === id)!;
+                  return <span key={id} title={a.desc} className="text-[16px]">{a.icon}</span>;
+                })
+              )}
+            </div>
+            <Link href="/achievements" className="text-[11px] text-indigo-600 font-semibold inline-block mt-1.5">View all {ACHIEVEMENTS.length} →</Link>
+          </div>
+        </div>
+
+        {/* Recommended lessons + projects from real progress */}
+        <div className="card p-5">
+          <h3 className="font-bold text-[15px] mb-3 flex items-center gap-2"><Sparkles className="w-4 h-4 text-amber-500" /> Recommended For You</h3>
+          <div className="text-[11px] font-extrabold uppercase tracking-wide text-slate-400 mb-1.5">Next lessons</div>
+          <div className="space-y-1.5 mb-3">
+            {(() => {
+              const doneSet = new Set(s.lessons ?? []);
+              const picks = ALL_LESSONS.filter((x) => !doneSet.has(x.lesson.id)).slice(0, 3);
+              if (!picks.length) return <p className="text-[12px] text-slate-500">Every curriculum lesson completed — incredible! 🎉</p>;
+              return picks.map((x) => (
+                <Link key={x.lesson.id} href={`/lesson/${x.lesson.id}`} className="flex items-center gap-2 bg-slate-50 hover:bg-indigo-50 border border-slate-100 hover:border-indigo-200 rounded-xl px-3 py-2 transition group">
+                  <span className="text-[15px]">{x.level.icon}</span>
+                  <span className="text-[12.5px] font-semibold text-slate-700 group-hover:text-indigo-700 truncate flex-1">{x.lesson.title}</span>
+                  <span className="text-[10px] text-slate-400 shrink-0">{x.lesson.mins}m</span>
+                </Link>
+              ));
+            })()}
+          </div>
+          <div className="text-[11px] font-extrabold uppercase tracking-wide text-slate-400 mb-1.5">Projects to build</div>
+          <div className="space-y-1.5">
+            {PROJECTS.filter((p) => !(s.projects ?? []).includes(p.id)).slice(0, 2).map((p) => (
+              <Link key={p.id} href={`/projects/${p.id}`} className="flex items-center gap-2 bg-purple-50/60 hover:bg-purple-50 border border-purple-100 rounded-xl px-3 py-2 transition group">
+                <Folder className="w-3.5 h-3.5 text-purple-500 shrink-0" />
+                <span className="text-[12.5px] font-semibold text-slate-700 group-hover:text-purple-700 truncate flex-1">{p.title}</span>
+                <span className="text-[10px] font-bold text-purple-500 shrink-0">{p.level}</span>
+              </Link>
+            ))}
+            {(s.projects?.length ?? 0) > 0 && (
+              <div className="text-[11px] text-green-600 font-semibold">✓ {s.projects!.length}/{PROJECTS.length} projects completed</div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Course progress strip */}
+      <div className="card p-5 mb-4">
+        <div className="flex justify-between items-center mb-3">
+          <h3 className="font-bold text-[15px] flex items-center gap-2"><BookOpen className="w-4 h-4 text-indigo-500" /> My Courses <span className="text-[11px] font-normal text-slate-400">({totalDone(s)}/{TOTAL_LESSONS} lessons)</span></h3>
+          <Link href="/courses" className="text-[12px] text-indigo-600 font-medium">All courses →</Link>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-2.5">
+          {LEVELS.map((lv) => {
+            const p = coursePct(s, lv);
+            return (
+              <Link key={lv.id} href={`/courses/${lv.id}`} className="border border-slate-100 rounded-xl p-3 hover:border-indigo-300 hover:shadow-md transition bg-white block">
+                <div className="flex items-center justify-between">
+                  <span className="text-[18px]">{lv.icon}</span>
+                  <span className={`text-[11px] font-bold ${p === 100 ? "text-green-600" : p > 0 ? "text-indigo-600" : "text-slate-400"}`}>{p}%</span>
+                </div>
+                <div className="text-[12px] font-bold text-[#101a3f] mt-1 truncate">{lv.short}</div>
+                <div className="h-[5px] bg-slate-100 rounded-full mt-1.5 overflow-hidden">
+                  <div className="h-full bg-gradient-to-r from-indigo-500 to-blue-400 rounded-full" style={{ width: `${Math.max(p, 1)}%` }} />
+                </div>
+              </Link>
+            );
+          })}
         </div>
       </div>
 

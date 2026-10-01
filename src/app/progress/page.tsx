@@ -7,9 +7,10 @@ import {
   useProgress, completionInt, avgScore, streakCount, CATEGORIES, catPct,
   UNITS, nextUnit, relTime, learnerLevel,
 } from "../../lib/store";
+import { SKILL_DOMAINS, domainPct, totalDone, TOTAL_LESSONS, PROJECTS, ACHIEVEMENTS, unlockedIds } from "../../lib/curriculum";
 import {
   Search, Sun, ArrowLeft, BookOpen, CheckCircle2, Clock, Flame,
-  Lightbulb, AlertTriangle,
+  Lightbulb, AlertTriangle, Trophy, Folder,
 } from "lucide-react";
 
 export default function ProgressPage() {
@@ -31,7 +32,12 @@ export default function ProgressPage() {
   const line = `M ${coords.join(" L ")}`;
   const area = nPts ? `M 30,${H} L ${coords.join(" L ")} L ${W},${H} Z` : "";
 
-  const weak = [...CATEGORIES].sort((a, b) => catPct(s, a) - catPct(s, b)).slice(0, 3);
+  const weakAll = SKILL_DOMAINS.map((d) => ({ ...d, pct: domainPct(s, d.levelIds) })).sort((a, b) => a.pct - b.pct);
+  const hasEvidence = totalDone(s) > 0 || s.attempts.length > 0;
+  // Weak = attempted but low (0<pct<60); untouched-but-progressed = 0%. Never random.
+  const weak = weakAll.filter((d) => d.pct < 60).slice(0, 3);
+  const projectsDone = (s.projects ?? []).length;
+  const badges = unlockedIds(s).length;
 
   const actIcon = (kind: string) =>
     kind === "quiz"
@@ -74,7 +80,7 @@ export default function ProgressPage() {
           {/* Stat cards */}
           <div className="stagger grid grid-cols-2 lg:grid-cols-4 gap-3">
             {[
-              { t: "Total Topics", v: "12", sub: `Completed ${s.done.length} / 12`, w: pct, icon: <BookOpen className="w-5 h-5 text-white" />, bg: "bg-indigo-500" },
+              { t: "Course Lessons", v: `${totalDone(s)}`, sub: `Completed ${totalDone(s)} / ${TOTAL_LESSONS}`, w: TOTAL_LESSONS ? Math.round((totalDone(s) / TOTAL_LESSONS) * 100) : 0, icon: <BookOpen className="w-5 h-5 text-white" />, bg: "bg-indigo-500" },
               { t: "Quizzes Taken", v: `${s.attempts.length}`, sub: s.attempts.length ? `Avg. Score ${avg}%` : "No quizzes yet", w: avg, icon: <CheckCircle2 className="w-5 h-5 text-white" />, bg: "bg-green-500" },
               { t: "Study Time", v: `${s.labHours} hrs`, sub: "Real time studied", w: Math.min(100, Math.round((s.labHours / 20) * 100)), icon: <Clock className="w-5 h-5 text-white" />, bg: "bg-blue-500" },
               { t: "Current Streak", v: `${streak} days`, sub: streak === 0 ? "Start with any task" : "Keep it up!", w: Math.min(100, streak * 20), icon: <Flame className="w-5 h-5 text-white" />, bg: "bg-orange-400" },
@@ -170,55 +176,94 @@ export default function ProgressPage() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-[1.4fr_1fr] gap-4">
-            {/* Subject-wise */}
+            {/* Skill development — 10 AI domains from real course completion */}
             <div className="card p-5">
-              <h3 className="font-bold text-[15px] text-[#101a3f] mb-4">Subject-wise Progress</h3>
-              {CATEGORIES.map((c) => {
-                const p = catPct(s, c);
-                const d = c.units.filter((u) => s.done.includes(u)).length;
-                const st = p === 100 ? "Completed" : p > 0 ? "In Progress" : "Not Started";
-                return (
-                  <div key={c.id} className="flex items-center gap-3 mb-3.5">
-                    <span className={`w-9 h-9 rounded-xl ${c.iconBg} flex items-center justify-center text-[18px] shrink-0`}>{c.icon}</span>
-                    <span className="w-[110px] text-[13px] font-semibold text-slate-700 shrink-0">{c.label}</span>
-                    <div className="flex-1 h-[8px] bg-slate-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-gradient-to-r from-indigo-500 to-blue-400 rounded-full transition-all" style={{ width: `${p}%` }} />
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-bold text-[15px] text-[#101a3f]">Skill Development</h3>
+                <span className="text-[11px] bg-slate-50 border border-slate-100 px-2 py-1 rounded-lg text-slate-500">{totalDone(s)} / {TOTAL_LESSONS} lessons</span>
+              </div>
+              {totalDone(s) === 0 ? (
+                <p className="text-[12.5px] text-slate-500 py-2">Complete your first course lesson and every skill bar below fills in from real progress — nothing is pre-filled.</p>
+              ) : (
+                SKILL_DOMAINS.map((d) => {
+                  const p = domainPct(s, d.levelIds);
+                  const st = p === 100 ? "Completed" : p > 0 ? "In Progress" : "Not Started";
+                  return (
+                    <div key={d.id} className="flex items-center gap-3 mb-3">
+                      <span className="w-9 h-9 rounded-xl bg-indigo-50 flex items-center justify-center text-[18px] shrink-0">{d.icon}</span>
+                      <span className="w-[120px] text-[13px] font-semibold text-slate-700 shrink-0">{d.label}</span>
+                      <div className="flex-1 h-[8px] bg-slate-100 rounded-full overflow-hidden">
+                        <div className="h-full bg-gradient-to-r from-indigo-500 to-blue-400 rounded-full transition-all" style={{ width: `${p}%` }} />
+                      </div>
+                      <span className="text-[11px] text-slate-500 w-[44px] text-right shrink-0">{p}%</span>
+                      <span className={`text-[10px] font-bold px-2 py-1 rounded-full shrink-0 ${st === "Completed" ? "bg-green-100 text-green-700" : st === "In Progress" ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-500"}`}>
+                        {st}
+                      </span>
                     </div>
-                    <span className="text-[11px] text-slate-500 w-[44px] text-right shrink-0">{p}%<br />{d} / {c.units.length}</span>
-                    <span className={`text-[10px] font-bold px-2 py-1 rounded-full shrink-0 ${st === "Completed" ? "bg-green-100 text-green-700" : st === "In Progress" ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-500"}`}>
-                      {st}
-                    </span>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </div>
 
-            {/* Weak topics */}
+            {/* Weak topics — real evidence only */}
             <div className="card p-5">
               <div className="flex justify-between mb-3 items-center">
                 <h3 className="font-bold text-[15px] text-[#101a3f] flex items-center gap-1.5">
                   <AlertTriangle className="w-4 h-4 text-red-500" /> Weak Topics
                 </h3>
-                <span className="text-[11px] text-indigo-600 font-medium">View All</span>
+                <Link href="/doubt" className="text-[11px] text-indigo-600 font-medium">Ask AI →</Link>
               </div>
-              {s.done.length === 0 && s.attempts.length === 0 ? (
-                <p className="text-[12px] text-slate-500">No evidence yet — finish a unit or take a quiz and your weak areas appear here (computed only from real results).</p>
-              ) : weak.map((c) => {
-                const p = catPct(s, c);
-                const d = c.units.filter((u) => s.done.includes(u)).length;
-                return (
-                  <div key={c.id} className="flex items-center gap-3 mb-3">
-                    <span className={`w-9 h-9 rounded-full ${c.iconBg} flex items-center justify-center text-[16px] shrink-0`}>{c.icon}</span>
-                    <span className="flex-1">
-                      <b className="text-[13px] text-[#101a3f] block">{c.label}</b>
-                      <span className="text-[11px] text-slate-400">Progress: {d}/{c.units.length}</span>
-                    </span>
-                    <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${p === 0 ? "bg-red-100 text-red-600" : "bg-amber-100 text-amber-700"}`}>
-                      {p === 0 ? "Needs Practice" : "Practice More"}
-                    </span>
-                  </div>
-                );
-              })}
+              {!hasEvidence ? (
+                <p className="text-[12px] text-slate-500">No evidence yet — finish a lesson or take a quiz and your weak areas appear here (computed only from real results).</p>
+              ) : weak.length === 0 ? (
+                <p className="text-[12px] text-green-600 font-semibold">🎉 No weak topics under 60% — every started skill is strong. Keep going!</p>
+              ) : weak.map((d) => (
+                <div key={d.id} className="flex items-center gap-3 mb-3">
+                  <span className="w-9 h-9 rounded-full bg-red-50 flex items-center justify-center text-[16px] shrink-0">{d.icon}</span>
+                  <span className="flex-1">
+                    <b className="text-[13px] text-[#101a3f] block">{d.label}</b>
+                    <span className="text-[11px] text-slate-400">Mastery: {d.pct}%</span>
+                  </span>
+                  <Link href={`/quizzes`} className={`text-[10px] font-bold px-2 py-1 rounded-full ${d.pct === 0 ? "bg-red-100 text-red-600" : "bg-amber-100 text-amber-700"}`}>
+                    {d.pct === 0 ? "Needs Practice" : "Practice More"}
+                  </Link>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Projects + Achievements */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="card p-5">
+              <h3 className="font-bold text-[15px] text-[#101a3f] mb-3 flex items-center gap-2"><Folder className="w-4 h-4 text-purple-500" /> Projects Completed</h3>
+              <div className="flex items-center gap-4">
+                <b className="text-[28px] text-[#101a3f]">{projectsDone}<span className="text-[15px] text-slate-400">/{PROJECTS.length}</span></b>
+                <div className="flex-1 h-[9px] bg-slate-100 rounded-full overflow-hidden">
+                  <div className="h-full bg-gradient-to-r from-purple-500 to-fuchsia-400 rounded-full" style={{ width: `${(projectsDone / PROJECTS.length) * 100}%` }} />
+                </div>
+              </div>
+              <Link href="/projects" className="mt-3 inline-block text-[12px] font-bold text-white bg-gradient-to-r from-purple-600 to-indigo-500 px-4 py-2 rounded-lg">
+                {projectsDone ? "Continue projects →" : "Browse projects →"}
+              </Link>
+            </div>
+            <div className="card p-5">
+              <h3 className="font-bold text-[15px] text-[#101a3f] mb-3 flex items-center gap-2"><Trophy className="w-4 h-4 text-amber-500" /> Achievements</h3>
+              <div className="flex items-center gap-4">
+                <b className="text-[28px] text-[#101a3f]">{badges}<span className="text-[15px] text-slate-400">/{ACHIEVEMENTS.length}</span></b>
+                <div className="flex-1 h-[9px] bg-slate-100 rounded-full overflow-hidden">
+                  <div className="h-full bg-gradient-to-r from-amber-400 to-orange-400 rounded-full" style={{ width: `${(badges / ACHIEVEMENTS.length) * 100}%` }} />
+                </div>
+              </div>
+              <div className="flex gap-1.5 mt-3 flex-wrap">
+                {badges === 0 ? (
+                  <span className="text-[11.5px] text-slate-500">Earn your first badge — complete a lesson or a 7-day streak.</span>
+                ) : (
+                  unlockedIds(s).map((id) => <span key={id} title={ACHIEVEMENTS.find((a) => a.id === id)?.desc} className="text-[20px]">{ACHIEVEMENTS.find((a) => a.id === id)?.icon}</span>)
+                )}
+              </div>
+              <Link href="/achievements" className="mt-2 inline-block text-[12px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-4 py-2 rounded-lg">
+                View all badges →
+              </Link>
             </div>
           </div>
 
