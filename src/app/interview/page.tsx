@@ -85,6 +85,18 @@ export default function InterviewPage() {
   };
   useEffect(() => () => stopMedia(), []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // list cameras up front — labels unlock after the first permission grant
+  useEffect(() => {
+    if (!navigator.mediaDevices?.enumerateDevices) return;
+    let alive = true;
+    void navigator.mediaDevices.enumerateDevices().then((list) => {
+      if (!alive) return;
+      const cams = list.filter((d) => d.kind === "videoinput").map((d, i) => ({ id: d.deviceId, label: d.label || `Camera ${i + 1}` }));
+      setDevices(cams);
+    });
+    return () => { alive = false; };
+  }, []);
+
   // camera stream lifecycle (async getUserMedia — honest error states)
   useEffect(() => {
     if (!camOn) {
@@ -129,7 +141,7 @@ export default function InterviewPage() {
             setCamErr("This camera isn't sending video (disconnected or busy). Pick another camera below.");
             setCamOn(false);
           }
-        }, 5000);
+        }, 3000);
       })
       .catch((err) => {
         const name = err instanceof DOMException ? err.name : "";
@@ -189,6 +201,15 @@ export default function InterviewPage() {
     } else {
       go();
     }
+  };
+
+  /** Spoken verdict — the interviewer reads the score back out loud. */
+  const cleanForSpeech = (s: string) =>
+    s.replace(/```[\s\S]*?```/g, " code omitted ").replace(/[*_#>`]/g, "").replace(/\s+/g, " ").trim();
+  const speakVerdict = (r: EvalResult) => {
+    if (!voiceOn) return;
+    const miss = r.missing ? cleanForSpeech(r.missing).slice(0, 220) : "";
+    speak(`You scored ${r.score} out of 5.${miss ? ` ${miss}` : ""}`);
   };
 
   // AI interviewer reads each question aloud when voice is on
@@ -294,16 +315,19 @@ export default function InterviewPage() {
             answer,
           };
       setResults((r) => [...r, result]);
+      speakVerdict(result);
       setDraft("");
       if (!useAI) toast("AI score unavailable — used keyword check", "info");
     } catch {
-      setResults((r) => [...r, {
+      const offline: EvalResult = {
         score: kwScore,
         reply: `AI request failed (network). Scored with a keyword check against ${q.keys.length} key concepts — press "Evaluate" again to retry the AI.`,
         missing: `Keyword check: matched ${q.keys.filter((k) => answer.toLowerCase().includes(k.toLowerCase())).length} of ${q.keys.length} key concepts (${q.keys.join(", ")}).`,
         source: "keyword",
         answer,
-      }]);
+      };
+      setResults((r) => [...r, offline]);
+      speakVerdict(offline);
       setDraft("");
       toast("AI unavailable — keyword check used", "info");
     } finally {
@@ -336,6 +360,7 @@ export default function InterviewPage() {
     }
     stopMedia();
     setCamOn(false);
+    if (voiceOn) speak(`Interview complete. You scored ${score} out of ${max}.`);
     setStage("summary");
   };
 
@@ -548,9 +573,11 @@ export default function InterviewPage() {
                 </div>
               </div>
               {camErr && <p className="text-[11px] text-red-500 mt-2">{camErr}</p>}
-              {devices.length > 1 && (
-                <label className="flex items-center gap-2 mt-2 text-[11px] text-slate-500 font-semibold">
-                  Camera
+              <label className="flex items-center gap-2 mt-2 text-[11px] text-slate-500 font-semibold">
+                Camera
+                {devices.length === 0 ? (
+                  <span className="flex-1 text-slate-400 font-medium">Checking… (reload if none appear)</span>
+                ) : (
                   <select
                     value={deviceId}
                     onChange={(e) => setDeviceId(e.target.value)}
@@ -559,8 +586,8 @@ export default function InterviewPage() {
                     <option value="">Default camera</option>
                     {devices.map((d) => <option key={d.id} value={d.id}>{d.label}</option>)}
                   </select>
-                </label>
-              )}
+                )}
+              </label>
               <div className="grid grid-cols-3 gap-1.5 mt-3">
                 <button
                   onClick={toggleCam}
