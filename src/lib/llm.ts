@@ -1,4 +1,5 @@
 // Multi-key cloud engine with automatic failover.
+import type { ChatMsg } from "./ai";
 // Env:
 //   GROQ_KEYS   = comma-separated Groq keys (gsk_..., up to 10+). Falls back to GROQ_API_KEY.
 //   GEMINI_KEYS = comma-separated Google AI Studio keys (backup provider). Falls back to GEMINI_API_KEY.
@@ -81,7 +82,10 @@ async function groqOnce(key: string, messages: any[], vision = false): Promise<s
   return reply;
 }
 
-async function geminiOnce(key: string, messages: any[]): Promise<string> {
+// Gemini model IDs rotate — a 404 means the ID was retired, so try known-good IDs in order.
+const GEMINI_MODELS = ["gemini-3-flash-preview", "gemini-flash-latest"];
+
+async function geminiOnce(key: string, messages: ChatMsg[]): Promise<string> {
   // Map OpenAI-style messages to Gemini contents — text, images and PDFs
   // travel as inline_data (Gemini reads both natively).
   const sys = messages.find((m: any) => m.role === "system");
@@ -98,17 +102,22 @@ async function geminiOnce(key: string, messages: any[]): Promise<string> {
       : [{ text: String(m.content) }];
     return { role: m.role === "assistant" ? "model" : "user", parts: parts.length ? parts : [{ text: "" }] };
   });
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents,
-        ...(sys ? { systemInstruction: { parts: [{ text: String(sys.content) }] } } : {}),
-      }),
-    }
-  );
+  let res: Response | undefined;
+  for (const model of GEMINI_MODELS) {
+    res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents,
+          ...(sys ? { systemInstruction: { parts: [{ text: String(sys.content) }] } } : {}),
+        }),
+      }
+    );
+    if (res.status !== 404) break; // 404 = this model ID is retired → try the next one
+  }
+  if (!res) throw new Error("Gemini HTTP 404 (no working model ID)");
   if (res.status === 429 || res.status >= 500) throw new Error(`Gemini HTTP ${res.status}`);
   if (!res.ok) throw new Error(`Gemini HTTP ${res.status}`);
   const data = await res.json();
@@ -174,7 +183,7 @@ export async function cloudChat(messages: any[]): Promise<Attempt> {
     try {
       const reply = await geminiOnce(key, messages);
       geminiCursor = gcur.i;
-      return { reply, engine: (hasPdf ? "gemini:2.5-flash (pdf)" : "gemini:2.5-flash") + (isMine(key) ? " · your key" : "") };
+      return { reply, engine: (hasPdf ? "gemini:3-flash (pdf)" : "gemini:3-flash") + (isMine(key) ? " · your key" : "") };
     } catch (e: any) {
       park(key);
       failures.push(`gemini:${e.message}`);
