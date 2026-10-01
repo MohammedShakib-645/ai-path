@@ -354,7 +354,7 @@ export default function InterviewPage() {
                     strokeDasharray={2 * Math.PI * 46}
                     strokeDashoffset={2 * Math.PI * 46 * (1 - pct / 100)}
                     transform="rotate(-90 55 55)"
-                    style={{ transition: "stroke-dashoffset 0.8s cubic-bezier(0.2,0.8,0.2,1)" }}
+                    style={{ transition: "stroke-dashoffset 0.4s cubic-bezier(0.2,0.8,0.2,1)" }}
                   />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">

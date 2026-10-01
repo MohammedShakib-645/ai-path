@@ -33,7 +33,7 @@ export default function SearchPage() {
       {!results ? (
         <div className="card p-10 text-center text-slate-500 text-[14px]">Type in the search bar above to find lessons, notes and chats.</div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="stagger grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="card p-5">
             <h3 className="font-bold text-[15px] mb-3 flex items-center gap-2"><GraduationCap className="w-4 h-4" /> Courses ({results.courses.length})</h3>
             {results.courses.length === 0 && <Empty />}

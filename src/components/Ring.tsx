@@ -44,7 +44,7 @@ export default function Ring({
           strokeLinecap="round"
           strokeDasharray={c}
           strokeDashoffset={strokeDashoffset}
-          className="transition-all duration-1000 ease-out"
+          className="transition-all duration-[400ms] ease-out"
         />
         <defs>
           <linearGradient id="ringGradient" x1="0" y1="0" x2="1" y2="1">

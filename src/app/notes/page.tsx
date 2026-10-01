@@ -309,7 +309,7 @@ export default function NotesPage() {
           <p className="text-[13px] text-slate-500 mt-1">Capture what you learn — text, sketches and AI tools, all in one place.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="stagger grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {list.map((n) => (
             <div key={n.id} className="card p-4 flex flex-col hover:-translate-y-1 hover:shadow-lg transition">
               <div className="flex items-start gap-2">

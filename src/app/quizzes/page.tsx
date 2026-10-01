@@ -530,7 +530,7 @@ export default function QuizzesPage() {
                     cx="48" cy="48" r="40" fill="none" stroke={submitted ? "#22c55e" : "#6366f1"} strokeWidth="11" strokeLinecap="round"
                     strokeDasharray={2 * Math.PI * 40} strokeDashoffset={2 * Math.PI * 40 * (1 - ringPct / 100)}
                     transform="rotate(-90 48 48)"
-                    style={{ transition: "stroke-dashoffset 0.6s cubic-bezier(0.2,0.8,0.2,1)" }}
+                    style={{ transition: "stroke-dashoffset 0.4s cubic-bezier(0.2,0.8,0.2,1)" }}
                   />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">

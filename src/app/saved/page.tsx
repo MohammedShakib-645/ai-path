@@ -25,7 +25,7 @@ export default function SavedPage() {
           <Link href="/learn" className="inline-block mt-4 px-5 py-2.5 rounded-xl primary-gradient text-white text-[13px] font-bold">Browse lessons</Link>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="stagger grid grid-cols-1 md:grid-cols-2 gap-4">
           {s.bookmarks.map((b) => (
             <div key={b.id} className="card p-4">
               <div className="flex items-start gap-2">
