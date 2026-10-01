@@ -212,7 +212,7 @@ export default function QuizzesPage() {
   return (
     <div>
       {/* Header */}
-      <TopHeader title="Quiz – Python Basics" subtitle="Test your knowledge and see where you need to improve 🙂" back="/" />
+      <TopHeader title="Quiz – Python Basics" subtitle="Test your knowledge and see where you need to improve 🙂" back="/dashboard" />
 
       <div className="grid grid-cols-1 xl:grid-cols-[1.7fr_1fr] gap-4">
         <div>

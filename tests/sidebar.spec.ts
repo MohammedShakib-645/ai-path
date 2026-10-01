@@ -6,7 +6,7 @@ test.describe("sidebar", () => {
   test.skip(({ viewport }) => (viewport?.width ?? 0) < 768, "desktop only");
 
   test("collapses and expands, keeps all links, persists", async ({ page }) => {
-    await page.goto(`${BASE}/`, { waitUntil: "domcontentloaded" });
+    await page.goto(`${BASE}/dashboard`, { waitUntil: "domcontentloaded" });
     const aside = page.locator("aside.hidden").first();
 
     // all 14 grouped nav links present (Settings lives in the pinned footer)
@@ -57,7 +57,7 @@ test.describe("sidebar", () => {
   });
 
   test("settings is reachable without page scroll", async ({ page }) => {
-    await page.goto(`${BASE}/`, { waitUntil: "domcontentloaded" });
+    await page.goto(`${BASE}/dashboard`, { waitUntil: "domcontentloaded" });
     const settings = page.getByRole("link", { name: "Settings" });
     const box = await settings.boundingBox();
     const vh = page.viewportSize()!.height;
@@ -67,7 +67,7 @@ test.describe("sidebar", () => {
   });
 
   test("AI bot is present on every page", async ({ page }) => {
-    for (const route of ["/", "/quizzes", "/progress", "/notes", "/settings", "/ai-tutor"]) {
+    for (const route of ["/dashboard", "/quizzes", "/progress", "/notes", "/settings", "/ai-tutor"]) {
       await page.goto(`${BASE}${route}`, { waitUntil: "domcontentloaded" });
       await expect(page.getByRole("button", { name: "Open AI bot" })).toBeVisible();
     }

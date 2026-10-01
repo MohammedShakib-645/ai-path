@@ -159,7 +159,7 @@ export default function InterviewPage() {
   return (
     <div>
       {/* Header */}
-      <TopHeader title="AI Interview Mode" subtitle="One question at a time — answer out loud in writing, get graded 0–5" back="/" />
+      <TopHeader title="AI Interview Mode" subtitle="One question at a time — answer out loud in writing, get graded 0–5" back="/dashboard" />
 
       {/* ── Stage 1: pick a track ─────────────────────────────── */}
       {stage === "pick" && (

@@ -66,7 +66,7 @@ export default function ProgressPage() {
 
   return (
     <div>
-      <TopHeader title="Progress Dashboard" subtitle="Track your learning journey and see how far you've come!" back="/" />
+      <TopHeader title="Progress Dashboard" subtitle="Track your learning journey and see how far you've come!" back="/dashboard" />
 
       <div className="stagger grid grid-cols-1 xl:grid-cols-[1.7fr_1fr] gap-4">
         <div className="space-y-4">

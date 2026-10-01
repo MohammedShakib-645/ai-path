@@ -8,7 +8,7 @@ import AiFab from "../components/AiFab";
 import CommandPalette from "../components/CommandPalette";
 import { Home, BookOpen, BotMessageSquare, FlaskConical, BarChart3 } from "lucide-react";
 const TABS = [
-  { href: "/", label: "Home", icon: Home },
+  { href: "/dashboard", label: "Home", icon: Home },
   { href: "/learn", label: "Learn", icon: BookOpen },
   { href: "/ai-tutor", label: "Tutor", icon: BotMessageSquare },
   { href: "/practice", label: "Code", icon: FlaskConical },
@@ -18,6 +18,17 @@ const TABS = [
 export default function SidebarWrapper({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
+
+  // Marketing landing at "/" is full-bleed: no app shell (palette still global).
+  if (pathname === "/") {
+    return (
+      <>
+        {children}
+        <CommandPalette />
+      </>
+    );
+  }
+
   return (
     <div className="flex min-h-screen">
       <Sidebar mobileOpen={open} onClose={() => setOpen(false)} />
@@ -30,7 +41,7 @@ export default function SidebarWrapper({ children }: { children: React.ReactNode
       {/* Mobile bottom navigation */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur border-t border-slate-200 px-2 py-1.5 flex justify-around">
         {TABS.map((t) => {
-          const active = t.href === "/" ? pathname === "/" : pathname.startsWith(t.href);
+          const active = t.href === "/dashboard" ? pathname.startsWith("/dashboard") : pathname.startsWith(t.href);
           const Icon = t.icon;
           return (
             <Link

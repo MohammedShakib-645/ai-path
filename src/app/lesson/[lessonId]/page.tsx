@@ -50,7 +50,10 @@ export default function LessonPage() {
     })
       .then((r) => r.json())
       .then((d) => {
-        if (d?.lesson) setContent(d.lesson as LessonContent);
+        // Accept only a real lesson (topic/intro present) — an empty or
+        // half-shaped object falls through to the honest "offline" card.
+        const l = d?.lesson as Partial<LessonContent> | null | undefined;
+        if (l && typeof l === "object" && typeof l.intro === "string" && l.intro.trim()) setContent(l as LessonContent);
         else setFailed(true);
       })
       .catch(() => setFailed(true))

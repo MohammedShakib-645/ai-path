@@ -10,7 +10,7 @@ import {
 type Item = { href: string; label: string; hint: string; icon: React.ComponentType<{ className?: string }>; group: string };
 
 const NAV: Item[] = [
-  { href: "/", label: "Dashboard", hint: "Overview, streak & next action", icon: Home, group: "LEARN" },
+  { href: "/dashboard", label: "Dashboard", hint: "Overview, streak & next action", icon: Home, group: "LEARN" },
   { href: "/learn", label: "Learn", hint: "Roadmap & course catalog", icon: BookOpen, group: "LEARN" },
   { href: "/ai-tutor", label: "AI Tutor", hint: "Chat that knows your level", icon: BotMessageSquare, group: "LEARN" },
   { href: "/practice", label: "Coding Practice", hint: "Real sandbox execution", icon: FlaskConical, group: "PRACTICE" },

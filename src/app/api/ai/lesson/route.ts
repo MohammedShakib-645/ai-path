@@ -15,26 +15,14 @@ export interface Lesson {
   summary: string;
 }
 
-const FALLBACK: Lesson = {
-  topic: "Topic",
-  intro: "AI service is unavailable right now — showing a starter outline. Connect cloud keys for full lessons.",
-  analogy: "Learning builds like layers.",
-  syntax: "# syntax appears here",
-  examples: [{ title: "Example", code: "print('hello')", explain: "Prints hello." }],
-  mistakes: ["Skipping practice"],
-  points: ["Practice daily"],
-  practice: ["Write one small program on this topic."],
-  quiz: [{ q: "What does print('hi') do?", options: ["Prints hi", "Error", "Nothing", "Asks input"], answer: 0, tip: "print outputs text." }],
-  challenge: "Build a tiny script using this topic.",
-  summary: "Review the example once more.",
-};
-
+/** Honest fallback: null → the client shows its "engine offline" card.
+ *  A dummy lesson (generic print('hello') content) must NEVER reach the UI. */
 export async function POST(req: Request) {
   const { topic = "Python Basics", level = "Beginner" } = await req.json().catch(() => ({}));
-  const { data, engine } = await aiJSON<Lesson>(
-    `Generate a complete ${level}-level programming lesson. Quiz: exactly 3 questions, 4 options each, answer = correct option index (0-3). Examples: 2-3 with runnable code.`,
-    `Lesson topic: ${topic}`,
-    { ...FALLBACK, topic }
+  const { data, engine } = await aiJSON<Lesson | null>(
+    `Generate a complete ${level}-level programming lesson on "${topic}". Return ONLY one JSON object, no markdown, with exactly these keys: topic (string), intro (2-3 sentences), analogy (one real-world comparison), syntax (code block as plain string), examples (2-3 objects {title, code, explain}), mistakes (3 short strings), points (4 short strings), practice (3 short tasks), quiz (exactly 3 objects {q, options[4 strings], answer: 0-3, tip}), challenge (one sentence), summary (one sentence).`,
+    `Lesson topic: ${topic}. Level: ${level}.`,
+    null
   );
   return Response.json({ lesson: data, engine });
 }

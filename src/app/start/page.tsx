@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Brain, ArrowRight } from "lucide-react";
 import { completeOnboarding, useProgress } from "../../lib/store";
@@ -14,8 +14,20 @@ export default function StartPage() {
   const [language, setLanguage] = useState("Python");
   const [dailyMins, setDailyMins] = useState(45);
 
+  const demoStarted = useRef(false);
+
   useEffect(() => {
-    if (s.onboarded) r.replace("/");
+    if (s.onboarded) {
+      r.replace("/dashboard");
+      return;
+    }
+    // Guided demo: landing's ?demo=1 creates a real local session in one click.
+    if (!demoStarted.current && new URLSearchParams(window.location.search).has("demo")) {
+      demoStarted.current = true;
+      completeOnboarding({ name: name.trim() || "Demo Learner", goal: goal.trim(), level, language, dailyMins });
+      toast("Guided demo started — real session, saved on this device");
+      r.push("/dashboard");
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [s.onboarded]);
 
@@ -26,7 +38,7 @@ export default function StartPage() {
     }
     completeOnboarding({ name: name.trim() || "Learner", goal: goal.trim(), level, language, dailyMins });
     toast("Learning path created ✓");
-    r.push("/");
+    r.push("/dashboard");
   };
 
   const field = "w-full border border-slate-200 rounded-xl px-4 py-2.5 text-[13px] bg-white outline-none";

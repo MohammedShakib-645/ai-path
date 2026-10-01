@@ -252,7 +252,7 @@ export default function AITutorPage() {
       <TopHeader
         title="AI Tutor"
         subtitle="Knows your level, weak topics and history — adapts every answer"
-        back="/"
+        back="/dashboard"
         actions={
           <button onClick={() => setShowChats(!showChats)} className="xl:hidden px-3 py-2 rounded-xl bg-white dark:bg-white/10 border border-slate-200 dark:border-white/15 text-[12px] font-bold">Chats</button>
         }

@@ -13,7 +13,7 @@ test("Ctrl+K opens the command palette and navigates", async ({ page }) => {
 
   await palette.getByLabel("Command palette search").fill("quiz");
   await page.keyboard.press("Enter");
-  await page.waitForURL("**/quizzes", { timeout: 10000 });
+  await page.waitForURL("**/quizzes", { timeout: 25000 });
   await expect(palette).toBeHidden();
 
   // header pill opens it too

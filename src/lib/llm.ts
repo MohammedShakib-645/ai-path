@@ -69,7 +69,8 @@ async function groqOnce(key: string, messages: any[], vision = false): Promise<s
       model: vision ? "qwen/qwen3.8-27b" : "openai/gpt-oss-120b",
       messages: mapped,
       temperature: 0.7,
-      max_tokens: 900,
+      // Quiz/plan JSON can exceed 900 tokens and get truncated → parse fails.
+      max_tokens: 4000,
     }),
   });
   if (res.status === 429 || res.status >= 500) throw new Error(`Groq HTTP ${res.status}`);

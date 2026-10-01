@@ -27,7 +27,7 @@ export default function ProjectsPage() {
   return (
     <div>
       <div className="flex items-center gap-3 mb-5">
-        <Link href="/" className="text-[#101a3f] hover:text-indigo-600 mt-1">
+        <Link href="/dashboard" className="text-[#101a3f] hover:text-indigo-600 mt-1">
           <ArrowLeft className="w-6 h-6" />
         </Link>
         <div className="flex-1">

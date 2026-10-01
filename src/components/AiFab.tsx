@@ -23,7 +23,7 @@ const TASKS = [  { id: "next", icon: "🎯", label: "Tell my next step", prompt:
 
 /** Pages the bot can OPEN inside the app when you say "open X" / "kholo X". */
 const ROUTES: { href: string; label: string; words: string[] }[] = [
-  { href: "/", label: "Dashboard", words: ["dashboard", "home", "main page", "home page", "mukhya"] },
+  { href: "/dashboard", label: "Dashboard", words: ["dashboard", "home", "main page", "home page", "mukhya"] },
   { href: "/learn", label: "Learn", words: ["learning path", "path", "syllabus", "course", "curriculum", "topics list", "roadmap", "catalog"] },
   { href: "/ai-tutor", label: "AI Tutor", words: ["ai tutor", "tutor", "chat", "assistant", "teacher"] },
   { href: "/quizzes", label: "Quizzes", words: ["quiz", "quizzes", "test", "exam", "mock test", "paper"] },

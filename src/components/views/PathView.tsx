@@ -42,7 +42,7 @@ export default function PathView({ embedded = false }: { embedded?: boolean } = 
       {!embedded && (
       <div className="flex items-start justify-between gap-4 mb-5 flex-wrap">
         <div className="flex items-center gap-3">
-          <Link href="/" className="text-[#101a3f] hover:text-indigo-600 mt-1">
+          <Link href="/dashboard" className="text-[#101a3f] hover:text-indigo-600 mt-1">
             <ArrowLeft className="w-6 h-6" />
           </Link>
           <div>
@@ -169,13 +169,26 @@ export default function PathView({ embedded = false }: { embedded?: boolean } = 
                       >
                         {isDone ? "✓" : t.id}
                       </button>
-                      <div className="flex-1 border border-slate-100 rounded-2xl p-4 bg-white shadow-sm">
-                        <div className="flex justify-between gap-3">
+                      <div
+                        className="flex-1 border border-slate-100 rounded-2xl p-4 bg-white shadow-sm"
+                      >
+                        <div
+                          className="flex justify-between gap-3 cursor-pointer select-none"
+                          onClick={() => setExpanded(open && expanded !== -1 ? null : t.id)}
+                          role="button"
+                          tabIndex={0}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              setExpanded(open && expanded !== -1 ? null : t.id);
+                            }
+                          }}
+                        >
                           <div className="flex gap-3">
                             <span className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-[22px] shrink-0">{t.icon}</span>
                             <div>
                               <div className="font-bold text-[14px] text-[#101a3f]">{t.title}</div>
-                              <div className="text-[12px] text-slate-500">Unit {t.id} of 12 — lesson, cheat sheet, resources &amp; quiz.</div>
+                              <div className="text-[12px] text-slate-500">Unit {t.id} of {UNITS.length} — lesson, cheat sheet, resources &amp; quiz.</div>
                             </div>
                           </div>
                           <div className="text-right shrink-0">
@@ -248,7 +261,7 @@ export default function PathView({ embedded = false }: { embedded?: boolean } = 
                           </>
                         )}
                       </div>
-                      <button onClick={() => setExpanded(open && expanded !== -1 ? null : t.id)} className="mt-4 text-slate-400 hover:text-slate-600 shrink-0">
+                      <button onClick={() => setExpanded(open && expanded !== -1 ? null : t.id)} className="mt-4 p-2 -m-1 text-slate-400 hover:text-slate-600 shrink-0" aria-label={open && expanded !== -1 ? `Collapse ${t.title}` : `Expand ${t.title}`}>
                         <ChevronDown className={`w-4 h-4 transition ${open && expanded !== -1 ? "rotate-180" : ""}`} />
                       </button>
                     </div>

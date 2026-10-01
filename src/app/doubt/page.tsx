@@ -69,7 +69,7 @@ export default function DoubtPage() {
   return (
     <div>
       {/* Header */}
-      <TopHeader title="AI Doubt Solver" subtitle="Stuck on something? Get the problem, cause, fix, example and practice — in order" back="/" />
+      <TopHeader title="AI Doubt Solver" subtitle="Stuck on something? Get the problem, cause, fix, example and practice — in order" back="/dashboard" />
 
       <div className="grid grid-cols-1 xl:grid-cols-[1.5fr_1fr] gap-4">
         <div>

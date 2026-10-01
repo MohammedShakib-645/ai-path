@@ -134,7 +134,7 @@ export default function CodeExplainerPage() {
   return (
     <div>
       {/* Header */}
-      <TopHeader title="AI Code Explainer" subtitle="Paste code — get a line-by-line explanation, concepts and fixes" back="/" />
+      <TopHeader title="AI Code Explainer" subtitle="Paste code — get a line-by-line explanation, concepts and fixes" back="/dashboard" />
 
       <div className="grid grid-cols-1 xl:grid-cols-[1.5fr_1fr] gap-4">
         <div>

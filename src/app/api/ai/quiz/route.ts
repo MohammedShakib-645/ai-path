@@ -13,11 +13,13 @@ export async function POST(req: Request) {
   const { topic = "Python Basics", difficulty = "Easy", count = 5 } = await req.json().catch(() => ({}));
   const n = Math.max(1, Math.min(10, Number(count) || 5));
   const { data, engine } = await aiJSON<{ questions: GenQ[] }>(
-    `Generate exactly ${n} ${difficulty} quiz questions on "${topic}". Mix types: mcq, true_false (options ["True","False"]), code_output (include "code"). Every question: q, options (4 for mcq, 2 for true_false), answer = correct index, tip (one-line explanation), type.`,
+    `Generate exactly ${n} ${difficulty} quiz questions on "${topic}". Mix types: mcq, true_false (options ["True","False"]), code_output (include "code"). Every question: q, options (4 for mcq, 2 for true_false), answer = correct index, tip (one-line explanation), type.\nReturn ONLY this JSON shape (no bare arrays): {"questions":[ ...the ${n} question objects... ]}`,
     `Topic: ${topic}. Difficulty: ${difficulty}. Count: ${n}.`,
     FALLBACK
   );
-  const questions = (Array.isArray(data.questions) ? data.questions : []).slice(0, n).map((q: any, i: number) => ({
+  // Tolerate a bare array reply (some models drop the wrapper).
+  const rawQs = Array.isArray(data) ? (data as unknown as GenQ[]) : Array.isArray(data?.questions) ? data.questions : [];
+  const questions = rawQs.slice(0, n).map((q, i) => ({
     q: String(q.q ?? `Question ${i + 1}`),
     code: q.code ? String(q.code) : undefined,
     options: Array.isArray(q.options) && q.options.length >= 2 ? q.options.map(String).slice(0, 4) : ["True", "False"],

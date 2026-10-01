@@ -57,32 +57,53 @@ FOLLOWUPS (required): output as the VERY LAST line of your reply exactly one lin
 FOLLOWUPS: ["next question one","next question two","next question three"]
 Pick three short, specific follow-up questions the learner could ask next (vary them every reply).`;
 
-/** Ask for strict JSON; repairs markdown fences; validates with fallback. NEVER throws. */
+/** Ask for strict JSON; repairs markdown fences; retries once; validates with fallback. NEVER throws. */
 export async function aiJSON<T>(system: string, user: string, fallback: T): Promise<{ data: T; engine: string }> {
-  let reply: string;
-  let engine: string;
-  try {
-    const r = await cloudChat([
-      { role: "system", content: system + "\nReturn ONLY valid JSON, no markdown fences, no commentary." },
-      { role: "user", content: user },
-    ]);
-    reply = r.reply;
-    engine = r.engine;
-  } catch (e: any) {
-    // No keys / all keys cooling down → caller still gets valid data.
-    return { data: fallback, engine: `offline (${String(e?.message ?? e).slice(0, 80)})` };
-  }
-  const clean = reply.replace(/^```(?:json)?/i, "").replace(/```$/i, "").trim();
-  try {
-    return { data: JSON.parse(clean) as T, engine };
-  } catch {
+  const pull = (reply: string): T | null => {
+    const clean = reply.replace(/^```(?:json)?/i, "").replace(/```$/i, "").trim();
+    try {
+      return JSON.parse(clean) as T;
+    } catch { /* try extraction below */ }
     const s = clean.indexOf("{");
     const e = clean.lastIndexOf("}");
     if (s >= 0 && e > s) {
       try {
-        return { data: JSON.parse(clean.slice(s, e + 1)) as T, engine };
-      } catch { /* fall through */ }
+        return JSON.parse(clean.slice(s, e + 1)) as T;
+      } catch { /* try arrays below */ }
     }
-    return { data: fallback, engine: engine + "+fallback" };
+    const as = clean.indexOf("[");
+    const ae = clean.lastIndexOf("]");
+    if (as >= 0 && ae > as) {
+      try {
+        return JSON.parse(clean.slice(as, ae + 1)) as T;
+      } catch { /* not JSON */ }
+    }
+    return null;
+  };
+
+  let engine = "";
+  for (let attempt = 0; attempt < 2; attempt++) {
+    let reply: string;
+    try {
+      const r = await cloudChat([
+        {
+          role: "system",
+          content:
+            system +
+            "\nReturn ONLY valid JSON, no markdown fences, no commentary." +
+            (attempt === 1 ? "\nCRITICAL: your previous reply was not valid JSON. Output nothing except the JSON value itself, starting with { or [." : ""),
+        },
+        { role: "user", content: user },
+      ]);
+      reply = r.reply;
+      engine = r.engine;
+    } catch (e) {
+      // No keys / all keys cooling down → caller still gets valid data.
+      const msg = e instanceof Error ? e.message : String(e);
+      return { data: fallback, engine: `offline (${msg.slice(0, 80)})` };
+    }
+    const data = pull(reply);
+    if (data) return { data, engine };
   }
+  return { data: fallback, engine: engine + "+fallback" };
 }
