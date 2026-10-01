@@ -188,7 +188,7 @@ function SidebarContent({
         )}
       </div>
 
-      <nav className={`space-y-1 flex-1 ${rail ? "flex flex-col items-center" : ""}`}>
+      <nav className={`space-y-1 flex-1 min-h-0 overflow-y-auto overflow-x-hidden py-1 ${rail ? "flex flex-col items-center" : ""}`}>
         {GROUPS.map((group) => (
           <div key={group.label} className={rail ? "contents" : "mb-2"}>
             {!rail && (
