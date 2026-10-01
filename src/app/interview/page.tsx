@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import TopHeader from "../../components/TopHeader";
 import Markdown from "../../components/Markdown";
@@ -9,7 +9,25 @@ import { recordQuiz, logActivity } from "../../lib/store";
 import {
   ArrowLeft, ArrowRight, CheckCircle2, Clock, Mic, RotateCcw,
   Sparkles, Target, TrendingUp, AlertTriangle,
+  Video, VideoOff, Volume2, VolumeX,
 } from "lucide-react";
+
+/** Clock helper lives at module scope — handlers call it, never the render path. */
+const nowMs = () => Date.now();
+
+/** Minimal Web Speech API typings (not in lib.dom yet). */
+type RecogEvent = { results: { length: number; [i: number]: { 0: { transcript: string } } } };
+interface SpeechRec {
+  continuous: boolean; interimResults: boolean; lang: string;
+  start(): void; stop(): void; abort?(): void;
+  onresult: ((e: RecogEvent) => void) | null;
+  onend: (() => void) | null;
+  onerror: (() => void) | null;
+}
+const getRecogCtor = (): (new () => SpeechRec) | null => {
+  const w = window as unknown as { SpeechRecognition?: new () => SpeechRec; webkitSpeechRecognition?: new () => SpeechRec };
+  return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
+};
 
 type EvalResult = {
   score: number;          // 0–5
@@ -26,12 +44,102 @@ export default function InterviewPage() {
   const [draft, setDraft] = useState("");
   const [results, setResults] = useState<EvalResult[]>([]);
   const [loading, setLoading] = useState(false);
-  const startedAt = useRef(Date.now());
+  const startedAt = useRef(0);
   const recorded = useRef(false);
+
+  // ── Camera / voice (all real browser APIs) ──
+  const [camOn, setCamOn] = useState(false);
+  const [camErr, setCamErr] = useState("");
+  const [voiceOn, setVoiceOn] = useState(true);
+  const [listening, setListening] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const recogRef = useRef<SpeechRec | null>(null);
+
+  const attachVideo = (el: HTMLVideoElement | null) => {
+    videoRef.current = el;
+    if (el && streamRef.current) el.srcObject = streamRef.current;
+  };
+  const stopMedia = () => {
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+    const r = recogRef.current;
+    if (r) { r.onend = null; r.onerror = null; r.onresult = null; r.abort?.(); recogRef.current = null; }
+    setListening(false);
+    if (typeof window !== "undefined" && "speechSynthesis" in window) window.speechSynthesis.cancel();
+    setSpeaking(false);
+  };
+  useEffect(() => () => stopMedia(), []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // camera stream lifecycle (async getUserMedia — honest error states)
+  useEffect(() => {
+    if (!camOn) {
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+      if (videoRef.current) videoRef.current.srcObject = null;
+      return;
+    }
+    let cancelled = false;
+    if (!navigator.mediaDevices?.getUserMedia) {
+      // deferred — setState directly inside an effect body is a cascading render
+      const tid = window.setTimeout(() => { setCamErr("Camera needs HTTPS (or localhost)."); setCamOn(false); }, 0);
+      return () => window.clearTimeout(tid);
+    }
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false })
+      .then((st) => {
+        if (cancelled) { st.getTracks().forEach((t) => t.stop()); return; }
+        streamRef.current = st;
+        if (videoRef.current) videoRef.current.srcObject = st;
+        setCamErr("");
+      })
+      .catch(() => { setCamErr("Camera blocked — allow camera access in your browser, then retry."); setCamOn(false); });
+    return () => { cancelled = true; streamRef.current?.getTracks().forEach((t) => t.stop()); streamRef.current = null; };
+  }, [camOn]);
+
+  const speak = (text: string) => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.rate = 1;
+    u.onstart = () => setSpeaking(true);
+    u.onend = () => setSpeaking(false);
+    u.onerror = () => setSpeaking(false);
+    window.speechSynthesis.speak(u);
+  };
+
+  // AI interviewer reads each question aloud when voice is on
+  // (effect lives below where `q` is declared — see run-stage section)
+
+  const toggleListen = () => {
+    if (listening) { recogRef.current?.stop(); setListening(false); return; }
+    const Ctor = getRecogCtor();
+    if (!Ctor) { toast("Voice input isn't supported here — try Chrome or Edge", "err"); return; }
+    const r = new Ctor();
+    r.continuous = false;
+    r.interimResults = false;
+    r.lang = "en-US";
+    r.onresult = (e) => {
+      const txt = e.results[0]?.[0]?.transcript ?? "";
+      if (txt) setDraft((d) => (d ? `${d} ${txt}` : txt));
+    };
+    r.onend = () => { setListening(false); recogRef.current = null; };
+    r.onerror = () => { setListening(false); recogRef.current = null; toast("Mic blocked — allow microphone access", "err"); };
+    recogRef.current = r;
+    r.start();
+    setListening(true);
+  };
 
   const track = INTERVIEW_TRACKS.find((t) => t.id === trackId) ?? null;
   const total = track?.qs.length ?? 0;
   const q = track?.qs[idx];
+
+  // AI interviewer reads each question aloud when voice is on.
+  useEffect(() => {
+    if (voiceOn && stage === "run" && q) speak(q.q);
+    if (!voiceOn && typeof window !== "undefined" && "speechSynthesis" in window) window.speechSynthesis.cancel();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [voiceOn, stage, trackId, idx]);
 
   const start = (id: string) => {
     setTrackId(id);
@@ -39,7 +147,7 @@ export default function InterviewPage() {
     setDraft("");
     setResults([]);
     recorded.current = false;
-    startedAt.current = Date.now();
+    startedAt.current = nowMs();
     setStage("run");
   };
 
@@ -49,7 +157,7 @@ export default function InterviewPage() {
     setDraft("");
     setResults([]);
     recorded.current = false;
-    startedAt.current = Date.now();
+    startedAt.current = nowMs();
     setStage("run");
   };
 
@@ -132,7 +240,7 @@ export default function InterviewPage() {
     // finished — record the real result once
     const score = results.reduce((s, r) => s + r.score, 0);
     const max = total * 5;
-    const secs = Math.min(1800, Math.max(1, Math.round((Date.now() - startedAt.current) / 1000)));
+    const secs = Math.min(1800, Math.max(1, Math.round((nowMs() - startedAt.current) / 1000)));
     if (!recorded.current) {
       recorded.current = true;
       recordQuiz(`AI Interview: ${track.label}`, score, max, secs);
@@ -143,6 +251,8 @@ export default function InterviewPage() {
       );
       toast(`Interview saved — ${score}/${max} ✓`);
     }
+    stopMedia();
+    setCamOn(false);
     setStage("summary");
   };
 
@@ -159,7 +269,7 @@ export default function InterviewPage() {
   return (
     <div>
       {/* Header */}
-      <TopHeader title="AI Interview Mode" subtitle="One question at a time — answer out loud in writing, get graded 0–5" back="/dashboard" />
+      <TopHeader title="AI Interview Mode" subtitle="Camera + voice interview — answer out loud or in writing, graded 0–5" back="/dashboard" />
 
       {/* ── Stage 1: pick a track ─────────────────────────────── */}
       {stage === "pick" && (
@@ -219,9 +329,18 @@ export default function InterviewPage() {
 
             <div className="card p-6">
               <div key={idx} className="pop-in">
-                <div className="flex gap-4 mb-4">
+                <div className="flex gap-4 mb-4 items-start">
                   <span className="w-10 h-10 rounded-full bg-purple-100 text-purple-700 font-extrabold flex items-center justify-center text-[18px] shrink-0">{idx + 1}</span>
                   <h2 className="font-extrabold text-[17px] text-[#101a3f] flex-1">{q?.q}</h2>
+                  {q && (
+                    <button
+                      onClick={() => speak(q.q)}
+                      title="Read question aloud"
+                      className="shrink-0 w-9 h-9 rounded-full border border-indigo-200 bg-indigo-50 text-indigo-600 flex items-center justify-center hover:bg-indigo-100 transition"
+                    >
+                      <Volume2 className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
 
                 {!current ? (
@@ -234,7 +353,17 @@ export default function InterviewPage() {
                       className="w-full border border-slate-200 rounded-xl px-4 py-3 text-[13.5px] leading-relaxed outline-none resize-y placeholder:text-slate-400"
                     />
                     <div className="flex items-center justify-between gap-3 mt-3 flex-wrap">
-                      <span className="text-[11px] text-slate-400">{draft.trim().length} characters</span>
+                      <span className="text-[11px] text-slate-400 flex items-center gap-2">
+                        {draft.trim().length} characters
+                        <button
+                          onClick={toggleListen}
+                          className={`inline-flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-full border transition ${
+                            listening ? "border-red-300 bg-red-50 text-red-600 animate-pulse" : "border-slate-200 text-slate-600 hover:border-indigo-300 hover:text-indigo-600"
+                          }`}
+                        >
+                          <Mic className="w-3.5 h-3.5" /> {listening ? "Listening… tap to stop" : "Dictate"}
+                        </button>
+                      </span>
                       <button
                         onClick={submitAnswer}
                         disabled={loading || !draft.trim()}
@@ -286,7 +415,7 @@ export default function InterviewPage() {
 
               <div className="flex justify-between mt-6 gap-3">
                 <button
-                  onClick={() => { setStage("pick"); setResults([]); setIdx(0); }}
+                  onClick={() => { stopMedia(); setCamOn(false); setStage("pick"); setResults([]); setIdx(0); }}
                   className="px-6 py-2.5 rounded-xl bg-slate-100 text-slate-500 text-[13px] font-bold flex items-center gap-2 hover:-translate-y-0.5 hover:shadow-md hover:text-slate-700"
                 >
                   <ArrowLeft className="w-4 h-4" /> Change track
@@ -305,6 +434,60 @@ export default function InterviewPage() {
 
           {/* right column */}
           <div className="space-y-4">
+            {/* Interview room — real webcam + AI interviewer with voice */}
+            <div className="card p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-bold text-[14px] text-[#101a3f] flex items-center gap-1.5"><Video className="w-4 h-4 text-indigo-500" /> Interview room</h3>
+                <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${speaking ? "bg-indigo-100 text-indigo-700" : listening ? "bg-red-100 text-red-600" : loading ? "bg-amber-100 text-amber-700" : camOn ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-500"}`}>
+                  {speaking ? "● AI speaking" : listening ? "● Listening" : loading ? "● Evaluating" : camOn ? "● Camera live" : "Ready"}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {/* your camera */}
+                <div className="relative aspect-video rounded-xl overflow-hidden bg-slate-900 border border-slate-700">
+                  {camOn && !camErr ? (
+                    <video ref={attachVideo} autoPlay playsInline muted className="w-full h-full object-cover -scale-x-100" />
+                  ) : (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400">
+                      <VideoOff className="w-5 h-5 mb-1" />
+                      <span className="text-[10px] font-semibold">Your camera</span>
+                    </div>
+                  )}
+                  <span className="absolute bottom-1 left-1.5 text-[9px] font-bold text-white/80 bg-black/40 px-1.5 py-0.5 rounded">You</span>
+                </div>
+                {/* AI interviewer */}
+                <div className={`relative aspect-video rounded-xl overflow-hidden bg-gradient-to-br from-indigo-900 to-purple-900 border flex items-center justify-center ${speaking ? "border-indigo-400 ring-2 ring-indigo-400/60 animate-pulse" : "border-indigo-700"}`}>
+                  <div className="flex flex-col items-center">
+                    <span className="text-[30px] leading-none">🤖</span>
+                    <span className="text-[9px] font-bold text-indigo-200 mt-1">AI Interviewer</span>
+                  </div>
+                  <span className="absolute bottom-1 left-1.5 text-[9px] font-bold text-white/80 bg-black/40 px-1.5 py-0.5 rounded">AI</span>
+                </div>
+              </div>
+              {camErr && <p className="text-[11px] text-red-500 mt-2">{camErr}</p>}
+              <div className="grid grid-cols-3 gap-1.5 mt-3">
+                <button
+                  onClick={() => setCamOn((v) => !v)}
+                  className={`text-[11px] font-bold py-2 rounded-lg border flex items-center justify-center gap-1 transition ${camOn ? "bg-green-50 border-green-200 text-green-700" : "bg-slate-50 border-slate-200 text-slate-600 hover:border-indigo-300"}`}
+                >
+                  <Video className="w-3.5 h-3.5" /> {camOn ? "Camera on" : "Camera off"}
+                </button>
+                <button
+                  onClick={() => setVoiceOn((v) => !v)}
+                  className={`text-[11px] font-bold py-2 rounded-lg border flex items-center justify-center gap-1 transition ${voiceOn ? "bg-indigo-50 border-indigo-200 text-indigo-700" : "bg-slate-50 border-slate-200 text-slate-600 hover:border-indigo-300"}`}
+                >
+                  {voiceOn ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />} {voiceOn ? "Voice on" : "Voice off"}
+                </button>
+                <button
+                  onClick={toggleListen}
+                  className={`text-[11px] font-bold py-2 rounded-lg border flex items-center justify-center gap-1 transition ${listening ? "bg-red-50 border-red-300 text-red-600 animate-pulse" : "bg-slate-50 border-slate-200 text-slate-600 hover:border-indigo-300"}`}
+                >
+                  <Mic className="w-3.5 h-3.5" /> {listening ? "Stop mic" : "Mic"}
+                </button>
+              </div>
+              <p className="text-[10px] text-slate-400 mt-2 leading-relaxed">Camera & mic stay in your browser — nothing is uploaded. Voice reads questions aloud; dictate fills your answer.</p>
+            </div>
+
             <div className="card p-5">
               <h3 className="font-bold text-[15px] text-[#101a3f] mb-3 flex items-center gap-2"><TrendingUp className="w-4 h-4" /> Live score</h3>
               <div className="flex gap-1.5 flex-wrap">

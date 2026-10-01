@@ -23,16 +23,21 @@ Built for the *Build Fast with AI: AI Build Challenge 2026* — track
   user starts **empty** with honest empty states (no seeded/fake records).
 
 ## Pages
-`/start` onboarding · `/` dashboard · `/learning-path` · `/learn/[id]` AI lesson ·
-`/ai-tutor` (10 modes, chat history, pin/rename) · `/quizzes` (Easy/Medium/**AI-generated**,
-result analysis) · `/practice` (sandboxed code runner + AI hint/analyze) ·
+`/` landing · `/start` onboarding (+`?demo=1` guided demo) · `/dashboard` ·
+`/learn` (Roadmap + Catalog tabs) · `/learn/[id]` AI lesson · `/lesson/[id]`
+authored MDX lessons · `/ai-tutor` (10 modes, chat history, pin/rename) ·
+`/quizzes` (Easy/Medium/**AI-generated**, result analysis) ·
+`/interview` (AI interview — **webcam room, voice questions, dictate answers**) ·
+`/practice` (sandboxed code runner + AI hint/analyze) ·
 `/progress` · `/activity` · `/notes` · `/saved` bookmarks · `/planner` ·
-`/search` · `/settings`
+`/projects` · `/doubt` · `/code-explainer` · `/search` · `/settings`
+Old URLs 308-redirect here (`/courses`, `/learning-path`, `/roadmap` → `/learn`).
 
 ## Tech stack
 Next.js 16 (App Router, webpack build) · React 19 · Tailwind CSS v4 ·
-lucide-react · Groq (`llama-3.3-70b-versatile`, key pool) ·
-Gemini (`2.0-flash`, backup pool)
+lucide-react · Groq (`openai/gpt-oss-120b`, key pool) ·
+Gemini (`gemini-2.5-flash`, backup pool) · PWA manifest + service icons ·
+`Ctrl/⌘+K` command palette ·
 · localStorage persistence (Supabase schema in `supabase/schema.sql` for phase 2).
 
 ## Run locally
@@ -69,13 +74,15 @@ npm run dist
 ## Testing / reproducibility
 ```bash
 npx tsc --noEmit        # type check
-npx playwright test     # 7 e2e tests (onboarding, dashboard, path, quiz+AI analysis,
-                        #  tutor answer, notes/planner/activity CRUD, settings persistence)
+npx playwright test     # 14 e2e tests (onboarding, dashboard, path actions,
+                        #  quiz+AI analysis, tutor answer, notes/planner/activity
+                        #  CRUD, settings persistence, cmd-K palette, MDX lesson)
 ```
 The e2e suite also fails on any browser console error, so regressions in the
 rendering layer are caught automatically.
 
 ## AI tools disclosed
 Built with OpenCode (Muse Spark) as pair-programmer; LLMs used at runtime:
-Groq `llama-3.3-70b-versatile` (primary pool) and Gemini `2.0-flash` (backup pool).
-Quiz content is a curated static bank; tutor answers are model-generated.
+Groq `openai/gpt-oss-120b` (primary pool) and `gemini-2.5-flash` (backup pool).
+Authored MDX lessons are editorial; other lessons, quizzes, plans and tutor
+answers are model-generated; camera/mic (interview) stay in the browser.
