@@ -1,10 +1,8 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import ThemeToggle from "../../components/ThemeToggle";
-import SearchBox from "../../components/SearchBox";
+import TopHeader from "../../components/TopHeader";
 import Markdown from "../../components/Markdown";
-import ProfileName from "../../components/ProfileName";
 import { PYTHON_QUIZ, PYTHON_QUIZ_MEDIUM, PYTHON_QUIZ_HARD, QuizQ } from "../../lib/data";
 import { useProgress, recordQuiz, recordMistakes, avgScore, learnerLevel } from "../../lib/store";
 import { toast } from "../../components/Toaster";
@@ -214,41 +212,18 @@ export default function QuizzesPage() {
   return (
     <div>
       {/* Header */}
-      <div className="flex items-start justify-between gap-4 mb-5 flex-wrap">
-        <div className="flex items-center gap-3">
-          <Link href="/" className="text-[#101a3f] hover:text-indigo-600 mt-1">
-            <ArrowLeft className="w-6 h-6" />
-          </Link>
-          <div>
-            <h1 className="text-[26px] md:text-[30px] font-extrabold text-[#101a3f] leading-tight">Quiz – Python Basics</h1>
-            <p className="text-[13px] text-slate-500 mt-0.5">Test your knowledge and see where you need to improve 🙂</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <SearchBox />
-          <ThemeToggle />
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-lg">👤</div>
-            <div className="hidden lg:block">
-              <div className="text-[13px] font-bold text-[#101a3f]"><ProfileName /></div>
-              <div className="text-[11px] text-slate-500 flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-green-500 inline-block" /> {learnerLevel(prog)}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <TopHeader title="Quiz – Python Basics" subtitle="Test your knowledge and see where you need to improve 🙂" back="/" />
 
       <div className="grid grid-cols-1 xl:grid-cols-[1.7fr_1fr] gap-4">
         <div>
           {/* Banner */}
-          <div className="card hero-gradient !border-0 p-5 text-white flex items-center gap-4 mb-4 flex-wrap">
-            <div className="w-16 h-16 rounded-full bg-white/20 border border-white/40 flex items-center justify-center shrink-0">
+          <div className="card p-5 flex items-center gap-4 mb-4 flex-wrap border-indigo-100 bg-indigo-50/60 dark:border-white/10 dark:bg-white/5">
+            <div className="w-16 h-16 rounded-full bg-white dark:bg-white/10 border border-indigo-200 dark:border-white/15 flex items-center justify-center shrink-0 text-indigo-600 dark:text-indigo-300">
               <ClipboardList className="w-8 h-8" />
             </div>
             <div className="flex-1 min-w-[200px]">
-              <div className="font-extrabold text-[18px]">Python Basics Quiz</div>
-              <div className="text-[12px] text-white/90">Answer the following questions. Each question has 1 mark.</div>
+              <div className="font-extrabold text-[18px] text-[#101a3f] dark:text-slate-50">Python Basics Quiz</div>
+              <div className="text-[12px] text-slate-500 dark:text-slate-400">Answer the following questions. Each question has 1 mark.</div>
               <div className="flex gap-1.5 mt-2 flex-wrap">
                 {(["easy", "medium", "hard", "ai"] as const).map((t) => {
                   const lockedT = t === "medium" && !mediumUnlocked;
@@ -260,7 +235,7 @@ export default function QuizzesPage() {
                       onClick={() => switchTier(t)}
                       disabled={lockedT || lockedH || aiLocked}
                       title={lockedT ? `Unlocks at 60% average (now ${avg}%)` : lockedH ? `Unlocks at 80% average or Advanced level (now ${avg}%)` : aiLocked ? "Generate an AI quiz below first" : ""}
-                      className={`text-[11px] font-bold px-3 py-1 rounded-full transition ${tier === t ? "bg-white text-indigo-700" : "bg-white/20 text-white hover:bg-white/30"} ${lockedT || lockedH || aiLocked ? "opacity-70" : ""}`}
+                      className={`text-[11px] font-bold px-3 py-1 rounded-full transition border ${tier === t ? "bg-white text-indigo-700 border-indigo-200 dark:border-white/15 shadow-sm" : "bg-white/70 dark:bg-white/10 text-slate-600 dark:text-slate-300 border-indigo-100 dark:border-white/10 hover:bg-white dark:hover:bg-white/20"} ${lockedT || lockedH || aiLocked ? "opacity-70" : ""}`}
                     >
                       {t === "easy" ? "Easy" : t === "medium" ? `Medium ${lockedT ? "🔒" : ""}` : t === "hard" ? `Hard ${lockedH ? "🔒" : ""}` : `AI ${aiLocked ? "🔒" : ""}`}
                     </button>
@@ -268,8 +243,8 @@ export default function QuizzesPage() {
                 })}
               </div>
             </div>
-            <span className="text-[12px] border border-white/40 rounded-full px-3 py-1.5 font-medium">Question {idx + 1} of {total}</span>
-            <span className="text-[12px] border border-white/40 rounded-full px-3 py-1.5 flex items-center gap-1.5 font-semibold">
+            <span className="text-[12px] border border-indigo-200 dark:border-white/15 rounded-full px-3 py-1.5 font-medium">Question {idx + 1} of {total}</span>
+            <span className="text-[12px] border border-indigo-200 dark:border-white/15 rounded-full px-3 py-1.5 flex items-center gap-1.5 font-semibold">
               <Clock className="w-3.5 h-3.5" /> {mm}:{ss}
             </span>
           </div>

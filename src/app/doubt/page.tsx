@@ -1,11 +1,10 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import ThemeToggle from "../../components/ThemeToggle";
-import SearchBox from "../../components/SearchBox";
+import TopHeader from "../../components/TopHeader";
 import Markdown from "../../components/Markdown";
 import { toast } from "../../components/Toaster";
-import { ArrowLeft, HelpCircle, Loader2, Send, Sparkles, ChevronDown, ChevronUp, Lightbulb } from "lucide-react";
+import { HelpCircle, Loader2, Send, Sparkles, ChevronDown, ChevronUp, Lightbulb } from "lucide-react";
 
 const CHIPS = [
   "Why is my model accuracy low?",
@@ -70,34 +69,20 @@ export default function DoubtPage() {
   return (
     <div>
       {/* Header */}
-      <div className="flex items-start justify-between gap-4 mb-5 flex-wrap">
-        <div className="flex items-center gap-3">
-          <Link href="/" className="text-[#101a3f] hover:text-indigo-600 mt-1">
-            <ArrowLeft className="w-6 h-6" />
-          </Link>
-          <div>
-            <h1 className="text-[26px] md:text-[30px] font-extrabold text-[#101a3f] leading-tight">AI Doubt Solver</h1>
-            <p className="text-[13px] text-slate-500 mt-0.5">Stuck on something? Get the problem, cause, fix, example and practice — in order</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <SearchBox />
-          <ThemeToggle />
-        </div>
-      </div>
+      <TopHeader title="AI Doubt Solver" subtitle="Stuck on something? Get the problem, cause, fix, example and practice — in order" back="/" />
 
       <div className="grid grid-cols-1 xl:grid-cols-[1.5fr_1fr] gap-4">
         <div>
           {/* Banner */}
-          <div className="card hero-gradient !border-0 p-5 text-white flex items-center gap-4 mb-4 flex-wrap">
-            <div className="w-16 h-16 rounded-full bg-white/20 border border-white/40 flex items-center justify-center shrink-0">
+          <div className="card p-5 flex items-center gap-4 mb-4 flex-wrap border-indigo-100 bg-indigo-50/60 dark:border-white/10 dark:bg-white/5">
+            <div className="w-16 h-16 rounded-full bg-white dark:bg-white/10 border border-indigo-200 dark:border-white/15 flex items-center justify-center shrink-0 text-indigo-600 dark:text-indigo-300">
               <HelpCircle className="w-8 h-8" />
             </div>
             <div className="flex-1 min-w-[200px]">
-              <div className="font-extrabold text-[18px]">Ask anything you&apos;re stuck on</div>
-              <div className="text-[12px] text-white/90">Problem → Why it happened → How to fix it → Correct example → Practice question</div>
+              <div className="font-extrabold text-[18px] text-[#101a3f] dark:text-slate-50">Ask anything you&apos;re stuck on</div>
+              <div className="text-[12px] text-slate-500 dark:text-slate-400">Problem → Why it happened → How to fix it → Correct example → Practice question</div>
             </div>
-            <span className="text-[12px] border border-white/40 rounded-full px-3 py-1.5 font-medium flex items-center gap-1.5">
+            <span className="text-[12px] border border-indigo-200 dark:border-white/15 text-slate-600 dark:text-slate-300 rounded-full px-3 py-1.5 font-medium flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5" /> Structured answers
             </span>
           </div>

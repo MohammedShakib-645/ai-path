@@ -1,11 +1,13 @@
 "use client";
-import { Search, Menu } from "lucide-react";
+import type { ReactNode } from "react";
+import Link from "next/link";
+import { Menu, ArrowLeft } from "lucide-react";
 import ThemeToggle from "./ThemeToggle";
 import SearchBox from "./SearchBox";
 import { useMenu } from "../app/MenuContext";
 import { greeting, useProgress, useProfileName, learnerLevel } from "../lib/store";
 
-export default function TopHeader({ title, subtitle }: { title?: string; subtitle?: string }) {
+export default function TopHeader({ title, subtitle, back, actions }: { title?: string; subtitle?: string; back?: string; actions?: ReactNode }) {
   const onMenu = useMenu();
   const s = useProgress();
   const level = learnerLevel(s);
@@ -15,13 +17,19 @@ export default function TopHeader({ title, subtitle }: { title?: string; subtitl
   return (
     <div className="flex items-start justify-between gap-4 mb-5 flex-wrap">
       <div className="flex items-center gap-3">
-        <button
-          onClick={onMenu}
-          className="md:hidden w-10 h-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center shadow-sm"
-          aria-label="Open menu"
-        >
-          <Menu className="w-5 h-5 text-slate-600" />
-        </button>
+        {back ? (
+          <Link href={back} aria-label="Back" className="text-[#101a3f] hover:text-indigo-600 dark:text-slate-200 dark:hover:text-indigo-300 mt-1">
+            <ArrowLeft className="w-6 h-6" />
+          </Link>
+        ) : (
+          <button
+            onClick={onMenu}
+            className="md:hidden w-10 h-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center shadow-sm"
+            aria-label="Open menu"
+          >
+            <Menu className="w-5 h-5 text-slate-600" />
+          </button>
+        )}
         <div>
           {title ? (
             <>
@@ -42,6 +50,7 @@ export default function TopHeader({ title, subtitle }: { title?: string; subtitl
       </div>
 
       <div className="flex items-center gap-3">
+        {actions}
         <SearchBox />
         <ThemeToggle />
         <div className="flex items-center gap-2">

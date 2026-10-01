@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Send, Bot, Copy, Check, RotateCcw, ArrowLeft, Cpu, Lightbulb, Plus, Search, Pin, Trash2, Pencil, Square, RefreshCw, Play, Bookmark, Paperclip } from "lucide-react";
+import { Send, Copy, Check, RotateCcw, Plus, Search, Pin, Trash2, Pencil, Square, RefreshCw, Play, Bookmark, Paperclip } from "lucide-react";
 import { toast } from "../../components/Toaster";
 import { runCode as runSandbox } from "../../lib/runner";
 import {
@@ -10,8 +10,7 @@ import {
 } from "../../lib/store";
 import { nextAction, tutorContext } from "../../lib/engine";
 import { readAttachmentFiles, type Attachment } from "../../lib/attachments";
-import ThemeToggle from "../../components/ThemeToggle";
-import SearchBox from "../../components/SearchBox";
+import TopHeader from "../../components/TopHeader";
 import Markdown, { parseFollowups } from "../../components/Markdown";
 
 interface Msg { role: "user" | "assistant"; content: string; time?: string; engine?: string; ms?: number }
@@ -250,20 +249,14 @@ export default function AITutorPage() {
 
   return (
     <div>
-      <div className="flex items-start justify-between gap-4 mb-4 flex-wrap">
-        <div className="flex items-center gap-3">
-          <Link href="/" className="text-[#101a3f] hover:text-indigo-600 mt-1"><ArrowLeft className="w-6 h-6" /></Link>
-          <div>
-            <h1 className="text-[26px] md:text-[30px] font-extrabold text-[#101a3f] leading-tight">AI Tutor</h1>
-            <p className="text-[13px] text-slate-500 mt-0.5">Knows your level, weak topics and history — adapts every answer</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <button onClick={() => setShowChats(!showChats)} className="xl:hidden px-3 py-2 rounded-xl bg-white border border-slate-200 text-[12px] font-bold">Chats</button>
-          <SearchBox />
-          <ThemeToggle />
-        </div>
-      </div>
+      <TopHeader
+        title="AI Tutor"
+        subtitle="Knows your level, weak topics and history — adapts every answer"
+        back="/"
+        actions={
+          <button onClick={() => setShowChats(!showChats)} className="xl:hidden px-3 py-2 rounded-xl bg-white dark:bg-white/10 border border-slate-200 dark:border-white/15 text-[12px] font-bold">Chats</button>
+        }
+      />
 
       <div className="grid grid-cols-1 xl:grid-cols-[220px_3fr_1.2fr] gap-4">
         {/* conversations */}
@@ -302,15 +295,15 @@ export default function AITutorPage() {
 
         {/* chat */}
         <div className="card p-0 overflow-hidden">
-          <div className="hero-gradient px-4 py-3 text-white flex items-center gap-2 flex-wrap">
-            <span className="w-9 h-9 rounded-full bg-white/25 border border-white/30 flex items-center justify-center text-[18px] shrink-0">🤖</span>
-            <select value={chat?.mode || mode} onChange={(e) => { setMode(e.target.value); if (chat) saveChat(chat.id, { mode: e.target.value }); }} className="bg-white/20 border border-white/30 rounded-full px-3 py-1.5 text-[12px] font-bold outline-none text-white [&>option]:text-slate-800">
+          <div className="bg-indigo-50/60 dark:bg-white/5 border-b border-indigo-100 dark:border-white/10 px-4 py-3 flex items-center gap-2 flex-wrap">
+            <span className="w-9 h-9 rounded-full bg-white dark:bg-white/10 border border-indigo-200 dark:border-white/15 flex items-center justify-center text-[18px] shrink-0">🤖</span>
+            <select value={chat?.mode || mode} onChange={(e) => { setMode(e.target.value); if (chat) saveChat(chat.id, { mode: e.target.value }); }} className="bg-white dark:bg-white/10 border border-indigo-200 dark:border-white/15 rounded-full px-3 py-1.5 text-[12px] font-bold outline-none text-[#101a3f] dark:text-slate-100 [&>option]:text-slate-800">
               {MODES.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
             </select>
-            <span className="text-[11px] text-white/85 hidden sm:inline">adapts to {prog.prefs.level} • {prog.done.length}/12 units</span>
+            <span className="text-[11px] text-slate-500 dark:text-slate-400 hidden sm:inline">adapts to {prog.prefs.level} • {prog.done.length}/12 units</span>
             <span className="ml-auto flex gap-1.5">
-              <button onClick={() => send(undefined, true)} disabled={loading || !msgs.length} title="Regenerate" className="w-8 h-8 rounded-full bg-white/20 border border-white/30 flex items-center justify-center disabled:opacity-40"><RefreshCw className="w-3.5 h-3.5" /></button>
-              <button onClick={() => { if (chat) { saveChat(chat.id, { msgs: [] }); toast("Conversation cleared"); } }} title="Clear chat" className="w-8 h-8 rounded-full bg-white/20 border border-white/30 flex items-center justify-center"><RotateCcw className="w-3.5 h-3.5" /></button>
+              <button onClick={() => send(undefined, true)} disabled={loading || !msgs.length} title="Regenerate" className="w-8 h-8 rounded-full bg-white dark:bg-white/10 border border-indigo-200 dark:border-white/15 flex items-center justify-center disabled:opacity-40"><RefreshCw className="w-3.5 h-3.5" /></button>
+              <button onClick={() => { if (chat) { saveChat(chat.id, { msgs: [] }); toast("Conversation cleared"); } }} title="Clear chat" className="w-8 h-8 rounded-full bg-white dark:bg-white/10 border border-indigo-200 dark:border-white/15 flex items-center justify-center"><RotateCcw className="w-3.5 h-3.5" /></button>
             </span>
           </div>
 

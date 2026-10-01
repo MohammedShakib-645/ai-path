@@ -1,13 +1,11 @@
 "use client";
 import { useState, useRef } from "react";
 import Link from "next/link";
-import ThemeToggle from "../../components/ThemeToggle";
-import SearchBox from "../../components/SearchBox";
+import TopHeader from "../../components/TopHeader";
 import Markdown from "../../components/Markdown";
-import ProfileName from "../../components/ProfileName";
 import { toast } from "../../components/Toaster";
 import { INTERVIEW_TRACKS } from "../../lib/curriculum";
-import { useProgress, recordQuiz, logActivity, learnerLevel } from "../../lib/store";
+import { recordQuiz, logActivity } from "../../lib/store";
 import {
   ArrowLeft, ArrowRight, CheckCircle2, Clock, Mic, RotateCcw,
   Sparkles, Target, TrendingUp, AlertTriangle,
@@ -22,8 +20,6 @@ type EvalResult = {
 };
 
 export default function InterviewPage() {
-  const prog = useProgress();
-
   const [stage, setStage] = useState<"pick" | "run" | "summary">("pick");
   const [trackId, setTrackId] = useState<string | null>(null);
   const [idx, setIdx] = useState(0);
@@ -163,43 +159,20 @@ export default function InterviewPage() {
   return (
     <div>
       {/* Header */}
-      <div className="flex items-start justify-between gap-4 mb-5 flex-wrap">
-        <div className="flex items-center gap-3">
-          <Link href="/" className="text-[#101a3f] hover:text-indigo-600 mt-1">
-            <ArrowLeft className="w-6 h-6" />
-          </Link>
-          <div>
-            <h1 className="text-[26px] md:text-[30px] font-extrabold text-[#101a3f] leading-tight">AI Interview Mode</h1>
-            <p className="text-[13px] text-slate-500 mt-0.5">One question at a time — answer out loud in writing, get graded 0–5</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <SearchBox />
-          <ThemeToggle />
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-lg">👤</div>
-            <div className="hidden lg:block">
-              <div className="text-[13px] font-bold text-[#101a3f]"><ProfileName /></div>
-              <div className="text-[11px] text-slate-500 flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-green-500 inline-block" /> {learnerLevel(prog)}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <TopHeader title="AI Interview Mode" subtitle="One question at a time — answer out loud in writing, get graded 0–5" back="/" />
 
       {/* ── Stage 1: pick a track ─────────────────────────────── */}
       {stage === "pick" && (
         <div>
-          <div className="card hero-gradient !border-0 p-6 text-white mb-4 flex items-center gap-4 flex-wrap">
-            <div className="w-16 h-16 rounded-full bg-white/20 border border-white/40 flex items-center justify-center shrink-0">
+          <div className="card p-6 mb-4 flex items-center gap-4 flex-wrap border-indigo-100 bg-indigo-50/60 dark:border-white/10 dark:bg-white/5">
+            <div className="w-16 h-16 rounded-full bg-white dark:bg-white/10 border border-indigo-200 dark:border-white/15 flex items-center justify-center shrink-0 text-indigo-600 dark:text-indigo-300">
               <Mic className="w-8 h-8" />
             </div>
             <div className="flex-1 min-w-[220px]">
               <div className="font-extrabold text-[18px]">Pick your interview track</div>
-              <div className="text-[12px] text-white/90">Real questions, graded by AI. Each answer scores 0–5 marks.</div>
+              <div className="text-[12px] text-slate-500 dark:text-slate-400">Real questions, graded by AI. Each answer scores 0–5 marks.</div>
             </div>
-            <span className="text-[12px] border border-white/40 rounded-full px-3 py-1.5 font-medium flex items-center gap-1.5">
+            <span className="text-[12px] border border-indigo-200 dark:border-white/15 rounded-full px-3 py-1.5 font-medium flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5" /> AI-graded
             </span>
           </div>
@@ -232,14 +205,14 @@ export default function InterviewPage() {
       {stage === "run" && track && (
         <div className="grid grid-cols-1 xl:grid-cols-[1.7fr_1fr] gap-4">
           <div>
-            <div className="card hero-gradient !border-0 p-5 text-white flex items-center gap-4 mb-4 flex-wrap">
-              <span className="w-14 h-14 rounded-full bg-white/20 border border-white/40 flex items-center justify-center text-[28px] shrink-0">{track.icon}</span>
+            <div className="card p-5 flex items-center gap-4 mb-4 flex-wrap border-indigo-100 bg-indigo-50/60 dark:border-white/10 dark:bg-white/5">
+              <span className="w-14 h-14 rounded-full bg-white dark:bg-white/10 border border-indigo-200 dark:border-white/15 flex items-center justify-center text-[28px] shrink-0">{track.icon}</span>
               <div className="flex-1 min-w-[180px]">
                 <div className="font-extrabold text-[17px]">{track.label} Interview</div>
-                <div className="text-[12px] text-white/90">Answer naturally — the AI grades depth, not keywords.</div>
+                <div className="text-[12px] text-slate-500 dark:text-slate-400">Answer naturally — the AI grades depth, not keywords.</div>
               </div>
-              <span className="text-[12px] border border-white/40 rounded-full px-3 py-1.5 font-medium">Question {idx + 1} of {total}</span>
-              <span className="text-[12px] border border-white/40 rounded-full px-3 py-1.5 flex items-center gap-1.5 font-semibold">
+              <span className="text-[12px] border border-indigo-200 dark:border-white/15 rounded-full px-3 py-1.5 font-medium">Question {idx + 1} of {total}</span>
+              <span className="text-[12px] border border-indigo-200 dark:border-white/15 rounded-full px-3 py-1.5 flex items-center gap-1.5 font-semibold">
                 <Target className="w-3.5 h-3.5" /> {score}/{max}
               </span>
             </div>
@@ -372,12 +345,12 @@ export default function InterviewPage() {
       {stage === "summary" && track && (
         <div className="grid grid-cols-1 xl:grid-cols-[1.7fr_1fr] gap-4">
           <div>
-            <div className="card hero-gradient !border-0 p-6 text-white mb-4 flex items-center gap-5 flex-wrap">
+            <div className="card p-6 mb-4 flex items-center gap-5 flex-wrap border-indigo-100 bg-indigo-50/60 dark:border-white/10 dark:bg-white/5">
               <div className="relative w-[110px] h-[110px] shrink-0">
                 <svg width="110" height="110" viewBox="0 0 110 110">
-                  <circle cx="55" cy="55" r="46" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="10" />
+                  <circle cx="55" cy="55" r="46" fill="none" stroke="rgba(99,102,241,0.25)" strokeWidth="10" />
                   <circle
-                    cx="55" cy="55" r="46" fill="none" stroke="#ffffff" strokeWidth="10" strokeLinecap="round"
+                    cx="55" cy="55" r="46" fill="none" stroke="#6366f1" strokeWidth="10" strokeLinecap="round"
                     strokeDasharray={2 * Math.PI * 46}
                     strokeDashoffset={2 * Math.PI * 46 * (1 - pct / 100)}
                     transform="rotate(-90 55 55)"
@@ -386,16 +359,16 @@ export default function InterviewPage() {
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
                   <b className="text-[24px]">{pct}%</b>
-                  <span className="text-[10px] text-white/85">overall</span>
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400">overall</span>
                 </div>
               </div>
               <div className="flex-1 min-w-[200px]">
                 <div className="font-extrabold text-[20px] flex items-center gap-2">{track.icon} {track.label} interview done</div>
-                <div className="text-[13px] text-white/90 mt-0.5">You scored <b>{score}</b> out of <b>{max}</b> marks across {total} questions.</div>
+                <div className="text-[13px] text-slate-500 dark:text-slate-400 mt-0.5">You scored <b>{score}</b> out of <b>{max}</b> marks across {total} questions.</div>
                 <div className="flex gap-2 mt-3 flex-wrap">
-                  <span className="text-[12px] border border-white/40 rounded-full px-3 py-1.5 font-medium">{score}/{max} marks</span>
-                  <span className="text-[12px] border border-white/40 rounded-full px-3 py-1.5 font-medium">{pct}%</span>
-                  <span className="text-[12px] border border-white/40 rounded-full px-3 py-1.5 font-medium">{weak.length} weak {weak.length === 1 ? "area" : "areas"}</span>
+                  <span className="text-[12px] border border-indigo-200 dark:border-white/15 rounded-full px-3 py-1.5 font-medium">{score}/{max} marks</span>
+                  <span className="text-[12px] border border-indigo-200 dark:border-white/15 rounded-full px-3 py-1.5 font-medium">{pct}%</span>
+                  <span className="text-[12px] border border-indigo-200 dark:border-white/15 rounded-full px-3 py-1.5 font-medium">{weak.length} weak {weak.length === 1 ? "area" : "areas"}</span>
                 </div>
               </div>
             </div>

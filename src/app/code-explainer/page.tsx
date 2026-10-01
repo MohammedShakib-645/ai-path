@@ -1,11 +1,10 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import ThemeToggle from "../../components/ThemeToggle";
-import SearchBox from "../../components/SearchBox";
+import TopHeader from "../../components/TopHeader";
 import Markdown from "../../components/Markdown";
 import { toast } from "../../components/Toaster";
-import { ArrowLeft, ClipboardList, Copy, Check, Eraser, Play, Sparkles, Code2, Loader2 } from "lucide-react";
+import { ClipboardList, Copy, Check, Eraser, Play, Sparkles, Code2, Loader2 } from "lucide-react";
 
 const LANGS = ["Python", "JavaScript", "Java", "C++", "SQL"] as const;
 type Lang = (typeof LANGS)[number];
@@ -135,39 +134,25 @@ export default function CodeExplainerPage() {
   return (
     <div>
       {/* Header */}
-      <div className="flex items-start justify-between gap-4 mb-5 flex-wrap">
-        <div className="flex items-center gap-3">
-          <Link href="/" className="text-[#101a3f] hover:text-indigo-600 mt-1">
-            <ArrowLeft className="w-6 h-6" />
-          </Link>
-          <div>
-            <h1 className="text-[26px] md:text-[30px] font-extrabold text-[#101a3f] leading-tight">AI Code Explainer</h1>
-            <p className="text-[13px] text-slate-500 mt-0.5">Paste code — get a line-by-line explanation, concepts and fixes</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <SearchBox />
-          <ThemeToggle />
-        </div>
-      </div>
+      <TopHeader title="AI Code Explainer" subtitle="Paste code — get a line-by-line explanation, concepts and fixes" back="/" />
 
       <div className="grid grid-cols-1 xl:grid-cols-[1.5fr_1fr] gap-4">
         <div>
           {/* Banner */}
-          <div className="card hero-gradient !border-0 p-5 text-white flex items-center gap-4 mb-4 flex-wrap">
-            <div className="w-16 h-16 rounded-full bg-white/20 border border-white/40 flex items-center justify-center shrink-0">
+          <div className="card p-5 flex items-center gap-4 mb-4 flex-wrap border-indigo-100 bg-indigo-50/60 dark:border-white/10 dark:bg-white/5">
+            <div className="w-16 h-16 rounded-full bg-white dark:bg-white/10 border border-indigo-200 dark:border-white/15 flex items-center justify-center shrink-0 text-indigo-600 dark:text-indigo-300">
               <Code2 className="w-8 h-8" />
             </div>
             <div className="flex-1 min-w-[200px]">
-              <div className="font-extrabold text-[18px]">Understand any code, line by line</div>
-              <div className="text-[12px] text-white/90">What it does • concepts • possible errors • improvements • expected output</div>
+              <div className="font-extrabold text-[18px] text-[#101a3f] dark:text-slate-50">Understand any code, line by line</div>
+              <div className="text-[12px] text-slate-500 dark:text-slate-400">What it does • concepts • possible errors • improvements • expected output</div>
             </div>
             <div className="flex gap-1.5 flex-wrap">
               {LANGS.map((l) => (
                 <button
                   key={l}
                   onClick={() => { setLang(l); setReply(""); setError(null); }}
-                  className={`text-[11px] font-bold px-3 py-1.5 rounded-full transition ${lang === l ? "bg-white text-indigo-700" : "bg-white/20 text-white hover:bg-white/30"}`}
+                  className={`text-[11px] font-bold px-3 py-1.5 rounded-full transition border ${lang === l ? "bg-white text-indigo-700 border-indigo-200 dark:border-white/15 shadow-sm" : "bg-white/70 dark:bg-white/10 text-slate-600 dark:text-slate-300 border-indigo-100 dark:border-white/10 hover:bg-white dark:hover:bg-white/20"}`}
                 >
                   {l}
                 </button>

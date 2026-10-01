@@ -198,26 +198,26 @@ export default function AiFab() {
         <div className={`fixed z-50 ${size} card pop-in !p-0 overflow-hidden flex flex-col shadow-2xl transition-all duration-200`}
           onClick={(e) => e.stopPropagation()}>
           {/* header */}
-          <div className="hero-gradient px-3.5 py-2.5 text-white flex items-center gap-2">
-            <span className="w-8 h-8 rounded-full bg-white/25 border border-white/30 flex items-center justify-center text-[17px]">🤖</span>
+          <div className="bg-indigo-50/60 dark:bg-white/5 border-b border-indigo-100 dark:border-white/10 px-3.5 py-2.5 flex items-center gap-2">
+            <span className="w-8 h-8 rounded-full bg-white dark:bg-white/10 border border-indigo-200 dark:border-white/15 flex items-center justify-center text-[17px]">🤖</span>
             <div className="flex-1 leading-tight min-w-0">
-              <div className="text-[13px] font-extrabold">AI-PATH Bot</div>
-              <div className="text-[10px] text-white/80 truncate">
+              <div className="text-[13px] font-extrabold text-[#101a3f] dark:text-slate-50">AI-PATH Bot</div>
+              <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
                 {loading ? "thinking…" : screenOn ? `watching ${pathname}` : "screen off"} • {prog.prefs.level}
               </div>
             </div>
             <button
               onClick={() => setScreenOn((v) => !v)}
               title={screenOn ? "Screen context ON (bot sees this page)" : "Screen context OFF"}
-              className={`w-7 h-7 rounded-full border flex items-center justify-center ${screenOn ? "bg-white/30 border-white/40" : "bg-white/10 border-white/20"}`}
+              className={`w-7 h-7 rounded-full border flex items-center justify-center ${screenOn ? "bg-indigo-100 dark:bg-indigo-500/30 border-indigo-300 dark:border-indigo-400/40 text-indigo-700 dark:text-indigo-200" : "bg-white dark:bg-white/10 border-indigo-200 dark:border-white/15 text-slate-500"}`}
             >
               {screenOn ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
             </button>
-            <Link href="/ai-tutor" title="Open full tutor screen" className="w-7 h-7 rounded-full bg-white/20 border border-white/30 flex items-center justify-center"><Maximize2 className="w-3.5 h-3.5" /></Link>
-            <button onClick={() => setBig((b) => !b)} title={big ? "Shrink" : "Expand"} className="w-7 h-7 rounded-full bg-white/20 border border-white/30 flex items-center justify-center">
+            <Link href="/ai-tutor" title="Open full tutor screen" className="w-7 h-7 rounded-full bg-white dark:bg-white/10 border border-indigo-200 dark:border-white/15 flex items-center justify-center"><Maximize2 className="w-3.5 h-3.5" /></Link>
+            <button onClick={() => setBig((b) => !b)} title={big ? "Shrink" : "Expand"} className="w-7 h-7 rounded-full bg-white dark:bg-white/10 border border-indigo-200 dark:border-white/15 flex items-center justify-center">
               {big ? <Minimize2 className="w-3.5 h-3.5" /> : <span className="text-[12px] leading-none">⤢</span>}
             </button>
-            <button onClick={() => setOpen(false)} aria-label="Close" className="w-7 h-7 rounded-full bg-white/20 border border-white/30 flex items-center justify-center"><X className="w-3.5 h-3.5" /></button>
+            <button onClick={() => setOpen(false)} aria-label="Close" className="w-7 h-7 rounded-full bg-white dark:bg-white/10 border border-indigo-200 dark:border-white/15 flex items-center justify-center"><X className="w-3.5 h-3.5" /></button>
           </div>
 
           {/* tabs */}

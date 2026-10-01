@@ -1,8 +1,6 @@
 "use client";
 import Link from "next/link";
-import ThemeToggle from "../../components/ThemeToggle";
-import SearchBox from "../../components/SearchBox";
-import ProfileName from "../../components/ProfileName";
+import TopHeader from "../../components/TopHeader";
 import {
   useProgress, useHydrated, completionInt, avgScore, streakCount, CATEGORIES, catPct,
   UNITS, nextUnit, relTime, learnerLevel,
@@ -11,7 +9,7 @@ import { totalDone, TOTAL_LESSONS, PROJECTS, ACHIEVEMENTS, unlockedIds } from ".
 import { selectSkills } from "../../lib/selectors";
 import { SkeletonStat } from "../../components/ui";
 import {
-  Search, Sun, ArrowLeft, BookOpen, CheckCircle2, Clock, Flame,
+  Search, Sun, BookOpen, CheckCircle2, Clock, Flame,
   Lightbulb, AlertTriangle, Trophy, Folder,
 } from "lucide-react";
 
@@ -68,30 +66,7 @@ export default function ProgressPage() {
 
   return (
     <div>
-      <div className="flex items-start justify-between gap-4 mb-5 flex-wrap">
-        <div className="flex items-center gap-3">
-          <Link href="/" className="text-[#101a3f] hover:text-indigo-600 mt-1">
-            <ArrowLeft className="w-6 h-6" />
-          </Link>
-          <div>
-            <h1 className="text-[26px] md:text-[30px] font-extrabold text-[#101a3f] leading-tight">Progress Dashboard</h1>
-            <p className="text-[13px] text-slate-500 mt-0.5">Track your learning journey and see how far you&apos;ve come!</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <SearchBox />
-          <ThemeToggle />
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-lg">👤</div>
-            <div className="hidden lg:block">
-              <div className="text-[13px] font-bold text-[#101a3f]"><ProfileName /></div>
-              <div className="text-[11px] text-slate-500 flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-green-500 inline-block" /> {level}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <TopHeader title="Progress Dashboard" subtitle="Track your learning journey and see how far you've come!" back="/" />
 
       <div className="stagger grid grid-cols-1 xl:grid-cols-[1.7fr_1fr] gap-4">
         <div className="space-y-4">
