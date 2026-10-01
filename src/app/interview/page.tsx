@@ -49,17 +49,30 @@ export default function InterviewPage() {
 
   // ── Camera / voice (all real browser APIs) ──
   const [camOn, setCamOn] = useState(false);
+  const [camPending, setCamPending] = useState(false);
   const [camErr, setCamErr] = useState("");
+  const [devices, setDevices] = useState<{ id: string; label: string }[]>([]);
+  const [deviceId, setDeviceId] = useState("");
   const [voiceOn, setVoiceOn] = useState(true);
   const [listening, setListening] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const watchRef = useRef<number | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const recogRef = useRef<SpeechRec | null>(null);
 
   const attachVideo = (el: HTMLVideoElement | null) => {
     videoRef.current = el;
-    if (el && streamRef.current) el.srcObject = streamRef.current;
+    if (el && streamRef.current && !el.srcObject) {
+      el.srcObject = streamRef.current;
+      void el.play().catch(() => undefined);
+    }
+  };
+  const toggleCam = () => {
+    setCamErr("");
+    if (camOn) { setCamOn(false); setCamPending(false); return; }
+    setCamPending(true);
+    setCamOn(true);
   };
   const stopMedia = () => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -83,29 +96,99 @@ export default function InterviewPage() {
     let cancelled = false;
     if (!navigator.mediaDevices?.getUserMedia) {
       // deferred — setState directly inside an effect body is a cascading render
-      const tid = window.setTimeout(() => { setCamErr("Camera needs HTTPS (or localhost)."); setCamOn(false); }, 0);
+      const tid = window.setTimeout(() => { setCamPending(false); setCamErr("Camera needs HTTPS (or localhost)."); setCamOn(false); }, 0);
       return () => window.clearTimeout(tid);
     }
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false })
+    const constraints: MediaStreamConstraints = {
+      video: deviceId ? { deviceId: { exact: deviceId } } : { facingMode: "user" },
+      audio: false,
+    };
+    navigator.mediaDevices.getUserMedia(constraints)
       .then((st) => {
         if (cancelled) { st.getTracks().forEach((t) => t.stop()); return; }
         streamRef.current = st;
-        if (videoRef.current) videoRef.current.srcObject = st;
+        const v = videoRef.current;
+        if (v) { v.srcObject = st; void v.play().catch(() => undefined); }
+        setCamPending(false);
         setCamErr("");
+        // device picker — labels unlock only after permission is granted
+        void navigator.mediaDevices.enumerateDevices().then((list) => {
+          const cams = list
+            .filter((d) => d.kind === "videoinput")
+            .map((d, i) => ({ id: d.deviceId, label: d.label || `Camera ${i + 1}` }));
+          setDevices(cams);
+        });
+        // honest watchdog: virtual/phone cameras can grant a track but never
+        // deliver a single frame — surface that instead of a dead black tile.
+        watchRef.current = window.setTimeout(() => {
+          const el = videoRef.current;
+          if (el && el.readyState < 2) {
+            st.getTracks().forEach((t) => t.stop());
+            if (streamRef.current === st) streamRef.current = null;
+            setCamPending(false);
+            setCamErr("This camera isn't sending video (disconnected or busy). Pick another camera below.");
+            setCamOn(false);
+          }
+        }, 5000);
       })
-      .catch(() => { setCamErr("Camera blocked — allow camera access in your browser, then retry."); setCamOn(false); });
-    return () => { cancelled = true; streamRef.current?.getTracks().forEach((t) => t.stop()); streamRef.current = null; };
-  }, [camOn]);
+      .catch((err) => {
+        const name = err instanceof DOMException ? err.name : "";
+        const msg =
+          name === "NotAllowedError" || name === "SecurityError"
+            ? "Camera permission denied — allow camera via the icon in the address bar, then retry."
+            : name === "NotFoundError"
+              ? "No camera found on this device."
+              : name === "NotReadableError"
+                ? "Camera is busy in another app — close it there, then retry."
+                : "Camera couldn't start. Check permissions and retry.";
+        setCamPending(false);
+        setCamErr(msg);
+        setCamOn(false);
+      });
+    return () => {
+      cancelled = true;
+      if (watchRef.current !== null) { window.clearTimeout(watchRef.current); watchRef.current = null; }
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    };
+  }, [camOn, deviceId]);
 
   const speak = (text: string) => {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+      toast("Voice isn't supported in this browser", "err");
+      return;
+    }
     window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
+    u.lang = "en-US";
     u.rate = 1;
     u.onstart = () => setSpeaking(true);
     u.onend = () => setSpeaking(false);
-    u.onerror = () => setSpeaking(false);
-    window.speechSynthesis.speak(u);
+    u.onerror = (ev) => {
+      setSpeaking(false);
+      if (ev.error && ev.error !== "interrupted" && ev.error !== "canceled") {
+        toast(`Voice failed (${ev.error}) — check your system sound`, "err");
+      }
+    };
+    // Chrome loads system voices asynchronously — speak() before they arrive
+    // silently produces nothing. Wait once (guarded so we never double-speak).
+    let fired = false;
+    const go = () => {
+      if (fired) return;
+      fired = true;
+      const voices = window.speechSynthesis.getVoices();
+      const en = voices.find((v) => /^en/i.test(v.lang)) ?? null;
+      if (en) u.voice = en;
+      window.speechSynthesis.speak(u);
+      // Chrome queue quirk — resume shortly after so playback actually starts.
+      window.setTimeout(() => { try { window.speechSynthesis.resume(); } catch { /* noop */ } }, 150);
+    };
+    if (window.speechSynthesis.getVoices().length === 0) {
+      window.speechSynthesis.addEventListener("voiceschanged", go, { once: true });
+      window.setTimeout(go, 400);
+    } else {
+      go();
+    }
   };
 
   // AI interviewer reads each question aloud when voice is on
@@ -438,8 +521,8 @@ export default function InterviewPage() {
             <div className="card p-4">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-bold text-[14px] text-[#101a3f] flex items-center gap-1.5"><Video className="w-4 h-4 text-indigo-500" /> Interview room</h3>
-                <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${speaking ? "bg-indigo-100 text-indigo-700" : listening ? "bg-red-100 text-red-600" : loading ? "bg-amber-100 text-amber-700" : camOn ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-500"}`}>
-                  {speaking ? "● AI speaking" : listening ? "● Listening" : loading ? "● Evaluating" : camOn ? "● Camera live" : "Ready"}
+                <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${speaking ? "bg-indigo-100 text-indigo-700" : listening ? "bg-red-100 text-red-600" : loading ? "bg-amber-100 text-amber-700" : camPending ? "bg-amber-100 text-amber-700" : camOn ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-500"}`}>
+                  {speaking ? "● AI speaking" : listening ? "● Listening" : loading ? "● Evaluating" : camPending ? "● Connecting…" : camOn ? "● Camera live" : "Ready"}
                 </span>
               </div>
               <div className="grid grid-cols-2 gap-2">
@@ -465,9 +548,22 @@ export default function InterviewPage() {
                 </div>
               </div>
               {camErr && <p className="text-[11px] text-red-500 mt-2">{camErr}</p>}
+              {devices.length > 1 && (
+                <label className="flex items-center gap-2 mt-2 text-[11px] text-slate-500 font-semibold">
+                  Camera
+                  <select
+                    value={deviceId}
+                    onChange={(e) => setDeviceId(e.target.value)}
+                    className="flex-1 border border-slate-200 rounded-lg px-2 py-1.5 text-[11px] font-semibold text-slate-700 bg-white"
+                  >
+                    <option value="">Default camera</option>
+                    {devices.map((d) => <option key={d.id} value={d.id}>{d.label}</option>)}
+                  </select>
+                </label>
+              )}
               <div className="grid grid-cols-3 gap-1.5 mt-3">
                 <button
-                  onClick={() => setCamOn((v) => !v)}
+                  onClick={toggleCam}
                   className={`text-[11px] font-bold py-2 rounded-lg border flex items-center justify-center gap-1 transition ${camOn ? "bg-green-50 border-green-200 text-green-700" : "bg-slate-50 border-slate-200 text-slate-600 hover:border-indigo-300"}`}
                 >
                   <Video className="w-3.5 h-3.5" /> {camOn ? "Camera on" : "Camera off"}
