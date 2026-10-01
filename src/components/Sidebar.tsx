@@ -131,7 +131,7 @@ export default function Sidebar({ mobileOpen, onClose }: { mobileOpen?: boolean;
     <>
       {/* desktop */}
       <aside
-        className={`hidden md:flex sidebar-gradient text-white flex-col h-dvh sticky top-0 p-4 shrink-0 overflow-y-auto overflow-x-hidden transition-[width] duration-[250ms] ease-[cubic-bezier(.2,.8,.2,1)] ${
+        className={`hidden md:flex sidebar-gradient text-white flex-col h-dvh sticky top-0 p-4 shrink-0 overflow-x-hidden transition-[width] duration-[250ms] ease-[cubic-bezier(.2,.8,.2,1)] ${
           rail ? "w-[76px]" : "w-[240px]"
         }`}
       >
