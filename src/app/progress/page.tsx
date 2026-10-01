@@ -105,6 +105,16 @@ export default function ProgressPage() {
                   <p className="text-[12.5px] text-slate-500 max-w-[240px]">Your trend appears here after your first real quiz — nothing is shown before you actually use it.</p>
                   <Link href="/quizzes" className="mt-3 text-[12px] font-bold text-white bg-gradient-to-r from-indigo-600 to-blue-500 px-4 py-2 rounded-lg hover:-translate-y-0.5 transition">Take a quiz →</Link>
                 </div>
+              ) : nPts === 1 ? (
+                /* One quiz = one real score (a 1-point line chart would look broken). */
+                <div className="flex flex-col items-center justify-center py-7 text-center">
+                  <div className="text-[44px] font-extrabold text-indigo-600 leading-none">{points[0]}%</div>
+                  <p className="text-[12.5px] text-slate-500 mt-2 max-w-[300px]">Your first quiz score ({dayLabels[0]}). Take one more to unlock the trend line.</p>
+                  <div className="mt-3 w-full max-w-[320px] h-[8px] bg-slate-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-indigo-500 to-blue-400 rounded-full transition-all" style={{ width: `${points[0]}%` }} />
+                  </div>
+                  <Link href="/quizzes" className="mt-4 text-[12px] font-bold text-white bg-gradient-to-r from-indigo-600 to-blue-500 px-4 py-2 rounded-lg hover:-translate-y-0.5 transition">Take another quiz →</Link>
+                </div>
               ) : (
                 <>
               <svg viewBox={`0 0 ${W} ${H + 22}`} className="w-full">

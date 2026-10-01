@@ -47,7 +47,7 @@ export const UNIT_EXTRAS: Record<number, { cheat: CheatSection[]; resources: Res
   },
   3: {
     cheat: [
-      { h: "Comparisons & logic", rows: ["==  !=  <  >  <=", "and  or  not", "0 <= x < 10  # chained", "is / is not  # identity"] },
+      { h: "Comparisons & logic", rows: ["==  !=  <  >  <=  >=", "and  or  not", "0 <= x < 10  # chained", "is / is not  # identity"] },
       { h: "if / elif / else", rows: ["if cond:", "elif other:", "else:", "x if cond else y  # ternary"] },
       { h: "Loops", rows: ["for i in range(5):  # 0..4", "for k, v in d.items():", "while cond:", "break  continue  for…else"] },
       { h: "Comprehensions", rows: ["[f(x) for x in xs if p(x)]", "{k: v for ...}", "{x for x in xs}  # set", "(x*2 for x in xs)  # generator"] },
@@ -78,7 +78,7 @@ export const UNIT_EXTRAS: Record<number, { cheat: CheatSection[]; resources: Res
       { h: "Lists", rows: ["append  insert  remove  pop", "xs.sort() (in-place) vs sorted(xs)", "xs[::-1]  # reversed copy", "xs[1:3]  xs.insert(i, v)"] },
       { h: "Dicts", rows: ["d.get(k, default)", "d.keys()  d.values()  d.items()", "d[k]  # KeyError if missing", "{**d1, **d2}  # merge"] },
       { h: "Sets", rows: ["a | b  a & b  a - b  # union/diff", "set(lst)  # dedupe, O(1) lookup", "x in s  # fast membership"] },
-      { h: "Tuples & stdlib", rows: ["t = (1, 2)  # immutable, hashable", "from collections import Counter", "deque(maxlen=10)  # bounded queue", "defaultdict(list)"] },
+      { h: "Tuples & stdlib", rows: ["t = (1, 2)  # immutable, hashable", "from collections import Counter, deque, defaultdict", "deque(maxlen=10)  # bounded queue", "defaultdict(list)  # auto-default value"] },
     ],
     resources: [
       { label: "Data Structures (official)", url: "https://docs.python.org/3/tutorial/datastructures.html", kind: "docs" },
@@ -117,10 +117,10 @@ export const UNIT_EXTRAS: Record<number, { cheat: CheatSection[]; resources: Res
   },
   8: {
     cheat: [
-      { h: "Open & read", rows: ["with open('f.txt') as f:", "  data = f.read()", "f.readline()  f.readlines()", "open(p, 'w' | 'a' | 'rb')", "encoding='utf-8'  # always set it"] },
+      { h: "Open & read", rows: ["with open('f.txt') as f:", "  data = f.read()", "f.readline()  f.readlines()", "modes: 'r' read  'w' write  'a' append", "encoding='utf-8'  # always set it"] },
       { h: "JSON & CSV", rows: ["import json, csv", "obj = json.load(f)", "json.dump(obj, f, indent=2)", "csv.DictReader(f)  # rows as dict"] },
       { h: "Paths (pathlib)", rows: ["from pathlib import Path", "Path('data') / 'in.csv'", "p.exists()  p.read_text()", "p.write_text('hi')"] },
-      { h: "Safety", rows: ["FileNotFoundError", "except OSError as e:", "  logging.error(e)", "with handles close() for you"] },
+      { h: "Safety", rows: ["except FileNotFoundError:", "except OSError as e:", "  logging.error(e)  # import logging first", "with closes files for you"] },
     ],
     resources: [
       { label: "Input & Output (files, format)", url: "https://docs.python.org/3/tutorial/inputoutput.html", kind: "docs" },
@@ -132,9 +132,9 @@ export const UNIT_EXTRAS: Record<number, { cheat: CheatSection[]; resources: Res
   9: {
     cheat: [
       { h: "try / except", rows: ["try:", "  x = int(s)", "except ValueError as e:", "  print('bad input', e)", "else: / finally:"] },
-      { h: "Raise & custom errors", rows: ["raise ValueError('msg')", "class MyError(Exception): pass", "raise New from old  # chaining"] },
-      { h: "Debug tools", rows: ["breakpoint()  # interactive pdb", "print(f'{x=} ')  # debug f-string", "python -m pdb script.py", "assert cond, 'msg'"] },
-      { h: "Logging", rows: ["import logging", "logging.basicConfig(level=INFO)", "logging.exception('failed')", "# never bare except:"] },
+      { h: "Raise & custom errors", rows: ["raise ValueError('msg')", "class MyError(Exception): pass", "raise NewError from old_err  # chaining"] },
+      { h: "Debug tools", rows: ["breakpoint()  # interactive pdb", "print(f'{x=}')  # debug f-string", "python -m pdb script.py", "assert cond, 'msg'"] },
+      { h: "Logging", rows: ["import logging", "logging.basicConfig(level=logging.INFO)", "logging.exception('failed')", "# never bare except:"] },
     ],
     resources: [
       { label: "Errors & Exceptions (official)", url: "https://docs.python.org/3/tutorial/errors.html", kind: "docs" },
@@ -161,7 +161,7 @@ export const UNIT_EXTRAS: Record<number, { cheat: CheatSection[]; resources: Res
     cheat: [
       { h: "ML types", rows: ["supervised → labelled data", "  regression  (numbers)", "  classification  (categories)", "unsupervised → clustering, PCA", "reinforcement → reward signal"] },
       { h: "Workflow", rows: ["X = features, y = target", "Xtr, Xte, ytr, yte = split", "model.fit(Xtr, ytr)", "model.predict(Xte)", "score = accuracy / R²"] },
-      { h: "sklearn essentials", rows: ["from sklearn.model_selection import", "  train_test_split, cross_val_score", "LinearRegression, RandomForest…", "make_pipeline(scaler, model)"] },
+      { h: "sklearn essentials", rows: ["from sklearn.model_selection import train_test_split", "cross_val_score(model, X, y, cv=5)", "LinearRegression  RandomForestClassifier", "make_pipeline(scaler, model)  # scale-safe"] },
       { h: "Overfitting check", rows: ["train high, test low → overfit!", "more data / regularization", "validate on held-out set", "plot learning curves"] },
     ],
     resources: [
