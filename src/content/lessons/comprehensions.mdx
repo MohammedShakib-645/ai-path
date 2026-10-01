@@ -1,0 +1,72 @@
+## What you'll learn
+
+A **comprehension** builds a whole list in one readable line — Python's way of saying "collect X for every Y where Z". It replaces the boring loop-then-append pattern.
+
+```python
+# The long way
+squares = []
+for n in range(5):
+    squares.append(n * n)
+
+# The Pythonic way — same result: [0, 1, 4, 9, 16]
+squares = [n * n for n in range(5)]
+```
+
+> 💡 **Key insight:** Read it **inside out**: *"n × n, for each n, where n is even."* The expression you want comes **first** — that's the whole trick.
+
+## Why it matters for AI
+
+Feature engineering is comprehension-shaped: `[f(row) for row in rows]`, filtering valid samples, tokenizing every sentence, mapping labels to numbers. One line where a notebook used five.
+
+## Filtering with `if`
+
+```python
+evens = [n for n in range(10) if n % 2 == 0]     # [0, 2, 4, 6, 8]
+
+# Map labels to numbers in one pass
+labels = ["cat", "dog", "cat"]
+encoded = [0 if l == "cat" else 1 for l in labels]   # [0, 1, 0]
+```
+
+The `if` goes **at the end** (it's a filter, not an expression) — unlike a normal `for` loop where the condition leads.
+
+## The other three flavours
+
+```python
+squares = {n: n * n for n in range(5)}        # dict comprehension
+unique  = {w.lower() for w in ["Go", "go"]}   # set → automatically dedupes
+gen     = (n * n for n in range(10_000_000))  # generator → lazy, near-zero memory
+```
+
+| Form | Produces | Best for |
+| --- | --- | --- |
+| `[x for ...]` | list | most cases |
+| `{k: v for ...}` | dict | building mappings |
+| `{x for ...}` | set | unique values |
+| `(x for ...)` | generator | huge/lazy streams |
+
+> 💡 A generator doesn't build the list in memory — it yields one value at a time. Perfect for looping over millions of rows without eating your RAM.
+
+## Nested — but keep it readable
+
+```python
+pairs = [(a, b) for a in range(3) for b in range(3)]
+```
+
+Two `for`s = nested loops (first one is the outer loop). If you need an `else` or deep nesting, a plain loop reads better — comprehension is a tool, not a religion.
+
+## Common mistakes
+
+> ⚠️ Side effects inside comprehensions (`[print(x) for x in ...]` builds a list of `None`s — just use a real loop), and mutating while mapping. Also: `[[0]*3]*3` creates three **references to the same row** — use `[[0]*3 for _ in range(3)]`.
+
+## Quick recap
+
+- `[expr for x in iterable if condition]` — expression first, filter last.
+- Dict/set/generator variants use `{}` and `()`; generators stay lazy.
+- Nest loops in order; skip comprehensions when it hurts readability.
+
+## Try it yourself
+
+1. From `[4, 9, 2, 15, 7]`, build a list of only the odd numbers.
+2. Squares of 1–20, but keep only squares ending in an even digit.
+3. Build `{name: len(name)}` for `["ada", "lin", "tom"]` with a dict comprehension.

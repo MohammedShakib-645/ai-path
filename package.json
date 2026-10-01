@@ -17,6 +17,9 @@
     "dist": "npm run build && node electron/prepare-standalone.js && electron-builder --win nsis"
   },
   "dependencies": {
+    "@mdx-js/loader": "^3.1.1",
+    "@mdx-js/react": "^3.1.1",
+    "@next/mdx": "^16.3.8",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.117.2",
     "lucide-react": "^1.48.0",

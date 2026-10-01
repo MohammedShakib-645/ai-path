@@ -1,0 +1,68 @@
+## What you'll learn
+
+**Prompt engineering** is writing instructions an LLM can't misinterpret. You're not "tricking" the model — you're doing the thinking a good manager does: clear goal, context, constraints, format.
+
+A weak prompt:
+> "Tell me about Python."
+
+A strong prompt:
+
+```text
+You are a patient Python tutor for a beginner.
+
+Task: Explain Python dictionaries in under 120 words.
+Context: The student just learned lists and is scared of new syntax.
+Format: 1) one-sentence definition  2) a 3-line code example  3) one gotcha.
+Tone: Friendly, no jargon without a definition.
+```
+
+> 💡 **Key insight:** LLMs are **completion machines, not mind readers**. Give the role, the goal, the constraints and the output shape — quality jumps because ambiguity, not intelligence, was the bottleneck.
+
+## Why it matters for AI
+
+Every product built on GPT-class models — including this tutor — is mostly prompt engineering plus guardrails. It's the cheapest performance gain in AI: zero training, instant iteration.
+
+## The techniques that actually work
+
+| Technique | When to use | Example |
+| --- | --- | --- |
+| **Zero-shot** | simple, common tasks | "Classify this review as positive or negative:" |
+| **Few-shot** | exact format/style needed | show 2–3 input → output pairs first |
+| **Role** | persona & depth | "You are a strict code reviewer" |
+| **Chain of steps** | reasoning problems | "Think step by step, then answer" |
+| **Delimiters** | messy input text | wrap it in `"""` or `###` |
+| **Output schema** | programmatic parsing | Reply ONLY with JSON: `{…}` |
+
+```python
+prompt = f"""
+Classify the customer email into exactly one of: BILLING, BUG, OTHER.
+
+Email:
+\"\"\"
+{email}
+\"\"\"
+
+Reply as JSON: {{"label": "...", "confidence": 0.0-1.0}}
+"""
+```
+
+## Guardrails for production
+
+- **Be explicit about refusal:** "If unsure, reply `UNKNOWN`" beats confident hallucination.
+- **Bound the output:** word limits, formats, schemas — parse with `json.loads`, never regex-scrape prose.
+- **Separate data from instructions:** delimiters stop user text from being read as commands (**prompt injection**).
+- **Iterate empirically:** keep 10 fixed test examples, change one thing at a time, measure. Vibes don't ship.
+
+> ⚠️ Longer ≠ better. A tight 80-word prompt with a clear format outperforms a rambling essay. Every extra sentence is a chance the model latches onto the wrong part.
+
+## Quick recap
+
+- Role + task + context + format + constraints = a prompt that behaves.
+- Few-shot for format, chain-of-thought for reasoning, JSON schema for machines.
+- Delimit untrusted input, demand honest uncertainty, test against fixed examples.
+
+## Try it yourself
+
+1. Rewrite a lazy prompt of yours into the 5-part structure — run both, compare.
+2. Ask an LLM for JSON output twice: once vaguely, once with an exact schema. Which parses?
+3. Build a 5-example test set and improve one prompt until it scores 5/5.

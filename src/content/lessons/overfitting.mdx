@@ -1,0 +1,71 @@
+## What you'll learn
+
+Your model aces practice questions but bombs the real exam — that's **overfitting**: it memorised your training data instead of learning the pattern. The opposite failure, **underfitting**, means the model never learned enough to be useful. This lesson is how you spot both and fix them.
+
+| | Underfitting (high bias) | Good fit | Overfitting (high variance) |
+| --- | --- | --- | --- |
+| Train error | high | low-ish | very low |
+| Test error | high | similar to train | much higher than train |
+| Model | too simple | right complexity | memorises noise |
+
+> 💡 **Key insight:** The gap between **train** and **test** error is the tell. Small gap + both high → too simple. Huge gap → too complex. Your job is landing between.
+
+## Why it matters for AI
+
+Every model choice, regularisation trick and cross-validation run exists to fight these two failures. Judges of any ML project will ask "how do you know it generalises?" — this lesson is your answer.
+
+## Diagnose it in code
+
+```python
+from sklearn.model_selection import cross_val_score
+from sklearn.linear_model import LinearRegression
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import PolynomialFeatures
+
+simple = LinearRegression()
+poly   = make_pipeline(PolynomialFeatures(12), LinearRegression())  # very flexible
+
+for name, m in [("simple", simple), ("wiggly", poly)]:
+    scores = cross_val_score(m, X, y, cv=5, scoring="neg_mean_squared_error")
+    print(name, -scores.mean())   # error on folds the model never trained on
+```
+
+Cross-validation trains on 4 folds and scores the 5th, five times over — an honest estimate without ever touching your final test set.
+
+## The fixes
+
+**If underfitting:**
+- More features, higher-degree terms, a more expressive model (tree depth, layers).
+- Train longer (for iterative models) — sometimes it just hasn't converged.
+
+**If overfitting:**
+- **More data** — the single best cure.
+- **Regularisation** (`Ridge`/`Lasso`) — penalise huge weights.
+- **Simpler model** — fewer features, shallower tree, early stopping.
+- **Dropout & data augmentation** (deep learning).
+- **Ensembles** — a random forest averages away individual quirks.
+
+```python
+from sklearn.linear_model import Ridge
+model = Ridge(alpha=1.0)   # alpha ↑ → simpler, smoother fit
+```
+
+> ⚠️ Tuning repeatedly against the **same validation set** slowly overfits *it* too. Keep a final test set sealed until the very end — and never let test statistics leak into training (fit scalers on train only!).
+
+## The bias–variance trade-off
+
+- **Bias** = error from wrong assumptions (too simple).
+- **Variance** = error from sensitivity to the training sample (too complex).
+- Total error ≈ bias² + variance + irreducible noise. Simplify when variance dominates; complicate when bias does.
+
+## Quick recap
+
+- Train ≈ test, both high → underfit. Train ≪ test → overfit.
+- Cure underfitting with capacity; cure overfitting with data, regularisation or simplicity.
+- Cross-validate for honest estimates; hold the test set back for one final look.
+
+## Try it yourself
+
+1. Fit degrees 1, 5 and 12 to the same data — record train vs CV error for each.
+2. Add `Ridge(alpha=…)` to the degree-12 model: does the gap shrink?
+3. Explain in one sentence which model you'd ship, and why a judge should believe you.

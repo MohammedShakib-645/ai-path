@@ -1,0 +1,65 @@
+## What you'll learn
+
+A **function** is a named block of code you can run on demand — the difference between writing a recipe once and re-typing it for every guest. Python's own functions (`print`, `len`, `range`) are just code someone else packaged; now you write your own.
+
+```python
+def greet(name):              # def, name, colon, indent
+    return f"Hello, {name}!"
+
+message = greet("Ada")        # call it, capture the result
+print(message)                # → Hello, Ada!
+```
+
+> 💡 **Key insight:** `return` **hands a value back** to the caller — without it, the function returns `None`. Printing shows text to a human; returning gives your program a value to keep using. In AI code you'll *return* predictions, never print them.
+
+## Why it matters for AI
+
+Every model, scaler and pipeline you use is built from functions. Your own preprocessing (`clean(text)`, `featurize(df)`) becomes reusable across experiments — and the difference between a notebook mess and a real project.
+
+## Parameters, defaults, and any number of arguments
+
+```python
+def train(data, epochs=10, verbose=False):   # defaults make args optional
+    ...
+    return model
+
+train(df)                      # uses defaults
+train(df, epochs=20)           # overrides one
+
+def total(*scores):            # *args — any number of values, arrives as a tuple
+    return sum(scores)
+```
+
+- **Positional args** come first, then **keyword args** (`epochs=20`).
+- Defaults must come **after** required parameters.
+
+## Scope — where a name lives
+
+```python
+level = "global"
+
+def show():
+    level = "local"      # this one only exists inside show()
+    print(level)
+
+show()
+print(level)             # → local ... → global  (outer one untouched)
+```
+
+> ⚠️ A common bug: mutating a **list** inside a function changes the original (lists are shared), but reassigning a **number/string** creates a local copy. When unsure, `return` the new value explicitly.
+
+## Common mistakes
+
+> ⚠️ Forgetting `return` (you get `None`), mutating an input instead of returning a new value, and side-effect functions that both print *and* return — pick one job per function.
+
+## Quick recap
+
+- `def name(params): ... return value` — define once, call anywhere.
+- Defaults make arguments optional; `*args` collects extras into a tuple.
+- Functions *return* results for the program; printing is only for humans.
+
+## Try it yourself
+
+1. Write `def celsius_to_f(c)` and convert three temperatures with it.
+2. Write `def is_pass(mark, passing=60)` — call it once with and once without the threshold.
+3. Chain two functions: `normalize(x)` returns a value that `scale(y)` consumes.

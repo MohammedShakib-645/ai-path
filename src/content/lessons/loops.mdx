@@ -1,0 +1,72 @@
+## What you'll learn
+
+Loops repeat work without copy-pasting code. Python gives you two: **`for`** walks over items, **`while`** repeats until a condition flips.
+
+```python
+for digit in "123":
+    print(int(digit) * 2)     # → 2 4 6
+
+count = 3
+while count > 0:
+    print(count)
+    count -= 1                # → 3 2 1
+```
+
+> 💡 **Key insight:** A `for` loop over `range(n)` is just sugar for "do this n times" — `for i in range(3)` runs with `i = 0, 1, 2`. That's why nearly every loop you write starts at 0.
+
+## Why it matters for AI
+
+Training iterates **epochs** over data, grids of hyperparameters get searched one by one, batches are looped, agent steps repeat until done. If you can loop, you can train.
+
+## range() — the loop engine
+
+```python
+for i in range(5):        # 0 1 2 3 4      (stop is exclusive!)
+    print(i)
+
+for i in range(2, 10, 2): # 2 4 6 8        (start, stop, step)
+    print(i)
+```
+
+## Loop control
+
+```python
+scores = [55, 72, 91, 40, 88]
+for s in scores:
+    if s < 50:
+        continue        # skip this one, keep looping
+    if s >= 90:
+        print("topper!", s)
+        break           # stop the whole loop
+else:
+    print("finished normally")   # the for-else runs only if no break happened
+```
+
+- **`continue`** — jump to the next iteration.
+- **`break`** — exit the loop now.
+- **`for ... else`** — the `else` runs when no `break` occurred.
+
+## Looping with index + value
+
+```python
+for i, name in enumerate(["Ada", "Lin"], start=1):
+    print(i, name)        # 1 Ada  /  2 Lin
+```
+
+Prefer `enumerate()` over manual counters — fewer bugs, clearer intent.
+
+## Common mistakes
+
+> ⚠️ **Infinite `while`**: forgetting to change the condition (`while True:` needs a `break` inside). And mutating a list *while* looping over it — iterate over a copy (`for x in items[:]`) instead.
+
+## Quick recap
+
+- `for` = walk a sequence; `range(start, stop, step)` generates numbers (stop exclusive).
+- `while` = repeat until condition is False; always give it a way out.
+- `break` exits, `continue` skips, `enumerate()` adds indices cleanly.
+
+## Try it yourself
+
+1. Print the multiplication table of 7 using `range`.
+2. Sum only the even numbers in `[3, 8, 15, 22, 7]` with a loop.
+3. Play "guess the number": loop until the user guesses `42`, count the tries.

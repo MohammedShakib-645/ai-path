@@ -6,6 +6,8 @@ import TopHeader from "../../../components/TopHeader";
 import { toast } from "../../../components/Toaster";
 import { useProgress, toggleLesson, logActivity, learnerLevel } from "../../../lib/store";
 import { findLesson, ALL_LESSONS } from "../../../lib/curriculum";
+import { AUTHORED_LESSONS } from "../../../content/lessons";
+import { mdxComponents } from "../../../components/mdx/MDXBody";
 import {
   ArrowLeft, ArrowRight, CheckCircle2, Copy, Check, BotMessageSquare,
   FlaskConical, ClipboardList, Clock, ChevronRight,
@@ -23,17 +25,20 @@ export default function LessonPage() {
   const params = useParams();
   const lessonId = typeof params.lessonId === "string" ? params.lessonId : "";
   const flat = findLesson(lessonId);
+  // Authored MDX lesson — derived at render time so no setState is needed in the effect.
+  const authored = flat ? AUTHORED_LESSONS[flat.lesson.title] : undefined;
   const s = useProgress();
 
   const [content, setContent] = useState<LessonContent | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!authored);
   const [failed, setFailed] = useState(false);
   const [tick, setTick] = useState(0);
   const [copied, setCopied] = useState<number | null>(null);
   const [quizPick, setQuizPick] = useState<Record<number, number>>({});
 
   useEffect(() => {
-    if (!flat) return;
+    // Authored MDX lessons render instantly — no AI round-trip, no flake.
+    if (!flat || AUTHORED_LESSONS[flat.lesson.title]) return;
     setLoading(true);
     setContent(null);
     setFailed(false);
@@ -109,7 +114,7 @@ export default function LessonPage() {
           <ArrowLeft className="w-6 h-6" />
         </Link>
         <div className="flex-1">
-          <TopHeader title={lesson.title} subtitle={`AI-generated for your ${learnerLevel(s)} level • ${mod.title}, ${level.title}`} />
+          <TopHeader title={lesson.title} subtitle={authored ? `Editorial lesson • ${mod.title}, ${level.title}` : `AI-generated for your ${learnerLevel(s)} level • ${mod.title}, ${level.title}`} />
         </div>
       </div>
 
@@ -130,7 +135,7 @@ export default function LessonPage() {
         </div>
       )}
 
-      {!loading && (failed || !content) && (
+      {!loading && !authored && (failed || !content) && (
         <div className="card p-10 text-center">
           <div className="text-[40px] mb-2">🛠️</div>
           <b className="text-[15px] text-[#101a3f]">Lesson engine is offline</b>
@@ -144,9 +149,16 @@ export default function LessonPage() {
         </div>
       )}
 
-      {!loading && content && (
+      {!loading && (authored || !!content) && (
         <div className="grid grid-cols-1 xl:grid-cols-[1.7fr_1fr] gap-4">
           <div className="space-y-4">
+            {authored && (
+              <div className="card p-6 mdx-body">
+                <authored.Component components={mdxComponents} />
+              </div>
+            )}
+            {!authored && content && (
+            <>
             <div className="card p-6">
               <h2 className="font-extrabold text-[18px] text-[#101a3f] mb-2">Introduction</h2>
               <p className="text-[13px] text-slate-600 leading-relaxed">{content.intro}</p>
@@ -213,6 +225,8 @@ export default function LessonPage() {
               <p className="text-[13px] text-slate-600">{content.challenge}</p>
               <p className="text-[12px] text-slate-500 mt-2 italic">Summary: {content.summary}</p>
             </div>
+            </>
+            )}
           </div>
 
           {/* Right sidebar actions */}
@@ -248,10 +262,12 @@ export default function LessonPage() {
               </Link>
             </div>
 
-            <div className="card p-5">
-              <h3 className="font-bold text-[14px] text-[#101a3f] mb-2">✍️ Practice tasks</h3>
-              <ul className="text-[12px] text-slate-600 space-y-1.5 list-disc pl-4">{content.practice.map((m, i) => <li key={i}>{m}</li>)}</ul>
-            </div>
+            {content && (
+              <div className="card p-5">
+                <h3 className="font-bold text-[14px] text-[#101a3f] mb-2">✍️ Practice tasks</h3>
+                <ul className="text-[12px] text-slate-600 space-y-1.5 list-disc pl-4">{content.practice.map((m, i) => <li key={i}>{m}</li>)}</ul>
+              </div>
+            )}
           </div>
         </div>
       )}

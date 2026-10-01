@@ -1,0 +1,57 @@
+## What you'll learn
+
+Python is the language of AI — every library you'll meet later (NumPy, pandas, scikit-learn, PyTorch) speaks it. This lesson covers the absolute core: writing statements, storing values in **variables**, and printing output.
+
+A variable is just a **label stuck on a value**. Python figures out the type for you:
+
+```python
+name = "Aisha"      # str — text
+age = 20            # int — whole number
+gpa = 8.7           # float — decimal
+is_enrolled = True  # bool — True / False
+```
+
+> 💡 **Key insight:** `score = score + 5` takes the old value of `score`, adds 5, and re-sticks the label on the new result. Variables can change — that's what makes them *variable*.
+
+## Why it matters for AI
+
+Every dataset column, model weight and prediction you'll handle later is a Python variable. `X_train`, `y_pred`, `weights` — all just labels on values. Master this and the rest of the journey is vocabulary, not magic.
+
+## The three rules that save beginners
+
+1. **Indentation IS syntax** — a block under `if`/`for`/`def` must start with the same spaces (use 4).
+2. **`=` assigns, `==` compares** — `x = 5` stores, `x == 5` asks a yes/no question.
+3. **Names tell the story** — `student_gpa` beats `g`, and names can't start with a digit.
+
+```python
+total_marks = 350   # ✅ clear snake_case
+2nd_place = "Ravi"   # ❌ SyntaxError — can't start with a digit
+```
+
+## Printing: your debugging window
+
+```python
+student = "Ravi"
+marks = 88
+print("Student:", student)
+print(f"{student} scored {marks}%")   # f-string: values drop straight into the text
+# → Ravi scored 88%
+```
+
+**Comments** (`#`) are ignored by Python — write them for your future self explaining *why*, not *what*.
+
+## Common mistakes
+
+> ⚠️ `print student` (missing quotes/parens), forgetting the `f` in f-strings so `{marks}` prints literally, and mixing tabs with spaces. Python reads all of these as errors — the message tells you the exact line.
+
+## Quick recap
+
+- Variables = labels on values; Python infers the type.
+- `=` assigns, `==` compares, indentation defines blocks.
+- `f"..."` embeds values inside text; `#` writes a comment.
+
+## Try it yourself
+
+1. Store your name, city and a favourite number, then print one sentence combining all three.
+2. Take `temperature = 36.6`, add 1.4 (a fever!), print the result with a label.
+3. Swap two variables in one line: `a, b = b, a` — then prove it with `print`.

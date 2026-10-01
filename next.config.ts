@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import createMDX from "@next/mdx";
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
@@ -7,6 +8,8 @@ const nextConfig: NextConfig = {
   devIndicators: false,
   // Required for the desktop .exe: produces .next/standalone server
   output: "standalone",
+  // Phase 4: authored MDX lessons are first-class pages.
+  pageExtensions: ["ts", "tsx", "mdx"],
   images: {
     formats: ["image/avif", "image/webp"],
   },
@@ -20,4 +23,6 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+const withMDX = createMDX({ extension: /\.mdx?$/ });
+
+export default withMDX(nextConfig);

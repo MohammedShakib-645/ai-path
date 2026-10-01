@@ -1,0 +1,68 @@
+## What you'll learn
+
+Real programs make **decisions**: pass/fail, skip spam, choose a model path. In Python that's `if / elif / else` — and the indentation block that follows.
+
+```python
+marks = 74
+
+if marks >= 90:
+    grade = "A"
+elif marks >= 60:      # checked only if the first condition was False
+    grade = "B"
+else:
+    grade = "C"
+
+print(grade)   # → B
+```
+
+> 💡 **Key insight:** Python checks conditions **top to bottom and stops at the first True**. Order matters — put the strictest threshold first, or a big value will satisfy every `if` above it.
+
+## Why it matters for AI
+
+Every rule you'll write later is a condition: `if confidence > 0.8: accept()`, filtering rows, early-stopping training, guardrails that block an agent. Decision logic is the skeleton of every system you'll build.
+
+## Conditions that compare like a pro
+
+```python
+age = 19
+if 18 <= age < 30:          # chained comparison — very Pythonic
+    print("student discount")
+
+if not (age < 18):          # negate with not
+    print("adult")
+
+tags = ["ml", "python"]
+if "ml" in tags:            # membership test — readable English
+    print("has ML tag")
+```
+
+| Operator | Meaning | Example |
+| --- | --- | --- |
+| `==` `!=` | equal / not equal | `x == 5` |
+| `<` `<=` `>` `>=` | ordering | `score >= 60` |
+| `in` | membership | `"a" in "cat"` |
+| `and` `or` `not` | combine checks | `x > 0 and y > 0` |
+
+## The ternary one-liner
+
+```python
+status = "pass" if marks >= 60 else "fail"
+```
+
+Use it for short decisions only — nested ternaries hurt readability.
+
+## Common mistakes
+
+> ⚠️ Using `=` instead of `==` inside `if`. And beware Python's **truthiness**: `0`, `""`, `[]`, `{}`, `None` are all False — so `if items:` means "if the list is not empty", which is usually what you want.
+
+## Quick recap
+
+- `if` → `elif` → `else`, first True wins, indentation defines each branch.
+- Combine with `and / or / not`, test membership with `in`, chain ranges naturally.
+- Empty containers and zero are False — `if my_list:` is the idiomatic emptiness check.
+
+## Try it yourself
+
+1. Write a quiz scorer: 4+ correct → "Pass with distinction", 3 → "Pass", else "Retry".
+2. Given `temperature = -3`, print "ice" if ≤ 0 else "water" using the ternary form.
+3. Ask Python: is 17 both greater than 10 and even? (`n > 10 and n % 2 == 0`)
