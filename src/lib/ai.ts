@@ -17,11 +17,14 @@ export const TUTOR_MODES: Record<string, { label: string; system: string }> = {
   planner: { label: "Study Planner", system: "Create a concrete day-by-day study plan from the user's goal, hours/day and deadline. Be specific with topics and practice tasks." },
 };
 
-/** Plain chat with mode-aware system prompt. */
-export async function aiChat(mode: string, profile: string, messages: ChatMsg[]) {
+/** Plain chat with mode-aware system prompt. `followups` is opt-in: only the
+ *  surfaces that render tappable chips (ai-tutor, AI fab) request the trailing
+ *  FOLLOWUPS metadata line — other AI endpoints never emit it. */
+export async function aiChat(mode: string, profile: string, messages: ChatMsg[], opts?: { followups?: boolean }) {
   const m = TUTOR_MODES[mode] ?? TUTOR_MODES.explain;
+  const followups = opts?.followups ? FOLLOWUPS_RULE : "";
   return cloudChat([
-    { role: "system", content: `${m.system}\n\nLearner context (adapt depth/tone): ${profile}${STRUCTURE}` },
+    { role: "system", content: `${m.system}\n\nLearner context (adapt depth/tone): ${profile}${STRUCTURE}${followups}` },
     ...messages,
   ]);
 }
@@ -45,6 +48,14 @@ OUTPUT RULES (always follow):
 4. Bold key terms. Put code in \`\`\` blocks with a one-line comment.
 5. End with one check question (one line).
 6. Plain English, max ~150 words unless the learner asks for depth. No filler, no repeating the question.`;
+
+/** Opt-in (chat surfaces): the client strips this line and renders the array as
+ *  tappable follow-up chips — transport metadata, never displayed raw. */
+const FOLLOWUPS_RULE = `
+
+FOLLOWUPS (required): output as the VERY LAST line of your reply exactly one line of valid JSON — no backticks and no other text on that line:
+FOLLOWUPS: ["next question one","next question two","next question three"]
+Pick three short, specific follow-up questions the learner could ask next (vary them every reply).`;
 
 /** Ask for strict JSON; repairs markdown fences; validates with fallback. NEVER throws. */
 export async function aiJSON<T>(system: string, user: string, fallback: T): Promise<{ data: T; engine: string }> {

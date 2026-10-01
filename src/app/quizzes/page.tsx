@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import ThemeToggle from "../../components/ThemeToggle";
 import SearchBox from "../../components/SearchBox";
+import Markdown from "../../components/Markdown";
 import ProfileName from "../../components/ProfileName";
 import { PYTHON_QUIZ, PYTHON_QUIZ_MEDIUM, PYTHON_QUIZ_HARD, QuizQ } from "../../lib/data";
 import { useProgress, recordQuiz, recordMistakes, avgScore, learnerLevel } from "../../lib/store";
@@ -399,7 +400,7 @@ export default function QuizzesPage() {
               <div className="mt-3 rounded-xl p-3.5 bg-indigo-50 border border-indigo-200 text-[13px] text-slate-700">
                 <b className="text-indigo-700 flex items-center gap-1.5 mb-1">🤖 AI Analysis of your result</b>
                 {analysis ? (
-                  <div className="whitespace-pre-wrap">{analysis}</div>
+                  <Markdown text={analysis} />
                 ) : (
                   <span className="text-slate-500">Analyzing your answers…</span>
                 )}

@@ -20,7 +20,7 @@ export async function POST(req: Request) {
   } catch {
     return Response.json({ reply: "Empty request. Ask me anything about Python or AI.", engine: "mock" });
   }
-  const { mode = "explain", profile = "", prefs, messages = [], attachments = [] } = body;
+  const { mode = "explain", profile = "", prefs, messages = [], attachments = [], followups = false } = body;
   if (!Array.isArray(messages) || messages.length === 0) {
     return Response.json({ reply: "Ask me anything — a concept, code to debug, or say 'quiz me'.", engine: "mock" });
   }
@@ -65,7 +65,7 @@ export async function POST(req: Request) {
     ? ` Style: ${prefs.respLength ?? "Short"} answers, ${prefs.style ?? "examples first"}, code in ${prefs.codeLang ?? "Python"}.`
     : "";
   try {
-    const { reply, engine } = await aiChat(String(mode), `${profile}${style}`, msgs);
+    const { reply, engine } = await aiChat(String(mode), `${profile}${style}`, msgs, { followups: Boolean(followups) });
     return Response.json({ reply, engine });
   } catch (e: any) {
     return Response.json({

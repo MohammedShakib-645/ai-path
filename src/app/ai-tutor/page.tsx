@@ -12,6 +12,7 @@ import { nextAction, tutorContext } from "../../lib/engine";
 import { readAttachmentFiles, type Attachment } from "../../lib/attachments";
 import ThemeToggle from "../../components/ThemeToggle";
 import SearchBox from "../../components/SearchBox";
+import Markdown, { parseFollowups } from "../../components/Markdown";
 
 interface Msg { role: "user" | "assistant"; content: string; time?: string; engine?: string; ms?: number }
 
@@ -135,6 +136,7 @@ export default function AITutorPage() {
           mode: chat.mode || mode,
           profile: tutorContext(prog),
           prefs: prog.prefs,
+          followups: true,
           messages: history,
           attachments: pending.map((a) => ({ name: a.name, mime: a.mime, kind: a.kind, data: a.data })),
         }),
@@ -219,33 +221,30 @@ export default function AITutorPage() {
     setTimeout(() => setCopied(null), 1500);
   };
 
-  const renderBody = (text: string, i: number) => {
-    const parts = text.split(/(```[\s\S]*?```)/g);
-    return parts.map((p, k) => {
-      if (p.startsWith("```")) {
-        const code = p.replace(/^```\w*\n?/, "").replace(/```$/, "");
-        const key = `${i}-${k}`;
-        return (
-          <div key={k} className="my-2 rounded-xl overflow-hidden border border-slate-200">
-            <div className="flex justify-between items-center px-3 py-1.5 bg-slate-50 text-[10px] font-mono text-slate-500">
-              <span>code</span>
-              <span className="flex gap-2">
-                <button onClick={() => runCode(code, key)} className="hover:text-green-600 flex items-center gap-1 font-semibold">
-                  <Play className="w-3 h-3" /> run
-                </button>
-                <button onClick={() => copy(code, i * 100 + k)} className="hover:text-indigo-600 flex items-center gap-1 font-semibold">
-                  {copied === i * 100 + k ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />} copy
-                </button>
-              </span>
-            </div>
-            <pre className="bg-[#0e1530] text-slate-100 text-[12px] p-3 overflow-x-auto font-mono whitespace-pre">{code}</pre>
-            {runOut[key] && <pre className="bg-green-50 text-green-900 text-[11px] p-3 font-mono whitespace-pre-wrap border-t border-green-100">{runOut[key]}</pre>}
+  /** AI replies render through the shared Markdown component; code blocks keep
+   *  this page's run/copy controls via the renderCode hook. */
+  const renderBody = (text: string, i: number) => (
+    <Markdown
+      text={text}
+      renderCode={(code, lang, k, key) => (
+        <div className="my-2 rounded-xl overflow-hidden border border-slate-200">
+          <div className="flex justify-between items-center px-3 py-1.5 bg-slate-50 text-[10px] font-mono text-slate-500">
+            <span>{lang || "code"}</span>
+            <span className="flex gap-2">
+              <button onClick={() => runCode(code, key)} className="hover:text-green-600 flex items-center gap-1 font-semibold">
+                <Play className="w-3 h-3" /> run
+              </button>
+              <button onClick={() => copy(code, i * 100 + k)} className="hover:text-indigo-600 flex items-center gap-1 font-semibold">
+                {copied === i * 100 + k ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />} copy
+              </button>
+            </span>
           </div>
-        );
-      }
-      return <div key={k} className="whitespace-pre-wrap">{p}</div>;
-    });
-  };
+          <pre className="bg-[#0e1530] text-slate-100 text-[12px] p-3 overflow-x-auto font-mono whitespace-pre">{code}</pre>
+          {runOut[key] && <pre className="bg-green-50 text-green-900 text-[11px] p-3 font-mono whitespace-pre-wrap border-t border-green-100">{runOut[key]}</pre>}
+        </div>
+      )}
+    />
+  );
 
   const act = nextAction(prog);
 
@@ -331,17 +330,26 @@ export default function AITutorPage() {
             )}
             {msgs.map((m, i) => {
               const user = m.role === "user";
+              const { body, followups } = user ? { body: m.content, followups: [] as string[] } : parseFollowups(m.content);
+              const showChips = !user && i === msgs.length - 1 && followups.length > 0 && !loading;
               return (
                 <div key={i} className={`flex ${user ? "justify-end" : "justify-start"}`}>
                   {!user && <span className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-[16px] shrink-0 mr-2">🤖</span>}
                   <div className={`pop-in max-w-[85%] px-4 py-3 rounded-2xl text-[13.5px] leading-relaxed ${user ? "primary-gradient text-white rounded-br-md" : "bg-slate-50 border border-slate-100 text-slate-700 rounded-bl-md"}`}>
-                    {user ? <div className="whitespace-pre-wrap">{m.content}</div> : renderBody(m.content, i)}
+                    {user ? <div className="whitespace-pre-wrap">{m.content}</div> : renderBody(body, i)}
+                    {showChips && (
+                      <div className="flex flex-wrap gap-1.5 mt-2">
+                        {followups.map((f, fi) => (
+                          <button key={fi} onClick={() => send(f)} disabled={loading} className="text-[11px] font-medium bg-white border border-indigo-200 text-indigo-700 rounded-full px-2.5 py-1 hover:bg-indigo-50 hover:-translate-y-0.5 transition disabled:opacity-50">{f}</button>
+                        ))}
+                      </div>
+                    )}
                     {!user && m.content !== "" && (
                       <div className="mt-2 pt-2 border-t border-slate-200/70 flex items-center justify-between text-[10px] text-slate-400 gap-2">
                         <span className="font-mono">{m.engine ?? "ai"}{m.ms ? ` · ${(m.ms / 1000).toFixed(1)}s` : ""}</span>
                         <span className="flex gap-2">
-                          <button onClick={() => copy(m.content, i)} className="hover:text-indigo-600 flex items-center gap-1 font-semibold">{copied === i ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />} Copy</button>
-                          <button onClick={() => { toggleBookmark("answer", `${chat?.id}-${i}`, (chat?.title || "Answer"), m.content.slice(0, 120)); toast("Answer bookmarked ✓"); }} className="hover:text-amber-500 flex items-center gap-1 font-semibold"><Bookmark className="w-3 h-3" /> Save</button>
+                          <button onClick={() => copy(body, i)} className="hover:text-indigo-600 flex items-center gap-1 font-semibold">{copied === i ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />} Copy</button>
+                          <button onClick={() => { toggleBookmark("answer", `${chat?.id}-${i}`, (chat?.title || "Answer"), body.slice(0, 120)); toast("Answer bookmarked ✓"); }} className="hover:text-amber-500 flex items-center gap-1 font-semibold"><Bookmark className="w-3 h-3" /> Save</button>
                         </span>
                       </div>
                     )}

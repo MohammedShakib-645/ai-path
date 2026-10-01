@@ -7,6 +7,7 @@ import { useProgress, logActivity } from "../lib/store";
 import { tutorContext, weakTopics, nextAction } from "../lib/engine";
 import { readAttachmentFiles, type Attachment } from "../lib/attachments";
 import { toast } from "./Toaster";
+import Markdown, { parseFollowups } from "./Markdown";
 
 interface M { role: "user" | "assistant"; content: string }
 
@@ -112,6 +113,7 @@ export default function AiFab() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           mode: task ? "exam" : "explain",
+          followups: true,
           profile:
             tutorContext(prog) +
             (screenOn ? `\nSCREEN I AM LOOKING AT now: URL ${pathname} — "${screenText()}" (react to what is actually visible).` : ""),
@@ -235,13 +237,31 @@ export default function AiFab() {
           <div className="flex-1 overflow-y-auto bg-white">
             {tab === "chat" ? (
               <div className="p-3 space-y-2.5">
-                {msgs.map((m, i) => (
-                  <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-                    <div className={`pop-in max-w-[88%] px-3 py-2 rounded-2xl text-[12.5px] leading-relaxed whitespace-pre-wrap ${m.role === "user" ? "primary-gradient text-white rounded-br-md" : "bg-slate-50 border border-slate-100 text-slate-700 rounded-bl-md"}`}>
-                      {m.content}
+                {msgs.map((m, i) => {
+                  if (m.role === "user") {
+                    return (
+                      <div key={i} className="flex justify-end">
+                        <div className="pop-in max-w-[88%] px-3 py-2 rounded-2xl text-[12.5px] leading-relaxed whitespace-pre-wrap primary-gradient text-white rounded-br-md">{m.content}</div>
+                      </div>
+                    );
+                  }
+                  const { body, followups } = parseFollowups(m.content);
+                  const showChips = i === msgs.length - 1 && followups.length > 0 && !loading;
+                  return (
+                    <div key={i} className="flex justify-start">
+                      <div className="pop-in max-w-[88%] px-3 py-2 rounded-2xl text-[12.5px] leading-relaxed bg-slate-50 border border-slate-100 text-slate-700 rounded-bl-md">
+                        <Markdown text={body} />
+                        {showChips && (
+                          <div className="flex flex-wrap gap-1.5 mt-2">
+                            {followups.map((f, fi) => (
+                              <button key={fi} onClick={() => ask(f)} disabled={loading} className="text-[10.5px] font-medium bg-white border border-indigo-200 text-indigo-700 rounded-full px-2 py-0.5 hover:bg-indigo-50 hover:-translate-y-0.5 transition disabled:opacity-50">{f}</button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
                 {loading && (
                   <div className="flex justify-start">
                     <div className="bg-slate-50 border border-slate-100 rounded-2xl rounded-bl-md px-3 py-2 text-[12px] text-slate-400 flex items-center gap-1.5">

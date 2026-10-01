@@ -3,6 +3,7 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import Link from "next/link";
 import TopHeader from "../../components/TopHeader";
 import { toast } from "../../components/Toaster";
+import Markdown from "../../components/Markdown";
 import { useProgress, saveNote, deleteNote, logActivity } from "../../lib/store";
 import { Plus, Search, Pin, Trash2, Pencil, BotMessageSquare, PenTool, Sparkles } from "lucide-react";
 
@@ -242,7 +243,7 @@ export default function NotesPage() {
                   <button onClick={() => setAiOut(null)} className="text-[11px] font-bold text-slate-400 px-2 py-1 hover:text-slate-600 transition">Dismiss</button>
                 </div>
               </div>
-              <div className="text-[12.5px] text-slate-700 whitespace-pre-wrap max-h-56 overflow-y-auto">{aiOut}</div>
+              <Markdown text={aiOut} className="text-[12.5px] text-slate-700 max-h-56 overflow-y-auto" />
             </div>
           )}
 

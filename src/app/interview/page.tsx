@@ -3,6 +3,7 @@ import { useState, useRef } from "react";
 import Link from "next/link";
 import ThemeToggle from "../../components/ThemeToggle";
 import SearchBox from "../../components/SearchBox";
+import Markdown from "../../components/Markdown";
 import ProfileName from "../../components/ProfileName";
 import { toast } from "../../components/Toaster";
 import { INTERVIEW_TRACKS } from "../../lib/curriculum";
@@ -281,7 +282,7 @@ export default function InterviewPage() {
                   <div className="pop-in space-y-3">
                     <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5">
                       <div className="text-[11px] font-bold uppercase tracking-wide text-slate-400 mb-1">Your answer</div>
-                      <div className="text-[13px] text-slate-600 whitespace-pre-wrap">{current.answer}</div>
+                      <Markdown text={current.answer} className="text-[13px] text-slate-600" />
                     </div>
 
                     <div className="flex items-center gap-3 flex-wrap">
@@ -298,13 +299,13 @@ export default function InterviewPage() {
                         <div className="text-[12px] font-extrabold text-amber-700 flex items-center gap-1.5 mb-1">
                           <AlertTriangle className="w-4 h-4" /> Missing concepts
                         </div>
-                        <div className="text-[13px] text-amber-900 whitespace-pre-wrap">{current.missing}</div>
+                        <Markdown text={current.missing} className="text-[13px] text-amber-900" />
                       </div>
                     )}
 
                     <div className="rounded-xl border border-indigo-200 bg-indigo-50/40 p-3.5">
                       <div className="text-[12px] font-extrabold text-indigo-700 mb-1">Full evaluation &amp; ideal answer</div>
-                      <div className="text-[13px] leading-relaxed text-slate-700 whitespace-pre-wrap">{current.reply}</div>
+                      <Markdown text={current.reply} className="text-[13px] leading-relaxed text-slate-700" />
                     </div>
                   </div>
                 )}

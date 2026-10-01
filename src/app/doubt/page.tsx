@@ -3,7 +3,7 @@ import { useState } from "react";
 import Link from "next/link";
 import ThemeToggle from "../../components/ThemeToggle";
 import SearchBox from "../../components/SearchBox";
-import MarkdownLite from "../../components/MarkdownLite";
+import Markdown from "../../components/Markdown";
 import { toast } from "../../components/Toaster";
 import { ArrowLeft, HelpCircle, Loader2, Send, Sparkles, ChevronDown, ChevronUp, Lightbulb } from "lucide-react";
 
@@ -178,7 +178,7 @@ export default function DoubtPage() {
                   Ask follow-up in AI Tutor →
                 </Link>
               </div>
-              <MarkdownLite text={reply} className="text-slate-700" />
+              <Markdown text={reply} className="text-slate-700" />
             </div>
           )}
 
