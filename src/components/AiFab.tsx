@@ -225,7 +225,7 @@ export default function AiFab() {
             {([["chat", "Chat", Sparkles], ["tasks", "Tasks", ClipboardList]] as const).map(([id, label, Icon]) => (
               <button
                 key={id}
-                onClick={() => setTab(id as any)}
+                onClick={() => setTab(id)}
                 className={`flex-1 py-2 text-[12px] font-bold flex items-center justify-center gap-1.5 border-b-2 transition ${tab === id ? "border-indigo-500 text-indigo-600" : "border-transparent text-slate-400"}`}
               >
                 <Icon className="w-3.5 h-3.5" /> {label}
@@ -274,7 +274,7 @@ export default function AiFab() {
             ) : (
               <div className="p-3 space-y-2">
                 <div className="text-[11px] text-slate-400">One tap = one real AI task, run with your live progress{screenOn ? " + this screen" : ""}.<br />
-                  You can also just type <b className="text-indigo-600">"open quizzes"</b> or <b className="text-indigo-600">"show my notes"</b> and I&apos;ll take you there.</div>
+                  You can also just type <b className="text-indigo-600">&quot;open quizzes&quot;</b> or <b className="text-indigo-600">&quot;show my notes&quot;</b> and I&apos;ll take you there.</div>
                 {TASKS.map((t) => (
                   <button
                     key={t.id}

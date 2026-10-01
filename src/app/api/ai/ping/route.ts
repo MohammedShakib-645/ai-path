@@ -10,7 +10,7 @@ export async function POST() {
       { role: "user", content: "ping" },
     ]);
     return Response.json({ ok: true, engine, reply: String(reply).slice(0, 40) });
-  } catch (e: any) {
-    return Response.json({ ok: false, error: String(e?.message ?? e).slice(0, 300) });
+  } catch (e) {
+    return Response.json({ ok: false, error: (e instanceof Error ? e.message : String(e)).slice(0, 300) });
   }
 }

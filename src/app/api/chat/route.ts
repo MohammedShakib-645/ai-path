@@ -81,11 +81,12 @@ export async function POST(req: Request) {
   try {
     const { reply, engine } = await cloudChat(withSystem);
     return Response.json({ reply, engine });
-  } catch (e: any) {
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
     return Response.json({
-      reply: `Cloud engines unreachable (${e.message}).\n\nOwner: add free keys in Vercel → Settings → Environment Variables:\n• GROQ_KEYS = gsk_...,gsk_... (console.groq.com)\n• GEMINI_KEYS = AI...,AI... (aistudio.google.com, backup)`,
+      reply: `Cloud engines unreachable (${msg}).\n\nOwner: add free keys in Vercel → Settings → Environment Variables:\n• GROQ_KEYS = gsk_...,gsk_... (console.groq.com)\n• GEMINI_KEYS = AI...,AI... (aistudio.google.com, backup)`,
       engine: "mock",
-      error: e.message,
+      error: msg,
     });
   }
 }

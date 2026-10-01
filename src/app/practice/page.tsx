@@ -57,7 +57,17 @@ function PracticeInner() {
   const [out, setOut] = useState("");
   const [running, setRunning] = useState(false);
   const [results, setResults] = useState<{ pass: boolean; got: string; want: string }[] | null>(null);
-  const [analysis, setAnalysis] = useState<any>(null);
+  interface Analysis {
+    kind?: string;
+    text?: string;
+    explanation?: string;
+    bugs?: string[];
+    time?: string;
+    space?: string;
+    improvements?: string[];
+    fixedCode?: string;
+  }
+  const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [copied, setCopied] = useState(false);
   const [engine, setEngine] = useState("");
@@ -99,10 +109,12 @@ function PracticeInner() {
   }, []);
 
   useEffect(() => {
-    if (topic) {
+    if (!topic) return;
+    const tid = window.setTimeout(() => {
       const hit = PROBLEMS.find((p) => p.topic.toLowerCase().includes(topic.toLowerCase().split(" ")[0]));
       if (hit) setProb(hit);
-    }
+    }, 0);
+    return () => window.clearTimeout(tid);
   }, [topic]);
 
   const run = async (submit: boolean) => {
@@ -138,8 +150,8 @@ function PracticeInner() {
           toast(`${passed}/${rows.length} tests passed`, "info");
         }
       }
-    } catch (e: any) {
-      setOut(`Execution failed: ${e.message}`);
+    } catch (e) {
+      setOut(`Execution failed: ${e instanceof Error ? e.message : String(e)}`);
       toast("Execution failed", "err");
     }
     setStatus("");
@@ -344,7 +356,7 @@ function PracticeInner() {
             )}
             {(analysis || analyzing) && (
               <div className="mx-4 mb-4 bg-indigo-50/60 border border-indigo-100 rounded-xl p-3 text-[12px] text-slate-600 whitespace-pre-wrap">
-                {analyzing ? "AI thinking…" : analysis.text}
+                {analyzing ? "AI thinking…" : analysis?.text}
                 {!analyzing && analysis && (
                   <div className="flex gap-2 mt-2">
                     <button onClick={() => hint("solution")} className="text-[11px] font-bold text-indigo-600">Explain solution</button>
@@ -374,13 +386,13 @@ function PracticeInner() {
             {analysis?.explanation && (
               <>
                 <div className="card p-5"><b className="text-[14px]">📖 Explanation</b><p className="text-[12px] text-slate-600 mt-1">{analysis.explanation}</p></div>
-                {analysis.bugs?.length > 0 && <div className="card p-5"><b className="text-[14px]">🐞 Bugs</b><ul className="text-[12px] text-slate-600 list-disc pl-4 mt-1">{analysis.bugs.map((b: string, i: number) => <li key={i}>{b}</li>)}</ul></div>}
+                {analysis.bugs && analysis.bugs.length > 0 && <div className="card p-5"><b className="text-[14px]">🐞 Bugs</b><ul className="text-[12px] text-slate-600 list-disc pl-4 mt-1">{analysis.bugs.map((b: string, i: number) => <li key={i}>{b}</li>)}</ul></div>}
                 <div className="card p-5 text-[12px] text-slate-600"><b className="text-[14px] text-[#101a3f]">⏱ Complexity</b><p className="mt-1">Time: <b className="font-mono">{analysis.time}</b> • Space: <b className="font-mono">{analysis.space}</b></p></div>
-                {analysis.improvements?.length > 0 && <div className="card p-5"><b className="text-[14px]">✨ Improvements</b><ul className="text-[12px] text-slate-600 list-disc pl-4 mt-1">{analysis.improvements.map((b: string, i: number) => <li key={i}>{b}</li>)}</ul></div>}
+                {analysis.improvements && analysis.improvements.length > 0 && <div className="card p-5"><b className="text-[14px]">✨ Improvements</b><ul className="text-[12px] text-slate-600 list-disc pl-4 mt-1">{analysis.improvements.map((b: string, i: number) => <li key={i}>{b}</li>)}</ul></div>}
                 {analysis.fixedCode && (
                   <div className="card p-5">
                     <div className="flex justify-between items-center mb-2"><b className="text-[14px]">✅ Fixed version</b>
-                      <button onClick={() => { navigator.clipboard.writeText(analysis.fixedCode); setCopied(true); setTimeout(() => setCopied(false), 1500); }} className="text-[11px] font-bold text-indigo-600 flex items-center gap-1">{copied ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />} copy</button>
+                      <button onClick={() => { navigator.clipboard.writeText(analysis.fixedCode ?? ""); setCopied(true); setTimeout(() => setCopied(false), 1500); }} className="text-[11px] font-bold text-indigo-600 flex items-center gap-1">{copied ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />} copy</button>
                     </div>
                     <pre className="bg-[#0e1530] text-slate-100 text-[12px] p-3 rounded-xl overflow-x-auto font-mono whitespace-pre">{analysis.fixedCode}</pre>
                   </div>

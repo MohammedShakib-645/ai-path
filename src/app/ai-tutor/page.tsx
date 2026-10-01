@@ -6,7 +6,7 @@ import { Send, Copy, Check, RotateCcw, Plus, Search, Pin, Trash2, Pencil, Square
 import { toast } from "../../components/Toaster";
 import { runCode as runSandbox } from "../../lib/runner";
 import {
-  useProgress, newChat, saveChat, deleteChat, toggleBookmark, logActivity,
+  useProgress, newChat, saveChat, deleteChat, toggleBookmark, logActivity, type Chat,
 } from "../../lib/store";
 import { nextAction, tutorContext } from "../../lib/engine";
 import { readAttachmentFiles, type Attachment } from "../../lib/attachments";
@@ -27,6 +27,9 @@ const QUICK = [
   "Create a practice session for my weak topics",
   "Make me a study plan for today",
 ];
+
+/** Clock helper at module scope — handlers call it, never the render path. */
+const nowMs = () => Date.now();
 
 export default function AITutorPage() {
   const search = useSearchParams();
@@ -51,26 +54,32 @@ export default function AITutorPage() {
 
   // ensure an active conversation exists
   useEffect(() => {
-    const fromUrl = search.get("chat");
-    if (fromUrl && prog.chats.some((c) => c.id === fromUrl)) {
-      setActiveId(fromUrl);
-      return;
-    }
-    if (!activeId || !prog.chats.some((c) => c.id === activeId)) {
-      setActiveId(prog.chats[0]?.id ?? newChat(mode));
-    }
+    const tid = window.setTimeout(() => {
+      const fromUrl = search.get("chat");
+      if (fromUrl && prog.chats.some((c) => c.id === fromUrl)) {
+        setActiveId(fromUrl);
+        return;
+      }
+      if (!activeId || !prog.chats.some((c) => c.id === activeId)) {
+        setActiveId(prog.chats[0]?.id ?? newChat(mode));
+      }
+    }, 0);
+    return () => window.clearTimeout(tid);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prog.chats.length]);
 
   // deep links: ?topic= / ?note=
   useEffect(() => {
-    const topic = search.get("topic");
-    const noteId = search.get("note");
-    if (topic) setInput(`Teach me ${topic} step by step`);
-    else if (noteId) {
-      const n = prog.notes.find((x) => x.id === noteId);
-      if (n) setInput(`Explain my note "${n.title}": ${n.body.slice(0, 400)}`);
-    }
+    const tid = window.setTimeout(() => {
+      const topic = search.get("topic");
+      const noteId = search.get("note");
+      if (topic) setInput(`Teach me ${topic} step by step`);
+      else if (noteId) {
+        const n = prog.notes.find((x) => x.id === noteId);
+        if (n) setInput(`Explain my note "${n.title}": ${n.body.slice(0, 400)}`);
+      }
+    }, 0);
+    return () => window.clearTimeout(tid);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -115,14 +124,14 @@ export default function AITutorPage() {
     if ((!q && !pending.length) || loading || !chat) return;
     setInput("");
     if (pending.length) setAtts([]);
-    const t0 = Date.now();
+    const t0 = nowMs();
     const base = regen ? msgs.filter((m, i) => !(i === msgs.length - 1 && m.role === "assistant")) : [...msgs, { role: "user" as const, content: qFinal, time: now() }];
     const history = (regen ? base : [...msgs, { role: "user" as const, content: qFinal, time: now() }]).map((m) => ({ role: m.role, content: m.content }));
     if (!regen) {
       const titled = chat.msgs.length === 0 ? (q || pending[0]?.name || "File").slice(0, 42) : chat.title;
       saveChat(chat.id, { msgs: [...chat.msgs, { role: "user", content: qFinal, time: now() }], title: titled, mode });
     } else {
-      saveChat(chat.id, { msgs: base as any });
+      saveChat(chat.id, { msgs: base });
     }
     setLoading(true);
     const ctl = new AbortController();
@@ -151,14 +160,14 @@ export default function AITutorPage() {
           engine = j.engine ?? "cloud";
         }
       } catch { /* plain-text stream body */ }
-      const cur = snapshot().chats.find((c: any) => c.id === chat.id);
-      let baseMsgs = (cur?.msgs ?? []).filter((m: any, i: number, a: any[]) => !(regen && i === a.length - 1 && m.role === "assistant"));
+      const cur = snapshot().chats.find((c) => c.id === chat.id);
+      const baseMsgs = (cur?.msgs ?? []).filter((m, i, a) => !(regen && i === a.length - 1 && m.role === "assistant"));
       // App-executed chat actions: the AI's [ACT:...] tags run here for real.
       const actTag = reply.match(/\[ACT:(clear|delete-chat|rename:[^\]]*)\]/i);
       if (actTag) {
         const cmd = actTag[1].toLowerCase();
         if (cmd === "clear") {
-          saveChat(chat.id, { msgs: [{ role: "assistant", content: "✅ Old messages deleted — fresh start. What next?", engine, time: now(), ms: Date.now() - t0 }], title: "New chat" });
+          saveChat(chat.id, { msgs: [{ role: "assistant", content: "✅ Old messages deleted — fresh start. What next?", engine, time: now(), ms: nowMs() - t0 }], title: "New chat" });
           toast("Messages deleted ✓");
           return;
         }
@@ -174,14 +183,15 @@ export default function AITutorPage() {
         }
         reply = reply.replace(/\[ACT:[^\]]*\]/g, "").trim() || "Done ✓";
       }
-      saveChat(chat.id, { msgs: [...baseMsgs, { role: "assistant", content: reply, engine, time: now(), ms: Date.now() - t0 }] });
+      saveChat(chat.id, { msgs: [...baseMsgs, { role: "assistant", content: reply, engine, time: now(), ms: nowMs() - t0 }] });
       logActivity(`AI Tutor session (${modeLabel(chat.mode || mode)})`, `${history.length} messages`, "tutor");
-    } catch (e: any) {
-      if (e.name === "AbortError") {
+    } catch (e) {
+      if (e instanceof Error && e.name === "AbortError") {
         toast("Stopped", "info");
       } else {
-        const cur = snapshot().chats.find((c: any) => c.id === chat.id);
-        saveChat(chat.id, { msgs: [...(cur?.msgs ?? []), { role: "assistant", content: `Request failed: ${e.message}. Your chat is saved — press Retry.`, engine: "mock", time: now() }] });
+        const cur = snapshot().chats.find((c) => c.id === chat.id);
+        const msg = e instanceof Error ? e.message : String(e);
+        saveChat(chat.id, { msgs: [...(cur?.msgs ?? []), { role: "assistant", content: `Request failed: ${msg}. Your chat is saved — press Retry.`, engine: "mock", time: now() }] });
       }
     } finally {
       setLoading(false);
@@ -192,7 +202,7 @@ export default function AITutorPage() {
   const now = () => new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
   // fresh read to avoid stale closures
-  const snapshot = () => {
+  const snapshot = (): { chats: Chat[] } => {
     try {
       const raw = localStorage.getItem("ai-path-progress-v3") || localStorage.getItem("ai-path-progress-v2") || localStorage.getItem("ai-path-progress-v1") || "{}";
       const p = JSON.parse(raw);
@@ -209,8 +219,9 @@ export default function AITutorPage() {
     try {
       const r = await runSandbox({ language: "python", code, stdin: "", timeoutMs: 5000 });
       setRunOut((x) => ({ ...x, [key]: r.timedOut ? r.stderr : r.stdout || r.stderr || "(no output)" }));
-    } catch (e: any) {
-      setRunOut((x) => ({ ...x, [key]: `Run failed: ${e.message}` }));
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setRunOut((x) => ({ ...x, [key]: `Run failed: ${msg}` }));
     }
   };
 

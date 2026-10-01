@@ -103,7 +103,7 @@ export function ruleRecommendations(s: ProgressState): RuleRec[] {
 export function tutorContext(s: ProgressState): string {
   const weak = weakTopics(s, 2).map((w) => `${w.label} (${w.mastery}% ${w.stage})`).join(", ");
   const recent = s.attempts.slice(-3).map((a) => `${a.quiz}: ${a.score}/${a.total}`).join("; ") || "no quizzes yet";
-  const mistakes = (s as any).mistakes?.slice(-5).map((m: any) => `"${m.q}" (picked "${m.picked}", correct "${m.correct}")`).join("; ") || "none recorded";
+  const mistakes = s.mistakes?.slice(-5).map((m) => `"${m.q}" (picked "${m.picked}", correct "${m.correct}")`).join("; ") || "none recorded";
   return `Level ${learnerLevel(s)}; goal "${s.goal}"; course lessons ${s.lessons?.length ?? 0}/${TOTAL_LESSONS} done; legacy units ${s.done.length}/${UNITS.length}; projects ${s.projects?.length ?? 0}/12; avg quiz ${avgScore(s)}%; weak: ${weak}; recent quizzes: ${recent}; repeated mistakes: ${mistakes}; streak ${streakCount(s)}d.`;
 }
 

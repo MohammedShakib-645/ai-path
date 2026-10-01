@@ -1,5 +1,5 @@
 // Multi-key cloud engine with automatic failover.
-import type { ChatMsg } from "./ai";
+import type { ChatMsg, MsgPart } from "./ai";
 // Env:
 //   GROQ_KEYS   = comma-separated Groq keys (gsk_..., up to 10+). Falls back to GROQ_API_KEY.
 //   GEMINI_KEYS = comma-separated Google AI Studio keys (backup provider). Falls back to GEMINI_API_KEY.
@@ -42,8 +42,36 @@ function pick(keys: string[], cursor: { i: number }): string | null {
   return null; // all cooling — caller decides (wait or fail over)
 }
 
-function park(key: string) {
-  coolUntil.set(key, Date.now() + COOLDOWN_MS);
+/** Provider HTTP failure carrying backoff metadata (Retry-After honoured). */
+class ProviderHttpError extends Error {
+  constructor(provider: string, readonly status: number, readonly retryAfterMs?: number) {
+    super(`${provider} HTTP ${status}`);
+  }
+}
+
+function retryMs(res: Response): number | undefined {
+  const ra = res.headers.get("retry-after");
+  if (!ra) return undefined;
+  const secs = Number(ra);
+  if (Number.isFinite(secs)) return Math.max(5, secs) * 1000;
+  const at = Date.parse(ra);
+  return Number.isFinite(at) ? Math.max(5_000, at - Date.now()) : undefined;
+}
+
+/** Backoff per failure: rate-limit → until the provider says go again (Retry-After,
+ *  default 2 min); dead key → 30 min; server hiccup → 90s. Every key re-enters
+ *  rotation automatically when its window expires — limits self-heal, no restart. */
+function parkFor(e: unknown): number {
+  if (e instanceof ProviderHttpError) {
+    if (e.status === 401 || e.status === 403) return 30 * 60_000;
+    if (e.status === 429) return e.retryAfterMs ?? 120_000;
+    if (e.status >= 500) return e.retryAfterMs ?? 90_000;
+  }
+  return COOLDOWN_MS;
+}
+
+function park(key: string, ms = COOLDOWN_MS) {
+  coolUntil.set(key, Date.now() + ms);
 }
 
 /** Ordered Groq keys, skipping cooling ones. */
@@ -56,14 +84,14 @@ export function coolKey(key: string) {
   park(key);
 }
 
-async function groqOnce(key: string, messages: any[], vision = false): Promise<string> {
+async function groqOnce(key: string, messages: ChatMsg[], vision = false): Promise<string> {
   // Map our attachment parts to OpenAI-style content for Groq's vision model.
-  const mapped = messages.map((m: any) => {
+  const mapped = messages.map((m) => {
     if (!Array.isArray(m.content)) return m;
     return {
       ...m,
       content: m.content
-        .map((p: any) => {
+        .map((p: MsgPart) => {
           if (p.type === "text") return { type: "text", text: p.text };
           if (p.type === "image") return { type: "image_url", image_url: { url: `data:${p.mime};base64,${p.data}` } };
           return null; // pdfs never reach Groq (cloudChat routes them to Gemini)
@@ -82,8 +110,7 @@ async function groqOnce(key: string, messages: any[], vision = false): Promise<s
       max_tokens: 4000,
     }),
   });
-  if (res.status === 429 || res.status >= 500) throw new Error(`Groq HTTP ${res.status}`);
-  if (!res.ok) throw new Error(`Groq HTTP ${res.status}`);
+  if (!res.ok) throw new ProviderHttpError("Groq", res.status, retryMs(res));
   const data = await res.json();
   const reply = data?.choices?.[0]?.message?.content;
   if (!reply) throw new Error("Empty Groq reply");
@@ -96,12 +123,12 @@ const GEMINI_MODELS = ["gemini-3-flash-preview", "gemini-flash-latest"];
 async function geminiOnce(key: string, messages: ChatMsg[]): Promise<string> {
   // Map OpenAI-style messages to Gemini contents — text, images and PDFs
   // travel as inline_data (Gemini reads both natively).
-  const sys = messages.find((m: any) => m.role === "system");
-  const rest = messages.filter((m: any) => m.role !== "system");
-  const contents = rest.map((m: any) => {
+  const sys = messages.find((m) => m.role === "system");
+  const rest = messages.filter((m) => m.role !== "system");
+  const contents = rest.map((m) => {
     const parts = Array.isArray(m.content)
       ? m.content
-          .map((p: any) => {
+          .map((p: MsgPart) => {
             if (p.type === "text") return { text: p.text };
             if (p.type === "image" || p.type === "pdf") return { inline_data: { mime_type: p.mime, data: p.data } };
             return null;
@@ -126,10 +153,9 @@ async function geminiOnce(key: string, messages: ChatMsg[]): Promise<string> {
     if (res.status !== 404) break; // 404 = this model ID is retired → try the next one
   }
   if (!res) throw new Error("Gemini HTTP 404 (no working model ID)");
-  if (res.status === 429 || res.status >= 500) throw new Error(`Gemini HTTP ${res.status}`);
-  if (!res.ok) throw new Error(`Gemini HTTP ${res.status}`);
+  if (!res.ok) throw new ProviderHttpError("Gemini", res.status, retryMs(res));
   const data = await res.json();
-  const reply = data?.candidates?.[0]?.content?.parts?.map((p: any) => p.text || "").join("");
+  const reply = data?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text || "").join("");
   if (!reply) throw new Error("Empty Gemini reply");
   return reply;
 }
@@ -165,8 +191,7 @@ async function openrouterOnce(key: string, messages: ChatMsg[]): Promise<string>
     if (res.status !== 404 && res.status !== 400) break; // bad model ID → try the next one
   }
   if (!res) throw new Error("OpenRouter HTTP 404 (no working model ID)");
-  if (res.status === 429 || res.status >= 500) throw new Error(`OpenRouter HTTP ${res.status}`);
-  if (!res.ok) throw new Error(`OpenRouter HTTP ${res.status}`);
+  if (!res.ok) throw new ProviderHttpError("OpenRouter", res.status, retryMs(res));
   const data = await res.json();
   const reply = data?.choices?.[0]?.message?.content;
   if (!reply) throw new Error("Empty OpenRouter reply");
@@ -174,7 +199,7 @@ async function openrouterOnce(key: string, messages: ChatMsg[]): Promise<string>
 }
 
 /** Try every Groq key, then every Gemini key. Throws only if ALL fail. */
-export async function cloudChat(messages: any[]): Promise<Attempt> {
+export async function cloudChat(messages: ChatMsg[]): Promise<Attempt> {
   // Manual "use my own key" (Settings): browser sends x-user-groq / x-user-gemini.
   // Those are tried FIRST for this one request, then the server's private pool.
   let userGroq: string[] = [];
@@ -218,9 +243,9 @@ export async function cloudChat(messages: any[]): Promise<Attempt> {
         const reply = await groqOnce(key, messages, hasImage);
         groqCursor = cursor.i;
         return { reply, engine: (hasImage ? "groq:qwen3.8-vision" : "groq:gpt-oss-120b") + (isMine(key) ? " · your key" : "") };
-      } catch (e: any) {
-        park(key);
-        failures.push(`groq:${e.message}`);
+      } catch (e) {
+        park(key, parkFor(e));
+        failures.push(`groq:${e instanceof Error ? e.message : String(e)}`);
       }
     }
     groqCursor = cursor.i;
@@ -236,7 +261,7 @@ export async function cloudChat(messages: any[]): Promise<Attempt> {
         openrouterCursor = ocur.i;
         return { reply, engine: "openrouter:free" };
       } catch (e) {
-        park(key);
+        park(key, parkFor(e));
         failures.push(`openrouter:${e instanceof Error ? e.message : String(e)}`);
       }
     }
@@ -250,9 +275,9 @@ export async function cloudChat(messages: any[]): Promise<Attempt> {
       const reply = await geminiOnce(key, messages);
       geminiCursor = gcur.i;
       return { reply, engine: (hasPdf ? "gemini:3-flash (pdf)" : "gemini:3-flash") + (isMine(key) ? " · your key" : "") };
-    } catch (e: any) {
-      park(key);
-      failures.push(`gemini:${e.message}`);
+    } catch (e) {
+      park(key, parkFor(e));
+      failures.push(`gemini:${e instanceof Error ? e.message : String(e)}`);
     }
   }
   geminiCursor = gcur.i;

@@ -2,7 +2,8 @@
 // Pool: GROQ_KEYS (primary) -> GEMINI_KEYS (backup), round-robin + 90s cooldown.
 import { cloudChat } from "./llm";
 
-export interface ChatMsg { role: "system" | "user" | "assistant"; content: string | Array<{ type: string; [k: string]: any }> }
+export interface MsgPart { type: string; text?: string; mime?: string; data?: string; [k: string]: unknown }
+export interface ChatMsg { role: "system" | "user" | "assistant"; content: string | MsgPart[] }
 
 export const TUTOR_MODES: Record<string, { label: string; system: string }> = {
   explain: { label: "Explain", system: "Explain the concept simply with one short example. End with a check question." },

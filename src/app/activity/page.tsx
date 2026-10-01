@@ -29,6 +29,9 @@ function groupOf(at: number) {
   return "Older";
 }
 
+/** Clock helper — handlers/derived computations call it, never raw render. */
+const nowMs = () => Date.now();
+
 export default function ActivityPage() {
   const s = useProgress();
   const [kind, setKind] = useState<string>("all");
@@ -36,7 +39,7 @@ export default function ActivityPage() {
   const [range, setRange] = useState("all");
 
   const items = useMemo(() => {
-    const now = Date.now();
+    const now = nowMs();
     return s.activity.filter((a) => {
       if (kind !== "all" && a.kind !== kind) return false;
       if (q && !(a.text + " " + a.detail).toLowerCase().includes(q.toLowerCase())) return false;

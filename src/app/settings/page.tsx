@@ -27,27 +27,33 @@ export default function SettingsPage() {
   }, []);
 
   useEffect(() => {
-    try {
-      const k = localStorage.getItem("ai-path-my-keys");
-      if (k) {
-        const p = JSON.parse(k);
-        setMyGroq(p.groq || "");
-        setMyGemini(p.gemini || "");
-        setKeySaved(!!(p.groq || p.gemini));
-      }
-    } catch { /* ignore */ }
+    const tid = window.setTimeout(() => {
+      try {
+        const k = localStorage.getItem("ai-path-my-keys");
+        if (k) {
+          const p = JSON.parse(k);
+          setMyGroq(p.groq || "");
+          setMyGemini(p.gemini || "");
+          setKeySaved(!!(p.groq || p.gemini));
+        }
+      } catch { /* ignore */ }
+    }, 0);
+    return () => window.clearTimeout(tid);
   }, []);
 
   useEffect(() => {
-    try {
-      const p = localStorage.getItem("ai-path-profile");
-      if (p) {
-        const parsed = JSON.parse(p);
-        if (parsed.name) setName(parsed.name);
-        if (parsed.email) setEmail(parsed.email);
-        if (parsed.track) setTrack(parsed.track);
-      }
-    } catch { /* ignore */ }
+    const tid = window.setTimeout(() => {
+      try {
+        const p = localStorage.getItem("ai-path-profile");
+        if (p) {
+          const parsed = JSON.parse(p);
+          if (parsed.name) setName(parsed.name);
+          if (parsed.email) setEmail(parsed.email);
+          if (parsed.track) setTrack(parsed.track);
+        }
+      } catch { /* ignore */ }
+    }, 0);
+    return () => window.clearTimeout(tid);
   }, []);
 
   const save = () => {
@@ -65,18 +71,18 @@ export default function SettingsPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-[220px_1fr] gap-4 max-w-5xl">
         <div className="card p-2 space-y-1 self-start">
-          {[
+          {([
             { id: "profile", label: "Profile", icon: User },
             { id: "track", label: "Learning Track", icon: Sliders },
             { id: "engine", label: "AI Engine", icon: Cpu },
             { id: "notices", label: "Notifications", icon: Bell },
-          ].map((t) => {
+          ] as const).map((t) => {
             const Icon = t.icon;
             const on = activeTab === t.id;
             return (
               <button
                 key={t.id}
-                onClick={() => setActiveTab(t.id as any)}
+                onClick={() => setActiveTab(t.id)}
                 className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl font-medium text-[13px] transition ${on ? "primary-gradient text-white font-bold shadow" : "text-slate-600 hover:bg-slate-50"}`}
               >
                 <Icon className="w-4 h-4" />
@@ -173,7 +179,7 @@ export default function SettingsPage() {
                         const r = await fetch("/api/ai/ping", { method: "POST" });
                         const d = await r.json();
                         setPingRes(d.ok ? { ok: true, msg: `Live ✓ (${d.engine})` } : { ok: false, msg: d.error || "failed" });
-                      } catch (e: any) { setPingRes({ ok: false, msg: String(e?.message || e) }); }
+                      } catch (e) { setPingRes({ ok: false, msg: e instanceof Error ? e.message : String(e) }); }
                       setPinging(false);
                     }}
                     disabled={pinging}

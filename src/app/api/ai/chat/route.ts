@@ -1,6 +1,7 @@
 // POST /api/ai/chat { mode, profile, prefs, messages, attachments } —
 // tutor modes + prefs + multimodal files (images & PDFs via copy/paste or upload).
 import { aiChat, TUTOR_MODES } from "../../../../lib/ai";
+import type { ChatMsg } from "../../../../lib/ai";
 
 export async function GET() {
   return Response.json({ modes: Object.entries(TUTOR_MODES).map(([id, m]) => ({ id, label: m.label })) });
@@ -13,8 +14,17 @@ interface Attachment {
   data?: string; // base64 (image/pdf) or raw text (text)
 }
 
+interface ChatBody {
+  mode?: string;
+  profile?: string;
+  prefs?: { respLength?: string; style?: string; codeLang?: string } | null;
+  messages?: Array<{ role?: string; content?: ChatMsg["content"] }>;
+  attachments?: unknown;
+  followups?: unknown;
+}
+
 export async function POST(req: Request) {
-  let body: any = {};
+  let body: ChatBody = {};
   try {
     body = await req.json();
   } catch {
@@ -38,9 +48,9 @@ export async function POST(req: Request) {
   }
 
   // Attach files to the CURRENT (last user) message only — history stays text.
-  const msgs: { role: "system" | "user" | "assistant"; content: any }[] = messages
+  const msgs: ChatMsg[] = messages
     .slice(-20)
-    .map((m: any) => ({ role: (m.role === "assistant" || m.role === "system" ? m.role : "user") as "system" | "user" | "assistant", content: m.content }));
+    .map((m) => ({ role: m.role === "assistant" || m.role === "system" ? m.role : "user", content: m.content ?? "" }));
   let lastUser = -1;
   for (let i = msgs.length - 1; i >= 0; i--) {
     if (msgs[i].role === "user") { lastUser = i; break; }
@@ -67,9 +77,10 @@ export async function POST(req: Request) {
   try {
     const { reply, engine } = await aiChat(String(mode), `${profile}${style}`, msgs, { followups: Boolean(followups) });
     return Response.json({ reply, engine });
-  } catch (e: any) {
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
     return Response.json({
-      reply: `AI service is temporarily unavailable (${e.message}). Your message is safe — try again, or add cloud keys in Vercel env (GROQ_KEYS / GEMINI_KEYS).`,
+      reply: `AI service is temporarily unavailable (${msg}). Your message is safe — try again, or add cloud keys in Vercel env (GROQ_KEYS / GEMINI_KEYS).`,
       engine: "mock",
       error: "AI_UNAVAILABLE",
     });

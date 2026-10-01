@@ -74,18 +74,22 @@ export default function LearnPage() {
   const next = UNITS.find((u) => u.id === unit.id + 1);
 
   useEffect(() => {
-    setLoading(true);
-    setLesson(null);
-    setQuizPick({});
-    fetch("/api/ai/lesson", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ topic: unit.title, level: learnerLevel(s) }),
-    })
-      .then((r) => r.json())
-      .then((d) => setLesson(normalizeLesson(d?.lesson)))
-      .catch(() => setLesson(null))
-      .finally(() => setLoading(false));
+    // deferred — synchronous setState in an effect body cascades renders
+    const tid = window.setTimeout(() => {
+      setLoading(true);
+      setLesson(null);
+      setQuizPick({});
+      fetch("/api/ai/lesson", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ topic: unit.title, level: learnerLevel(s) }),
+      })
+        .then((r) => r.json())
+        .then((d) => setLesson(normalizeLesson(d?.lesson)))
+        .catch(() => setLesson(null))
+        .finally(() => setLoading(false));
+    }, 0);
+    return () => window.clearTimeout(tid);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [unit.id, tick]);
 

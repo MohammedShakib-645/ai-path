@@ -39,25 +39,29 @@ export default function LessonPage() {
   useEffect(() => {
     // Authored MDX lessons render instantly — no AI round-trip, no flake.
     if (!flat || AUTHORED_LESSONS[flat.lesson.title]) return;
-    setLoading(true);
-    setContent(null);
-    setFailed(false);
-    setQuizPick({});
-    fetch("/api/ai/lesson", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ topic: flat.lesson.title, level: learnerLevel(s) }),
-    })
-      .then((r) => r.json())
-      .then((d) => {
-        // Accept only a real lesson (topic/intro present) — an empty or
-        // half-shaped object falls through to the honest "offline" card.
-        const l = d?.lesson as Partial<LessonContent> | null | undefined;
-        if (l && typeof l === "object" && typeof l.intro === "string" && l.intro.trim()) setContent(l as LessonContent);
-        else setFailed(true);
+    // deferred — synchronous setState in an effect body cascades renders
+    const tid = window.setTimeout(() => {
+      setLoading(true);
+      setContent(null);
+      setFailed(false);
+      setQuizPick({});
+      fetch("/api/ai/lesson", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ topic: flat.lesson.title, level: learnerLevel(s) }),
       })
-      .catch(() => setFailed(true))
-      .finally(() => setLoading(false));
+        .then((r) => r.json())
+        .then((d) => {
+          // Accept only a real lesson (topic/intro present) — an empty or
+          // half-shaped object falls through to the honest "offline" card.
+          const l = d?.lesson as Partial<LessonContent> | null | undefined;
+          if (l && typeof l === "object" && typeof l.intro === "string" && l.intro.trim()) setContent(l as LessonContent);
+          else setFailed(true);
+        })
+        .catch(() => setFailed(true))
+        .finally(() => setLoading(false));
+    }, 0);
+    return () => window.clearTimeout(tid);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lessonId, tick]);
 

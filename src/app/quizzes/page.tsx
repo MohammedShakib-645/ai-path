@@ -11,6 +11,9 @@ import {
   CheckCircle2, XCircle, ClipboardList, Info, Lightbulb, BarChart3, Lock, Eye,
 } from "lucide-react";
 
+/** Clock helper at module scope — handlers call it, never the render path. */
+const nowMs = () => Date.now();
+
 export default function QuizzesPage() {
   const prog = useProgress();
   const avg = avgScore(prog);
@@ -30,7 +33,7 @@ export default function QuizzesPage() {
   const [showPreview, setShowPreview] = useState(false);
   const advTimer = useRef<number | null>(null);
   // real measured time on this quiz attempt (start → submit)
-  const startedAt = useRef(Date.now());
+  const startedAt = useRef(nowMs());
   const [secs, setSecs] = useState(300);
   const [submitted, setSubmitted] = useState(false);
   const [genTopic, setGenTopic] = useState("Python Functions");
@@ -53,7 +56,7 @@ export default function QuizzesPage() {
   };
   const reset = () => {
     if (advTimer.current) window.clearTimeout(advTimer.current);
-    startedAt.current = Date.now();
+    startedAt.current = nowMs();
     setIdx(0);
     setAnswers({});
     setMultiAnswers({});

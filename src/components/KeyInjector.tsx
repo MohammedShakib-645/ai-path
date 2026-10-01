@@ -7,13 +7,13 @@ import { useEffect } from "react";
 // that request only — never stored, never sent to anyone else.
 export default function KeyInjector() {
   useEffect(() => {
-    const w = window as any;
+    const w = window as Window & { __keyInjector?: boolean };
     if (w.__keyInjector) return;
     w.__keyInjector = true;
     const orig = window.fetch.bind(window);
-    window.fetch = (input: any, init?: any) => {
+    window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
       try {
-        const url = typeof input === "string" ? input : input?.url || "";
+        const url = typeof input === "string" ? input : input instanceof Request ? input.url : input.href;
         if (url.startsWith("/api/")) {
           const raw = localStorage.getItem("ai-path-my-keys");
           if (raw) {

@@ -48,9 +48,9 @@ export async function POST(req: Request) {
   const raw = await req.text();
   if (raw.length > 64 * 1024) return Response.json({ error: "Request too large" }, { status: 413 });
 
-  let body: any;
+  let body: Record<string, unknown>;
   try {
-    body = JSON.parse(raw);
+    body = JSON.parse(raw) as Record<string, unknown>;
   } catch {
     return Response.json({ error: "Invalid JSON" }, { status: 400 });
   }
@@ -96,7 +96,8 @@ export async function POST(req: Request) {
       timedOut: !!j.run?.timeout || String(j.run?.signal ?? "") === "SIGKILL" || Number(j.run?.code ?? 0) === 124,
       engine: `${language}@${j.language?.version ?? "remote"}`,
     });
-  } catch (e: any) {
-    return Response.json({ error: `Runner unreachable: ${e?.message ?? e}` }, { status: 502 });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return Response.json({ error: `Runner unreachable: ${msg}` }, { status: 502 });
   }
 }
