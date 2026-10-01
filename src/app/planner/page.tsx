@@ -8,7 +8,7 @@ import { CalendarCheck, Sparkles } from "lucide-react";
 
 export default function PlannerPage() {
   const s = useProgress();
-  const [goal, setGoal] = useState(s.prefs.goal || s.goal || "Learn Python in 30 days");
+  const [goal, setGoal] = useState(s.prefs.goal || s.goal || "");
   const [hours, setHours] = useState(1);
   const [target, setTarget] = useState("");
   const [loading, setLoading] = useState(false);
@@ -26,9 +26,15 @@ export default function PlannerPage() {
         body: JSON.stringify({ goal, hoursPerDay: hours, targetDate: target, level: s.prefs.level }),
       });
       const d = await res.json();
-      savePlan({ goal, days: d.days, createdAt: Date.now() });
-      logActivity(`Study plan: ${goal.slice(0, 40)}`, `${d.days.length} days`, "plan");
-      toast("Study plan created ✓");
+      const eng = String(d.engine ?? "");
+      const canned = eng.includes("fallback") || eng.includes("mock") || eng.includes("offline");
+      if (!Array.isArray(d.days) || d.days.length === 0 || canned) {
+        toast("AI couldn't build a real plan right now — try again", "err");
+      } else {
+        savePlan({ goal, days: d.days, createdAt: Date.now() });
+        logActivity(`Study plan: ${goal.slice(0, 40)}`, `${d.days.length} days`, "plan");
+        toast("Study plan created ✓");
+      }
     } catch {
       toast("AI unavailable — try again", "err");
     }
@@ -45,7 +51,7 @@ export default function PlannerPage() {
         <div className="card p-5 space-y-3 self-start">
           <div>
             <label className="text-[13px] font-bold">Goal</label>
-            <input value={goal} onChange={(e) => setGoal(e.target.value)} className="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2 text-[13px] outline-none" />
+            <input value={goal} onChange={(e) => setGoal(e.target.value)} placeholder="e.g. Learn Machine Learning in 30 days" className="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2 text-[13px] outline-none" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>

@@ -102,13 +102,15 @@ export default function QuizzesPage() {
         body: JSON.stringify({ topic: genTopic, difficulty: genDiff, count: genCount }),
       });
       const d = await res.json();
-      if (d.questions?.length) {
+      const eng = String(d.engine ?? "");
+      const canned = eng.includes("fallback") || eng.includes("mock");
+      if (d.questions?.length && !canned) {
         setAiBank(d.questions);
         setTier("ai");
         reset();
         toast(`AI quiz ready: ${d.questions.length} questions ✓`);
       } else {
-        toast(d.error || "Quiz generation failed", "err");
+        toast(d.error || "AI couldn't create real questions — try again", "err");
       }
     } catch {
       toast("AI unavailable", "err");

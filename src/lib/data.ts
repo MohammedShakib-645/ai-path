@@ -1,34 +1,3 @@
-export type TopicStatus = 'completed' | 'in_progress' | 'not_started';
-
-export interface Topic {
-  id: number;
-  title: string;
-  description: string;
-  duration: string;
-  status: TopicStatus;
-  progress: number; // 0-100
-  color: string; // bg tint
-  iconColor: string;
-}
-
-export const INITIAL_TOPICS: Topic[] = [
-  { id: 1, title: 'Python Basics', description: 'Learn about Python syntax, variables, data types, operators and basic input/output.', duration: '2 hours', status: 'completed', progress: 100, color: 'bg-green-50', iconColor: 'text-green-600' },
-  { id: 2, title: 'Data Types', description: 'Lists, tuples, sets, dictionaries and their operations.', duration: '2 hours', status: 'in_progress', progress: 60, color: 'bg-blue-50', iconColor: 'text-blue-600' },
-  { id: 3, title: 'Control Flow', description: 'Learn if-else statements, loops and conditional execution.', duration: '1.5 hours', status: 'not_started', progress: 0, color: 'bg-gray-50', iconColor: 'text-gray-500' },
-  { id: 4, title: 'Functions', description: 'Understand functions, parameters, return values and function scope.', duration: '2 hours', status: 'not_started', progress: 0, color: 'bg-gray-50', iconColor: 'text-gray-500' },
-  { id: 5, title: 'Data Structures', description: 'Learn lists, tuples, sets, dictionaries and their operations.', duration: '2.5 hours', status: 'not_started', progress: 0, color: 'bg-gray-50', iconColor: 'text-gray-500' },
-  { id: 6, title: 'Projects', description: 'Build real mini projects to apply everything you learned.', duration: '3 hours', status: 'not_started', progress: 0, color: 'bg-gray-50', iconColor: 'text-gray-500' },
-];
-
-export const FULL_PATH_TOPICS = [
-  { id: 1, title: 'Python Basics', description: 'Learn about Python syntax, variables, data types, operators and basic input/output.', duration: '2 hours', status: 'completed' as TopicStatus },
-  { id: 2, title: 'Control Flow', description: 'Learn if-else statements, loops and conditional execution.', duration: '1.5 hours', status: 'completed' as TopicStatus },
-  { id: 3, title: 'Functions', description: 'Understand functions, parameters, return values and function scope.', duration: '2 hours', status: 'completed' as TopicStatus },
-  { id: 4, title: 'Data Structures', description: 'Learn lists, tuples, sets, dictionaries and their operations.', duration: '2.5 hours', status: 'in_progress' as TopicStatus },
-  { id: 5, title: 'Object Oriented Programming', description: 'Classes, objects, inheritance and encapsulation.', duration: '3 hours', status: 'not_started' as TopicStatus },
-  { id: 6, title: 'Machine Learning Basics', description: 'What is ML, types of learning, and real-world applications.', duration: '2 hours', status: 'not_started' as TopicStatus },
-];
-
 export interface QuizQ {
   q: string;
   code?: string;

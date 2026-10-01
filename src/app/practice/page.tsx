@@ -332,6 +332,9 @@ function PracticeInner() {
             </div>
             {results && (
               <div className="px-4 pb-4 space-y-2">
+                <div className={`text-[12.5px] font-bold rounded-lg px-3 py-2 border ${results.filter((r) => r.pass).length === results.length ? "bg-green-50 border-green-200 text-green-800" : "bg-amber-50 border-amber-200 text-amber-800"}`}>
+                  {results.filter((r) => r.pass).length}/{results.length} tests passed
+                </div>
                 {results.map((r, i) => (
                   <div key={i} className={`text-[12px] rounded-lg px-3 py-2 border ${r.pass ? "bg-green-50 border-green-200 text-green-800" : "bg-red-50 border-red-200 text-red-800"}`}>
                     Test {i + 1}: {r.pass ? "✓ Passed" : `✗ got "${r.got}" want "${r.want}"`}

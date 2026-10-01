@@ -117,11 +117,16 @@ export function dailyBrief(s: ProgressState): { focus: string; why: string; step
     why: act.why,
     steps: rules.length
       ? rules.map((r) => `${r.title} — ${r.why}`)
-      : [
-          `Review ${weak ? weak.label : "current unit"} — 8 min`,
-          `Practice 3 questions — 10 min`,
-          `Continue ${nextUnit(s).title} — 7 min`,
-        ],
+      : (() => {
+          const m = Math.max(15, s.prefs.dailyMins);
+          const a = Math.round(m * 0.3);
+          const b = Math.round(m * 0.4);
+          return [
+            `Review ${weak ? weak.label : "current unit"} — ${a} min`,
+            `Practice 3 questions — ${b} min`,
+            `Continue ${nextUnit(s).title} — ${Math.max(5, m - a - b)} min`,
+          ];
+        })(),
   };
 }
 

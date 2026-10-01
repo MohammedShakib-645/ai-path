@@ -2,7 +2,7 @@
 // Every page reads/writes here, so Dashboard, Path, Quiz, Tutor and
 // Progress always show the same live numbers — no mock constants.
 "use client";
-import { useSyncExternalStore, useEffect } from "react";
+import { useSyncExternalStore, useEffect, useState } from "react";
 
 export interface Unit { id: number; title: string; hours: string; icon: string }
 export interface QuizAttempt { quiz: string; score: number; total: number; at: number }
@@ -191,6 +191,15 @@ export function useProgress(): ProgressState {
     }
   }, []);
   return s;
+}
+
+/** True once localStorage state has been read — pages show skeletons until then. */
+export function useHydrated(): boolean {
+  const [h, setH] = useState(false);
+  useEffect(() => {
+    setH(true);
+  }, []);
+  return h;
 }
 
 // ---- profile name (onboarding/settings) — external store so no setState-in-effect ----
