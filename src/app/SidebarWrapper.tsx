@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import Sidebar from "../components/Sidebar";
 import { MenuProvider } from "./MenuContext";
 import AiFab from "../components/AiFab";
+import CommandPalette from "../components/CommandPalette";
 import { Home, BookOpen, BotMessageSquare, FlaskConical, BarChart3 } from "lucide-react";
 const TABS = [
   { href: "/", label: "Home", icon: Home },
@@ -46,6 +47,8 @@ export default function SidebarWrapper({ children }: { children: React.ReactNode
 
       {/* Floating AI bot — tap to open a small chat screen right here */}
       <AiFab />
+      {/* Ctrl/⌘+K command palette — global navigation + search */}
+      <CommandPalette />
     </div>
   );
 }
