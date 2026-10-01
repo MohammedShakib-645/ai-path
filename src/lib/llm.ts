@@ -14,7 +14,15 @@ interface Attempt {
 const COOLDOWN_MS = 90_000;
 const coolUntil = new Map<string, number>(); // key -> timestamp
 let groqCursor = 0;
+let openrouterCursor = 0;
 let geminiCursor = 0;
+
+// OpenRouter free models (404 = ID retired → try next).
+const OPENROUTER_MODELS = [
+  "nvidia/nemotron-3-super-120b-a12b:free",
+  "qwen/qwen3.8-27b:free",
+  "google/gemma-4-31b-it:free",
+];
 
 function pool(name: string, legacy: string): string[] {
   const raw = process.env[name] || process.env[legacy] || "";
@@ -126,6 +134,45 @@ async function geminiOnce(key: string, messages: ChatMsg[]): Promise<string> {
   return reply;
 }
 
+/** OpenRouter — OpenAI-compatible endpoint over free models, 404-fallback chain. */
+async function openrouterOnce(key: string, messages: ChatMsg[]): Promise<string> {
+  // Same OpenAI-style mapping as Groq (text + image parts; PDFs never land here).
+  const mapped = messages.map((m) => {
+    if (!Array.isArray(m.content)) return m;
+    return {
+      ...m,
+      content: m.content
+        .map((p) => {
+          if (p.type === "text") return { type: "text", text: p.text };
+          if (p.type === "image") return { type: "image_url", image_url: { url: `data:${p.mime};base64,${p.data}` } };
+          return null;
+        })
+        .filter(Boolean),
+    };
+  });
+  let res: Response | undefined;
+  for (const model of OPENROUTER_MODELS) {
+    res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${key}`,
+        "HTTP-Referer": "https://ai-path-tutor.vercel.app",
+        "X-Title": "AI-PATH",
+      },
+      body: JSON.stringify({ model, messages: mapped, temperature: 0.7, max_tokens: 4000 }),
+    });
+    if (res.status !== 404 && res.status !== 400) break; // bad model ID → try the next one
+  }
+  if (!res) throw new Error("OpenRouter HTTP 404 (no working model ID)");
+  if (res.status === 429 || res.status >= 500) throw new Error(`OpenRouter HTTP ${res.status}`);
+  if (!res.ok) throw new Error(`OpenRouter HTTP ${res.status}`);
+  const data = await res.json();
+  const reply = data?.choices?.[0]?.message?.content;
+  if (!reply) throw new Error("Empty OpenRouter reply");
+  return reply;
+}
+
 /** Try every Groq key, then every Gemini key. Throws only if ALL fail. */
 export async function cloudChat(messages: any[]): Promise<Attempt> {
   // Manual "use my own key" (Settings): browser sends x-user-groq / x-user-gemini.
@@ -143,8 +190,10 @@ export async function cloudChat(messages: any[]): Promise<Attempt> {
   const isMine = (k: string) => userGroq.includes(k) || userGemini.includes(k);
 
   const groqKeys = [...userGroq, ...pool("GROQ_KEYS", "GROQ_API_KEY")];
+  const openrouterKeys = pool("OPENROUTER_KEYS", "OPENROUTER_API_KEY");
   const geminiKeys = [...userGemini, ...pool("GEMINI_KEYS", "GEMINI_API_KEY")];
   const cursor = { i: groqCursor };
+  const ocur = { i: openrouterCursor };
   const gcur = { i: geminiCursor };
   const failures: string[] = [];
 
@@ -175,6 +224,23 @@ export async function cloudChat(messages: any[]): Promise<Attempt> {
       }
     }
     groqCursor = cursor.i;
+  }
+
+  // OpenRouter — second line of defence for plain text chat (images/PDFs go to Gemini).
+  if (!hasPdf && !hasImage) {
+    for (let n = 0; n < openrouterKeys.length; n++) {
+      const key = pick(openrouterKeys, ocur);
+      if (!key) break;
+      try {
+        const reply = await openrouterOnce(key, messages);
+        openrouterCursor = ocur.i;
+        return { reply, engine: "openrouter:free" };
+      } catch (e) {
+        park(key);
+        failures.push(`openrouter:${e instanceof Error ? e.message : String(e)}`);
+      }
+    }
+    openrouterCursor = ocur.i;
   }
 
   for (let n = 0; n < geminiKeys.length; n++) {
