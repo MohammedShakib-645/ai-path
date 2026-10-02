@@ -19,8 +19,9 @@ let geminiCursor = 0;
 
 // OpenRouter free models (404 = ID retired → try next).
 const OPENROUTER_MODELS = [
-  "nvidia/nemotron-3-super-120b-a12b:free",
+  // Smallest/fastest free model first (27B ≈ seconds); big 120B free model as fallback.
   "qwen/qwen3.8-27b:free",
+  "nvidia/nemotron-3-super-120b-a12b:free",
   "google/gemma-4-31b-it:free",
 ];
 
