@@ -49,3 +49,6 @@ next-env.d.ts
 
 # Supabase CLI local temp (connection metadata, never needed in repo)
 supabase/.temp/
+
+# deck stays private on the author's machine — never in the repo
+docs/*.pptx

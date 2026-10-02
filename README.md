@@ -18,7 +18,7 @@
 
 <br>
 
-[**Launch app →**](https://ai-path-tutor.vercel.app) &nbsp;·&nbsp; [**Pitch deck →**](docs/AI-PATH-Pitch-Deck.pptx) &nbsp;·&nbsp; [**Source →**](https://github.com/MohammedShakib-645/ai-path)
+[**Launch app →**](https://ai-path-tutor.vercel.app) &nbsp;·&nbsp; [**Source →**](https://github.com/MohammedShakib-645/ai-path)
 
 <br>
 
@@ -170,7 +170,7 @@ Built pair-programming with **OpenCode**. Runtime models: **Groq `openai/gpt-oss
 
 <div align="center">
 
-**[🚀 Launch](https://ai-path-tutor.vercel.app)** · **[📊 Deck](docs/AI-PATH-Pitch-Deck.pptx)** · **[📦 Repo](https://github.com/MohammedShakib-645/ai-path)**
+**[🚀 Launch](https://ai-path-tutor.vercel.app)** · **[📦 Repo](https://github.com/MohammedShakib-645/ai-path)**
 
 <sub>Real auth · real data · real AI — no mock numbers anywhere.</sub>
 
