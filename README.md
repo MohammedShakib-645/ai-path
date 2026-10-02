@@ -15,8 +15,6 @@ quiz and explanation to your live progress.**
 
 **🚀 [Live App](https://ai-path-tutor.vercel.app)** · **[🎬 Demo Video](https://drive.google.com/file/d/1x6GuXbR447IFWwk5L_fjbo_O3yfwUkJDI/view?usp=sharing)** · **📊 [Pitch Deck](docs/AI-Path-Hackathon-Deck.pptx)** · **[🌐 GitHub](https://github.com/MohammedShakib-645/ai-path)**
 
-<img src="public/screenshots/dashboard.png" alt="AI-PATH dashboard" width="850">
-
 </div>
 
 ---
