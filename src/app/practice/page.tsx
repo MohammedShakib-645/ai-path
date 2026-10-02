@@ -313,7 +313,7 @@ function PracticeInner() {
 
           <div className="card p-0 overflow-hidden">
             <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100 flex-wrap">
-              <select title={supported.length < LANGS.length ? "C, C++ and Java are hidden: this deployment has no hosted runner (RUNNER_URL). Python & JavaScript run locally in your browser." : "Language"} value={lang.id} onChange={(e) => { const l = LANGS.find((x) => x.id === e.target.value)!; setLang(l); setCode(l.starter); }} className="border border-slate-200 rounded-lg px-2 py-1.5 text-[12px] font-bold bg-white outline-none">
+              <select title={supported.length < LANGS.length ? "Python & JavaScript run instantly in your browser." : "Language"} value={lang.id} onChange={(e) => { const l = LANGS.find((x) => x.id === e.target.value)!; setLang(l); setCode(l.starter); }} className="border border-slate-200 rounded-lg px-2 py-1.5 text-[12px] font-bold bg-white outline-none">
                 {langs.map((l) => <option key={l.id} value={l.id}>{l.label}</option>)}
               </select>
               <div className="ml-auto flex gap-2">
