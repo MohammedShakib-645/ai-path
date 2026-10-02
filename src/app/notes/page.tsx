@@ -36,6 +36,9 @@ export default function NotesPage() {
   const [aiOut, setAiOut] = useState<string | null>(null);
   const [aiLabel, setAiLabel] = useState("");
   const [aiOffline, setAiOffline] = useState(false);
+  // card resize (works with mouse AND touch — pointer events)
+  const [rz, setRz] = useState<{ id: string; span: number; h: number; x0: number; y0: number; sSpan: number; sH: number } | null>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
 
   const list = useMemo(() => {
     const f = s.notes.filter((n) => !q || (n.title + n.body + n.tag).toLowerCase().includes(q.toLowerCase()));
@@ -131,6 +134,33 @@ export default function NotesPage() {
     }
     baseSketch.current = null;
     setSketchSrc(null);
+  };
+
+  // ── drag-to-resize note cards (mouse + touch via pointer events) ─────────
+  const rzDown = (e: React.PointerEvent<HTMLButtonElement>, id: string, cur?: { span: number; h: number }) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* ignore */ }
+    const card = e.currentTarget.closest("[data-note]") as HTMLElement | null;
+    const h = cur?.h ?? card?.offsetHeight ?? 260;
+    const span = cur?.span ?? 1;
+    setRz({ id, span, h, x0: e.clientX, y0: e.clientY, sSpan: span, sH: h });
+  };
+  const rzMove = (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (!rz) return;
+    e.stopPropagation();
+    const cols = typeof window === "undefined" ? 3 : window.innerWidth >= 1280 ? 3 : window.innerWidth >= 768 ? 2 : 1;
+    const grid = gridRef.current;
+    const gap = 16;
+    const colW = grid && cols > 1 ? (grid.clientWidth - gap * (cols - 1)) / cols : 400;
+    const span = Math.min(cols, Math.max(1, rz.sSpan + Math.round((e.clientX - rz.x0) / (colW + gap))));
+    const h = Math.min(900, Math.max(200, rz.sH + (e.clientY - rz.y0)));
+    if (span !== rz.span || h !== rz.h) setRz({ ...rz, span, h });
+  };
+  const rzUp = () => {
+    if (!rz) return;
+    saveNote({ id: rz.id, size: { span: rz.span, h: rz.h } });
+    setRz(null);
   };
 
   const aiNote = async (a: (typeof AI_ACTIONS)[number]) => {
@@ -309,14 +339,18 @@ export default function NotesPage() {
           <p className="text-[13px] text-slate-500 mt-1">Capture what you learn — text, sketches and AI tools, all in one place.</p>
         </div>
       ) : (
-        <div className="stagger grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {list.map((n) => (
-            <div key={n.id} className="card p-4 flex flex-col hover:-translate-y-1 hover:shadow-lg transition">
+        <div ref={gridRef} className="stagger grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {list.map((n) => {
+            const live = rz?.id === n.id ? rz : null;
+            const span = live?.span ?? n.size?.span ?? 1;
+            const h = live?.h ?? n.size?.h;
+            return (
+            <div key={n.id} data-note className={`card p-4 flex flex-col hover:-translate-y-1 hover:shadow-lg transition relative md:[grid-column:span_min(var(--span),2)] xl:[grid-column:span_var(--span)] ${live ? "z-10 !translate-y-0 shadow-xl outline outline-2 outline-indigo-300" : ""}`} style={{ ...(n.size || live ? { "--span": String(span) } : {}), ...(h || live ? { minHeight: h } : {}) } as React.CSSProperties}>
               <div className="flex items-start gap-2">
                 <b className="text-[14px] text-[#101a3f] flex-1">{n.title}</b>
                 {n.pinned && <Pin className="w-3.5 h-3.5 text-amber-500 shrink-0" />}
               </div>
-              <p className="text-[12px] text-slate-500 mt-1 flex-1 whitespace-pre-wrap line-clamp-4">{n.body || "—"}</p>
+              <p className={`text-[12px] text-slate-500 mt-1 flex-1 whitespace-pre-wrap ${n.size || live ? "" : "line-clamp-4"}`}>{n.body || "—"}</p>
               {n.sketch && (
                 <img src={n.sketch} alt="Note sketch" className="mt-2 h-20 w-full object-cover rounded-lg border border-slate-100" />
               )}
@@ -327,8 +361,21 @@ export default function NotesPage() {
                 <Link href={`/ai-tutor?note=${n.id}`} title="Ask AI about this note" className="p-1.5 rounded-lg hover:bg-slate-100 text-indigo-500 hover:-translate-y-0.5 transition"><BotMessageSquare className="w-4 h-4" /></Link>
                 <button onClick={() => { deleteNote(n.id); toast("Note deleted"); }} title="Delete" className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 hover:-translate-y-0.5 transition ml-auto"><Trash2 className="w-4 h-4" /></button>
               </div>
+              <button
+                aria-label="Resize note (drag with mouse or finger)"
+                title="Drag to resize — works with touch"
+                onPointerDown={(e) => rzDown(e, n.id, n.size)}
+                onPointerMove={rzMove}
+                onPointerUp={rzUp}
+                onPointerCancel={rzUp}
+                onClick={(e) => e.stopPropagation()}
+                className="absolute bottom-0 right-0 w-6 h-6 flex items-end justify-end p-1 text-slate-300 hover:text-indigo-500 cursor-nwse-resize touch-none select-none z-10"
+              >
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"><path d="M9 1 L1 9 M9 5 L5 9" /></svg>
+              </button>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

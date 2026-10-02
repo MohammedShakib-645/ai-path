@@ -8,7 +8,7 @@ export interface Unit { id: number; title: string; hours: string; icon: string }
 export interface QuizAttempt { quiz: string; score: number; total: number; at: number }
 export interface ActivityItem { text: string; detail: string; at: number; kind: "quiz" | "unit" | "lab" | "tutor" | "started" | "lesson" | "practice" | "note" | "plan" }
 export interface Chat { id: string; title: string; pinned: boolean; mode: string; msgs: { role: "user" | "assistant"; content: string; time?: string; engine?: string; ms?: number }[]; updatedAt: number }
-export interface Note { id: string; title: string; body: string; tag: string; topic: string; pinned: boolean; updatedAt: number; sketch?: string }
+export interface Note { id: string; title: string; body: string; tag: string; topic: string; pinned: boolean; updatedAt: number; sketch?: string; size?: { span: number; h: number } }
 export interface Bookmark { id: string; kind: string; ref: string; title: string; snippet: string; at: number }
 export interface StudyTask { id: string; text: string; done: boolean }
 export interface StudyDay { date: string; tasks: StudyTask[] }
