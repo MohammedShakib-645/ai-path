@@ -305,8 +305,8 @@ export default function AITutorPage() {
         </div>
 
         {/* chat */}
-        <div className="card p-0 overflow-hidden">
-          <div className="bg-indigo-50/60 dark:bg-white/5 border-b border-indigo-100 dark:border-white/10 px-4 py-3 flex items-center gap-2 flex-wrap">
+        <div className="card p-0 overflow-hidden flex flex-col h-[calc(100dvh-235px)] md:h-[calc(100dvh-145px)] min-h-[420px]">
+          <div className="shrink-0 bg-indigo-50/60 dark:bg-white/5 border-b border-indigo-100 dark:border-white/10 px-4 py-3 flex items-center gap-2 flex-wrap">
             <span className="w-9 h-9 rounded-full bg-white dark:bg-white/10 border border-indigo-200 dark:border-white/15 flex items-center justify-center text-[18px] shrink-0">🤖</span>
             <select value={chat?.mode || mode} onChange={(e) => { setMode(e.target.value); if (chat) saveChat(chat.id, { mode: e.target.value }); }} className="bg-white dark:bg-white/10 border border-indigo-200 dark:border-white/15 rounded-full px-3 py-1.5 text-[12px] font-bold outline-none text-[#101a3f] dark:text-slate-100 [&>option]:text-slate-800">
               {MODES.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
@@ -318,15 +318,15 @@ export default function AITutorPage() {
             </span>
           </div>
 
-          <div className="px-4 py-2 bg-slate-50/70 border-b border-slate-100 flex items-center gap-2 overflow-x-auto">
+          <div className="shrink-0 px-4 py-2 bg-slate-50/70 border-b border-slate-100 flex items-center gap-2 overflow-x-auto">
             {["Explain what I should learn next", "Why am I struggling?", "Quiz me on my weak topics"].map((x, i) => (
               <button key={i} onClick={() => send(x)} disabled={loading} className="text-[11px] font-medium bg-white border border-slate-200 rounded-full px-3 py-1.5 whitespace-nowrap hover:border-indigo-300 hover:bg-indigo-50 hover:-translate-y-0.5 hover:shadow-md transition disabled:opacity-50">{x}</button>
             ))}
           </div>
 
-          <div className="h-[560px] overflow-y-auto p-4 space-y-4 bg-white">
+          <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4 bg-white">
             {msgs.length === 0 && (
-              <div className="text-center text-slate-400 text-sm py-12">
+              <div className="h-full flex flex-col justify-center text-center text-slate-400 text-sm">
                 <div className="w-14 h-14 mx-auto rounded-full bg-indigo-100 flex items-center justify-center text-[28px] mb-2">🤖</div>
                 <b className="text-slate-600">Start a {modeLabel(chat?.mode || mode).toLowerCase()} session</b>
                 <p className="text-[12px] mt-1">I know your progress — just ask, paste code, or pick a suggestion.</p>
@@ -365,7 +365,7 @@ export default function AITutorPage() {
             <div ref={bottomRef} />
           </div>
 
-          <div className="p-3 border-t border-slate-100 bg-white">
+          <div className="shrink-0 p-3 border-t border-slate-100 bg-white">
             {atts.length > 0 && (
               <div className="flex gap-1.5 flex-wrap mb-2 px-1">
                 {atts.map((a, i) => (
