@@ -16,14 +16,13 @@ const LANGS = [
   // remote, real compilers (cloud engine via /api/run)
   { id: "c", label: "C", lang: "c", starter: "#include <stdio.h>\nint main() {\n    return 0;\n}" },
   { id: "cpp", label: "C++", lang: "c++", starter: "#include <bits/stdc++.h>\nusing namespace std;\nint main() {\n    return 0;\n}" },
-  { id: "java", label: "Java", lang: "java", starter: "public class Main {\n    public static void main(String[] args) {\n    }\n}" },
+  { id: "java", label: "Java", lang: "java", starter: "class Main {\n    public static void main(String[] args) {\n    }\n}" },
   { id: "csharp", label: "C#", lang: "c#", starter: "using System;\nclass Program {\n    static void Main() {\n        Console.WriteLine(\"Hello\");\n    }\n}" },
   { id: "go", label: "Go", lang: "go", starter: "package main\n\nimport \"fmt\"\n\nfunc main() {\n\tfmt.Println(\"Hello\")\n}" },
   { id: "rust", label: "Rust", lang: "rust", starter: "fn main() {\n    println!(\"Hello\");\n}" },
   { id: "php", label: "PHP", lang: "php", starter: "<?php\nfunction solve() {\n}\nsolve();\n" },
   { id: "ruby", label: "Ruby", lang: "ruby", starter: "def solve\nend\nputs solve" },
   { id: "kotlin", label: "Kotlin", lang: "kotlin", starter: "fun main() {\n    println(\"Hello\")\n}" },
-  { id: "swift", label: "Swift", lang: "swift", starter: "func solve() {\n}\nsolve()" },
   { id: "bash", label: "Bash", lang: "bash", starter: "# Write your solution\nsolve() {\n  echo \"done\"\n}\nsolve" },
   { id: "haskell", label: "Haskell", lang: "haskell", starter: "main :: IO ()\nmain = putStrLn \"Hello\"" },
   { id: "scala", label: "Scala", lang: "scala", starter: "object Main extends App {\n  println(\"Hello\")\n}" },
@@ -33,8 +32,8 @@ const LANGS = [
   { id: "perl", label: "Perl", lang: "perl", starter: "sub solve {\n}\nsolve();\nprint \"done\\n\";\n" },
 ];
 
-/** Local: Python/JS/TS run instantly in the browser. Everything else appears when
- *  the cloud compiler engine (Piston) is reachable through /api/run. */
+/** Local (instant, no network): Python and JavaScript run in the browser sandbox.
+ *  Everything else compiles on real cloud compilers through /api/run. */
 
 const PROBLEMS = [
   { id: "p1", title: "Sum of list", topic: "Python Basics", desc: "Read n then n integers. Print their sum.", ex: "Input:\n3\n1 2 3\nOutput:\n6", tests: [{ stdin: "3\n1 2 3", out: "6" }, { stdin: "2\n10 20", out: "30" }] },

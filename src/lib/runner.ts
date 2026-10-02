@@ -161,7 +161,8 @@ async function runRemote(language: string, code: string, stdin: string, timeoutM
   }
 }
 
-export const REMOTE_LANGUAGES = ["c", "cpp", "c++", "java", "csharp", "go", "rust", "php", "ruby", "kotlin", "swift", "bash", "haskell", "scala", "lua", "dart", "r", "perl", "typescript"];
+/** Remote languages (shown only when the cloud compiler reports them). */
+export const REMOTE_LANGUAGES = ["c", "cpp", "c++", "java", "csharp", "go", "rust", "php", "ruby", "bash", "haskell", "scala", "lua", "r", "perl", "typescript"];
 
 export async function runCode(input: RunInput): Promise<RunResult> {
   const id = (input.language || "").toLowerCase();
@@ -173,7 +174,7 @@ export async function runCode(input: RunInput): Promise<RunResult> {
   return runRemote(id === "c++" ? "cpp" : id, input.code, stdin, timeoutMs);
 }
 
-/** Languages available right now (remote ones only when RUNNER_URL is configured). */
+/** Languages available right now (local base + what the cloud engine reports). */
 export async function availableLanguages(): Promise<string[]> {
   const base = ["python", "javascript"];
   try {

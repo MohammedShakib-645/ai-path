@@ -51,7 +51,7 @@
 | 🧭 **Adaptive path** | Onboarding (goal · level · daily minutes) → a 12-unit roadmap unique to you; every completed unit updates the whole app live |
 | 🤖 **AI Tutor** | 10 teaching modes — each message carries your live profile, so depth and tone adapt to what you've *actually* done |
 | 👁️ **Screen-aware bot** | Floating bot reads the page you're on (with an honest eye toggle — off means it truly can't see) and jumps to any section on one command |
-| ⚡ **Code lab** | Real Python in the browser via Pyodide — instant, sandboxed, zero server cost |
+| ⚡ **Code lab** | Python + JavaScript run instantly in the browser (Pyodide/WASM) — plus 15 languages on real cloud compilers (C, C++, Java, Go, Rust, C#, TypeScript…) |
 | 🧠 **Quizzes that feed back** | Generated from your lessons → scored → weak topics detected → injected into your next explanation |
 | 🎤 **Mock interviews** | Webcam room, AI voice questions, dictated answers, graded feedback |
 | 📊 **Honest dashboard** | Real streaks, real scores, activity feed — no seeded numbers, ever |

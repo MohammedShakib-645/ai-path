@@ -1,75 +1,87 @@
-// POST /api/run — remote code execution proxy (30+ languages).
-// Our server NEVER runs the code: it forwards to a Piston-compatible engine.
-//   • RUNNER_URL (+ optional RUNNER_KEY) → your own/self-hosted instance
-//   • otherwise → the public Piston cloud (emkc.org, free, no key)
-// Python and JS do not come here at all — they run in the learner's browser (src/lib/runner.ts).
+// POST /api/run — remote code execution proxy (30+ real compilers).
+// Our server NEVER runs the code: it forwards to a public compile engine.
+//   • Wandbox (wandbox.org) — free, no key — default for 30+ languages
+//   • RUNNER_URL (+ optional RUNNER_KEY) — your own Piston-compatible instance
+// Python/JS/TS run in the learner's browser instead (see src/lib/runner.ts).
 //
-// GET  /api/run -> { languages: [...] }  (engine runtimes, cached 10 min)
+// GET  /api/run -> { languages: [...] }  (engine list, cached 10 min)
 // POST /api/run -> { stdout, stderr, exitCode, timedOut, engine }
 
-const PUBLIC_PISTON = "https://emkc.org/api/v2/piston";
+const PUBLIC_BASE = "https://wandbox.org/api";
 const MAX_CODE = 20 * 1024;
 const MAX_STDIN = 4 * 1024;
-const RATE_LIMIT = 20; // requests / minute / IP  (in-memory: serverless needs KV — see guard.ts)
+const RATE_LIMIT = 40; // requests / minute / IP
 
-/** common spellings → Piston runtime names */
-const ALIASES: Record<string, string> = {
-  "c++": "cpp",
-  "cc": "cpp",
-  "cxx": "cpp",
-  "g++": "cpp",
-  "c#": "csharp",
-  "cs": "csharp",
-  "dotnet": "csharp",
-  "js": "javascript",
-  "node": "javascript",
-  "ts": "typescript",
-  "py": "python",
-  "python3": "python",
-  "golang": "go",
-  "rb": "ruby",
-  "sh": "bash",
-  "shell": "bash",
-  "rscript": "r",
-  "kt": "kotlin",
-  "rs": "rust",
-  "pl": "perl",
-  "pascal": "freebasic",
-};
-
-interface Runtime {
-  language: string;
-  version: string;
-  aliases?: string[];
+/** Normalize any spelling (ours or Wandbox's) to one canonical id. */
+function canon(s: string): string {
+  const x = (s || "").toLowerCase().replace(/[^a-z0-9+#]/g, "");
+  if (x === "c++" || x === "cpp") return "cpp";
+  if (x === "c#" || x === "csharp") return "csharp";
+  if (x === "bash" || x === "bashscript" || x === "sh" || x === "shell") return "bash";
+  if (x === "javascript" || x === "js" || x === "node") return "javascript";
+  if (x === "typescript" || x === "ts") return "typescript";
+  if (x === "python" || x === "py") return "python";
+  if (x === "golang" || x === "go") return "go";
+  if (x === "ruby" || x === "rb") return "ruby";
+  if (x === "rscript" || x === "rlang") return "r";
+  if (x === "perl" || x === "pl") return "perl";
+  if (x === "kotlin" || x === "kt") return "kotlin";
+  if (x === "dart") return "dart";
+  return x;
 }
 
-let rtCache: { at: number; list: Runtime[] } | null = null;
+/** preferred compiler name fragments per canonical language (first match wins).
+ *  Ordered stable-first so nightly "head" builds lose to released versions. */
+const PREFER: Record<string, string[]> = {
+  c: ["gcc-13", "gcc-12", "gcc-11", "gcc"],
+  cpp: ["g++-13", "g++-12", "g++", "gcc-13", "gcc-12", "gcc"],
+  java: ["openjdk", "jdk", "javac"],
+  go: ["go-1", "go"],
+  rust: ["rust-1", "rustc", "rust"],
+  csharp: ["mono", "dotnet"],
+  php: ["php-8", "php"],
+  ruby: ["ruby-4", "ruby-3", "ruby"],
+  typescript: ["typescript"],
+  javascript: ["node"],
+  haskell: ["ghc"],
+  scala: ["scala-2.13", "scala-3.3", "scala"],
+  lua: ["lua"],
+  r: ["r-"],
+  perl: ["perl"],
+  bash: ["bash"],
+  python: ["python"],
+};
 
-/** Engine runtimes (10-minute server-side cache; honest [] on failure). */
-async function runtimes(): Promise<Runtime[]> {
-  if (rtCache && Date.now() - rtCache.at < 10 * 60_000) return rtCache.list;
-  const base = (process.env.RUNNER_URL || PUBLIC_PISTON).replace(/\/$/, "");
+interface WandCompiler {
+  name: string;
+  language: string;
+  "display-name"?: string;
+}
+
+let listCache: { at: number; list: WandCompiler[] } | null = null;
+
+async function compilers(): Promise<WandCompiler[]> {
+  if (listCache && Date.now() - listCache.at < 10 * 60_000) return listCache.list;
   try {
-    const headers: Record<string, string> = {};
-    if (process.env.RUNNER_KEY) headers.Authorization = `Bearer ${process.env.RUNNER_KEY}`;
-    const res = await fetch(`${base}/runtimes`, { headers, signal: AbortSignal.timeout(8000), cache: "no-store" });
+    const res = await fetch(`${PUBLIC_BASE}/list.json`, { signal: AbortSignal.timeout(10000), cache: "no-store" });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const j = (await res.json()) as Runtime[];
-    if (!Array.isArray(j) || !j.length) throw new Error("empty runtimes");
-    rtCache = { at: Date.now(), list: j };
+    const j = (await res.json()) as WandCompiler[];
+    if (!Array.isArray(j) || !j.length) throw new Error("empty list");
+    listCache = { at: Date.now(), list: j };
     return j;
   } catch {
-    return rtCache?.list ?? [];
+    return listCache?.list ?? [];
   }
 }
 
-/** resolve a user language id to a concrete runtime (name + version). */
-function resolve(language: string, list: Runtime[]): Runtime | null {
-  const id = (language || "").toLowerCase().trim();
-  const target = ALIASES[id] ?? id;
-  const exact = list.filter((r) => r.language === target);
-  if (exact.length) return exact[exact.length - 1]; // last = newest when several exist
-  return list.find((r) => (r.aliases ?? []).some((a) => a.toLowerCase() === target)) ?? null;
+function pickCompiler(id: string, list: WandCompiler[]): WandCompiler | null {
+  const candidates = list.filter((c) => canon(c.language) === id);
+  if (!candidates.length) return null;
+  for (const pat of PREFER[id] ?? []) {
+    const hit = candidates.find((c) => c.name.toLowerCase().includes(pat));
+    if (hit) return hit;
+  }
+  return candidates[0];
 }
 
 const hits = new Map<string, { n: number; t: number }>();
@@ -91,8 +103,9 @@ function rateLimit(ip: string): boolean {
 }
 
 export async function GET() {
-  const list = await runtimes();
-  return Response.json({ languages: list.map((r) => r.language) });
+  const list = await compilers();
+  const ids = [...new Set(list.map((c) => canon(c.language)))];
+  return Response.json({ languages: ids });
 }
 
 export async function POST(req: Request) {
@@ -127,57 +140,81 @@ export async function POST(req: Request) {
   if (code.length > MAX_CODE) return Response.json({ error: "Code exceeds 20 KB" }, { status: 413 });
   if (stdin.length > MAX_STDIN) return Response.json({ error: "stdin exceeds 4 KB" }, { status: 413 });
 
-  const list = await runtimes();
+  const id = canon(language);
+
+  // ── self-hosted Piston-compatible runner (optional) ──────────────────────
+  const own = process.env.RUNNER_URL?.replace(/\/$/, "");
+  if (own) {
+    try {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (process.env.RUNNER_KEY) headers.Authorization = `Bearer ${process.env.RUNNER_KEY}`;
+      const res = await fetch(`${own}/execute`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ language: id, version: "*", files: [{ content: code }], stdin, run_timeout: timeoutMs }),
+        signal: AbortSignal.timeout(timeoutMs + 8000),
+      });
+      if (!res.ok) return Response.json({ error: `Runner HTTP ${res.status}` }, { status: 502 });
+      const j = await res.json();
+      return Response.json({
+        stdout: j.run?.stdout ?? "",
+        stderr: j.run?.stderr ?? "",
+        exitCode: Number(j.run?.code ?? 0),
+        timedOut: !!j.run?.timeout || Number(j.run?.code ?? 0) === 124,
+        engine: `${language}@${j.language?.version ?? "self-hosted"}`,
+      });
+    } catch (e) {
+      return Response.json({ error: `Runner unreachable: ${e instanceof Error ? e.message : String(e)}` }, { status: 502 });
+    }
+  }
+
+  // ── Wandbox (public, free) ───────────────────────────────────────────────
+  const list = await compilers();
   if (!list.length) {
     return Response.json(
       { error: "Cloud compiler is unreachable right now — Python and JavaScript still run locally in your browser." },
       { status: 503 }
     );
   }
-
-  const rt = resolve(language, list);
-  if (!rt) {
-    const sample = list.slice(0, 12).map((r) => r.language).join(", ");
-    return Response.json(
-      { error: `Language "${language}" isn't available on this runner. Try one of: ${sample}…` },
-      { status: 400 }
-    );
+  const comp = pickCompiler(id, list);
+  if (!comp) {
+    const sample = [...new Set(list.map((c) => canon(c.language)))].slice(0, 14).join(", ");
+    return Response.json({ error: `Language "${language}" isn't available on this runner. Try one of: ${sample}…` }, { status: 400 });
   }
 
-  const base = (process.env.RUNNER_URL || PUBLIC_PISTON).replace(/\/$/, "");
   try {
-    const headers: Record<string, string> = { "Content-Type": "application/json" };
-    if (process.env.RUNNER_KEY) headers.Authorization = `Bearer ${process.env.RUNNER_KEY}`;
-
-    const res = await fetch(`${base}/execute`, {
+    const res = await fetch(`${PUBLIC_BASE}/compile.json`, {
       method: "POST",
-      headers,
-      body: JSON.stringify({
-        language: rt.language,
-        version: rt.version,
-        files: [{ content: code }],
-        stdin,
-        run_timeout: timeoutMs,
-        compile_timeout: timeoutMs,
-      }),
-      signal: AbortSignal.timeout(timeoutMs + 8000),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ compiler: comp.name, code, stdin }),
+      signal: AbortSignal.timeout(timeoutMs + 30000), // compile (JVM langs ~25s) + run
     });
-    if (res.status === 429) {
+    if (res.status === 429 || res.status === 503) {
       return Response.json({ error: "The cloud compiler is busy — wait a few seconds and run again." }, { status: 429, headers: { "Retry-After": "10" } });
     }
     if (!res.ok) {
-      return Response.json({ error: `Runner HTTP ${res.status}` }, { status: 502 });
+      return Response.json({ error: `Compiler service error (HTTP ${res.status}) — try again shortly.` }, { status: 502 });
     }
     const j = await res.json();
+    const stdout = String(j.program_output ?? "");
+    const stderr = [String(j.compiler_error ?? ""), String(j.program_error ?? "")]
+      .filter(Boolean)
+      .join("");
+    const signal = String(j.signal ?? "");
+    const ok = String(j.status) === "0";
     return Response.json({
-      stdout: j.run?.stdout ?? "",
-      stderr: j.compile?.stderr || j.run?.stderr || "",
-      exitCode: Number(j.run?.code ?? 0),
-      timedOut: !!j.run?.timeout || String(j.run?.signal ?? "") === "SIGKILL" || Number(j.run?.code ?? 0) === 124,
-      engine: `${rt.language}@${rt.version} · ${process.env.RUNNER_URL ? "self-hosted runner" : "piston cloud"}`,
+      stdout,
+      stderr,
+      exitCode: ok ? 0 : 1,
+      timedOut: signal === "SIGKILL" || signal === "SIGXCPU",
+      engine: `${comp.name} · ${process.env.RUNNER_URL ? "self-hosted" : "wandbox"}`,
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    return Response.json({ error: `Compiler unreachable: ${msg}` }, { status: 502 });
+    const timedOut = msg.includes("timeout") || msg.includes("abort");
+    return Response.json(
+      { error: timedOut ? `The compiler took too long (over ~${Math.round((timeoutMs + 30000) / 1000)}s) — heavy languages like Scala/Java can be slow to compile. Try again.` : `Compiler unreachable: ${msg}` },
+      { status: timedOut ? 408 : 502 }
+    );
   }
 }
