@@ -14,7 +14,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![Vercel](https://img.shields.io/badge/Deployed-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://vercel.com)
 
-**[🚀 Live App](https://ai-path-tutor.vercel.app)** · **[📊 Pitch Deck](docs/AI-Path-Hackathon-Deck.pptx)** · **[📦 Repository](https://github.com/MohammedShakib-645/ai-path)**
+**[🚀 Live App](https://ai-path-tutor.vercel.app)** · **[📊 Pitch Deck](docs/AI-PATH-Pitch-Deck.pptx)** · **[📦 Repository](https://github.com/MohammedShakib-645/ai-path)**
 
 <br>
 
@@ -277,7 +277,7 @@ Per challenge rules — full transparency:
 
 ### Built for the Build Fast with AI Challenge 2026 · Track PS 03 — Personalised AI Tutor for Learning AI
 
-**[🚀 Live App](https://ai-path-tutor.vercel.app)** · **[📊 Deck](docs/AI-Path-Hackathon-Deck.pptx)**
+**[🚀 Live App](https://ai-path-tutor.vercel.app)** · **[📊 Deck](docs/AI-PATH-Pitch-Deck.pptx)**
 
 <sub>Real auth · real data · real AI — no mock numbers anywhere.</sub>
 
