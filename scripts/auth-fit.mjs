@@ -14,22 +14,18 @@ const DESKTOP = [
 const MOBILE = [390, 844];
 
 // Right-panel controls — must be present on BOTH desktop and mobile.
+// OAuth buttons render only when this deployment has provider credentials
+const PROVIDERS = (process.env.NEXT_PUBLIC_OAUTH_PROVIDERS || "").toLowerCase();
+const providerTexts = [];
+if (PROVIDERS.includes("google")) providerTexts.push("Continue with Google");
+if (PROVIDERS.includes("github")) providerTexts.push("Continue with GitHub");
+
 const REQUIRED = {
-  "/signup": [
-    "Create your account",
-    "Continue with Google",
-    "Continue with GitHub",
-    "Create Account",
-    "Confirm password",
-    "Continue as Guest",
-    "Sign in",
-    "AI-PATH",
-  ],
+  "/signup": ["Create your account", ...providerTexts, "Create Account", "Confirm password", "Continue as Guest", "Sign in", "AI-PATH"],
   "/signin": [
     "Welcome back",
     "Continue your learning journey.",
-    "Continue with Google",
-    "Continue with GitHub",
+    ...providerTexts,
     "Forgot password?",
     "Sign In",
     "Create one",

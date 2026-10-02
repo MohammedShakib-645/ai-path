@@ -78,3 +78,10 @@ are never merged or exported. Duplicate sign-ups return an explicit
 Until step 1 + 3/4 are done the buttons/forms return explicit messages such as
 "…isn't available on this deployment yet — the auth backend hasn't been
 configured." Guest mode stays fully usable.
+
+**Provider buttons:** Google/GitHub buttons render only when
+`NEXT_PUBLIC_OAUTH_PROVIDERS` contains them (e.g. `google,github`). Once the
+providers above are enabled in Supabase, set that env var on Vercel
+(`npx vercel env add NEXT_PUBLIC_OAUTH_PROVIDERS production`) and redeploy —
+the buttons appear with zero code changes. While empty, the auth screen shows
+only working options (email/password + guest) — no dead buttons, no errors.

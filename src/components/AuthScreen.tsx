@@ -186,6 +186,14 @@ export default function AuthScreen({ mode }: { mode: Mode }) {
     router.push(consumeNextPath(nextRef.current || fallback));
   }
 
+  // OAuth providers visible only when real credentials are configured for this
+  // deployment (NEXT_PUBLIC_OAUTH_PROVIDERS=google,github). No creds → no dead
+  // buttons, no misleading errors — email/password + guest stay fully usable.
+  const providers = (process.env.NEXT_PUBLIC_OAUTH_PROVIDERS || "")
+    .split(",")
+    .map((p) => p.trim().toLowerCase())
+    .filter(Boolean);
+
   const heading = panel === "reset" ? "Reset password" : isSignup ? "Create your account" : "Welcome back";
   const sub =
     panel === "reset"
@@ -254,29 +262,33 @@ export default function AuthScreen({ mode }: { mode: Mode }) {
           <h1 className="text-[23px] font-extrabold tracking-[-0.01em] text-[#101a3f] dark:text-white">{heading}</h1>
           <p className="mt-1.5 text-[13.5px] text-slate-500 dark:text-slate-400">{sub}</p>
 
-          {panel === "auth" && (
+          {panel === "auth" && providers.length > 0 && (
             <>
               {/* Real OAuth — Google & GitHub through Supabase.
                   Provider client secrets never touch this browser. */}
               <div className="mt-5 space-y-2.5">
-                <button
-                  type="button"
-                  onClick={() => oauth("google")}
-                  disabled={busy}
-                  className="w-full h-[42px] rounded-lg border border-[#dadce0] dark:border-slate-700 bg-white hover:bg-[#f8faff] dark:hover:bg-slate-900 text-[14px] font-medium text-[#3c4043] dark:text-slate-200 transition flex items-center justify-center gap-3 disabled:opacity-70"
-                >
-                  <GoogleG />
-                  {busyLabel === "Connecting to Google..." ? busyLabel : "Continue with Google"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => oauth("github")}
-                  disabled={busy}
-                  className="w-full h-[42px] rounded-lg border border-[#dadce0] dark:border-slate-700 bg-white hover:bg-[#f8faff] dark:hover:bg-slate-900 text-[14px] font-medium text-[#3c4043] dark:text-slate-200 transition flex items-center justify-center gap-3 disabled:opacity-70"
-                >
-                  <GitHubMark />
-                  {busyLabel === "Connecting to GitHub..." ? busyLabel : "Continue with GitHub"}
-                </button>
+                {providers.includes("google") && (
+                  <button
+                    type="button"
+                    onClick={() => oauth("google")}
+                    disabled={busy}
+                    className="w-full h-[42px] rounded-lg border border-[#dadce0] dark:border-slate-700 bg-white hover:bg-[#f8faff] dark:hover:bg-slate-900 text-[14px] font-medium text-[#3c4043] dark:text-slate-200 transition flex items-center justify-center gap-3 disabled:opacity-70"
+                  >
+                    <GoogleG />
+                    {busyLabel === "Connecting to Google..." ? busyLabel : "Continue with Google"}
+                  </button>
+                )}
+                {providers.includes("github") && (
+                  <button
+                    type="button"
+                    onClick={() => oauth("github")}
+                    disabled={busy}
+                    className="w-full h-[42px] rounded-lg border border-[#dadce0] dark:border-slate-700 bg-white hover:bg-[#f8faff] dark:hover:bg-slate-900 text-[14px] font-medium text-[#3c4043] dark:text-slate-200 transition flex items-center justify-center gap-3 disabled:opacity-70"
+                  >
+                    <GitHubMark />
+                    {busyLabel === "Connecting to GitHub..." ? busyLabel : "Continue with GitHub"}
+                  </button>
+                )}
               </div>
 
               {/* OR divider */}
@@ -294,7 +306,9 @@ export default function AuthScreen({ mode }: { mode: Mode }) {
               void doSubmit();
             }}
             noValidate
-            className={panel === "reset" ? "mt-6 space-y-4" : "space-y-4"}
+            className={
+              panel === "reset" ? "mt-6 space-y-4" : panel === "auth" && providers.length === 0 ? "mt-5 space-y-4" : "space-y-4"
+            }
           >
             {isSignup && panel === "auth" && (
               <div>

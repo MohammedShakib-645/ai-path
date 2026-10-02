@@ -1,7 +1,21 @@
 import { test, expect, type Page } from "@playwright/test";
+import { readFileSync } from "fs";
+
+// Load .env.local so CONFIGURED/provider expectations match the dev server
+// actually running under test (Playwright does not read Next.js env files).
+try {
+  const raw = readFileSync(process.cwd() + "/.env.local", "utf8");
+  for (const line of raw.split(/\r?\n/)) {
+    const m = /^\s*([A-Za-z0-9_]+)\s*=\s*(.*)$/.exec(line);
+    if (m && !(m[1] in process.env)) process.env[m[1]] = m[2].trim().replace(/^["']|["']$/g, "");
+  }
+} catch {
+  /* no .env.local — tests use unconfigured expectations */
+}
 
 const BASE = "http://localhost:3000";
 const CONFIGURED = !!process.env.NEXT_PUBLIC_SUPABASE_URL;
+const PROVIDERS = (process.env.NEXT_PUBLIC_OAUTH_PROVIDERS || "").toLowerCase();
 const errors: string[] = [];
 
 /** Navigate and wait for the auth screen to be interactive (hydrated). */
@@ -30,9 +44,19 @@ test.afterEach(() => {
 
 test("signup page shows the full auth surface", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Create your account" })).toBeVisible();
-  await expect(page.getByRole("button", { name: /Continue with Google/ })).toBeVisible();
-  await expect(page.getByRole("button", { name: /Continue with GitHub/ })).toBeVisible();
-  await expect(page.getByText("OR", { exact: true })).toBeVisible();
+  if (PROVIDERS.includes("google")) {
+    await expect(page.getByRole("button", { name: /Continue with Google/ })).toBeVisible();
+    await expect(page.getByText("OR", { exact: true })).toBeVisible();
+  } else {
+    // unconfigured providers stay hidden — no dead buttons, no fake errors
+    await expect(page.getByRole("button", { name: /Continue with Google/ })).toHaveCount(0);
+    await expect(page.getByText("OR", { exact: true })).toHaveCount(0);
+  }
+  if (PROVIDERS.includes("github")) {
+    await expect(page.getByRole("button", { name: /Continue with GitHub/ })).toBeVisible();
+  } else {
+    await expect(page.getByRole("button", { name: /Continue with GitHub/ })).toHaveCount(0);
+  }
   await expect(page.getByLabel("Full name")).toBeVisible();
   await expect(page.getByLabel("Email address")).toBeVisible();
   await expect(page.getByLabel("Password", { exact: true })).toBeVisible();
@@ -68,8 +92,16 @@ test("sign-in surface + forgot password states are honest", async ({ page }) => 
   await open(page, "/signin");
   await expect(page.getByRole("heading", { name: "Welcome back" })).toBeVisible();
   await expect(page.getByText("Continue your learning journey.")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Continue with Google" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Continue with GitHub" })).toBeVisible();
+  if (PROVIDERS.includes("google")) {
+    await expect(page.getByRole("button", { name: "Continue with Google" })).toBeVisible();
+  } else {
+    await expect(page.getByRole("button", { name: "Continue with Google" })).toHaveCount(0);
+  }
+  if (PROVIDERS.includes("github")) {
+    await expect(page.getByRole("button", { name: "Continue with GitHub" })).toBeVisible();
+  } else {
+    await expect(page.getByRole("button", { name: "Continue with GitHub" })).toHaveCount(0);
+  }
 
   // real forgot-password flow — honest about configuration state
   await page.getByRole("button", { name: "Forgot password?" }).click();
@@ -120,7 +152,9 @@ test("account roundtrip: signup → sign out → sign in", async ({ page }) => {
 
   if (page.url().includes("signin") || (await confirmNotice.count()) > 0) return; // confirmation flow
 
-  // sign out via the account menu
+  // account menu lives in the dashboard TopHeader (signup lands on /start)
+  if (!page.url().includes("/dashboard")) await page.goto(`${BASE}/dashboard`);
+  await expect(page.getByRole("button", { name: "Account menu" })).toBeVisible({ timeout: 15000 });
   await page.getByRole("button", { name: "Account menu" }).click();
   await expect(page.getByText("Sign Out")).toBeVisible();
   await page.getByText("Sign Out").click();
