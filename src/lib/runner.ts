@@ -161,7 +161,7 @@ async function runRemote(language: string, code: string, stdin: string, timeoutM
   }
 }
 
-export const REMOTE_LANGUAGES = ["c", "cpp", "c++", "java"];
+export const REMOTE_LANGUAGES = ["c", "cpp", "c++", "java", "csharp", "go", "rust", "php", "ruby", "kotlin", "swift", "bash", "haskell", "scala", "lua", "dart", "r", "perl", "typescript"];
 
 export async function runCode(input: RunInput): Promise<RunResult> {
   const id = (input.language || "").toLowerCase();

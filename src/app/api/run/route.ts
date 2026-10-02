@@ -1,15 +1,76 @@
-// POST /api/run — remote code execution proxy for C / C++ / Java ONLY.
-// Our server NEVER runs the code: it forwards to a self-hosted Piston-compatible
-// instance configured with RUNNER_URL (+ optional RUNNER_KEY). Python and JS do
-// not come here at all — they run in the learner's browser (see src/lib/runner.ts).
+// POST /api/run — remote code execution proxy (30+ languages).
+// Our server NEVER runs the code: it forwards to a Piston-compatible engine.
+//   • RUNNER_URL (+ optional RUNNER_KEY) → your own/self-hosted instance
+//   • otherwise → the public Piston cloud (emkc.org, free, no key)
+// Python and JS do not come here at all — they run in the learner's browser (src/lib/runner.ts).
 //
-// GET  /api/run -> { languages: [...] }  (empty when RUNNER_URL is not configured)
+// GET  /api/run -> { languages: [...] }  (engine runtimes, cached 10 min)
 // POST /api/run -> { stdout, stderr, exitCode, timedOut, engine }
 
-const ALLOWED = ["c", "cpp", "c++", "java"];
+const PUBLIC_PISTON = "https://emkc.org/api/v2/piston";
 const MAX_CODE = 20 * 1024;
 const MAX_STDIN = 4 * 1024;
 const RATE_LIMIT = 20; // requests / minute / IP  (in-memory: serverless needs KV — see guard.ts)
+
+/** common spellings → Piston runtime names */
+const ALIASES: Record<string, string> = {
+  "c++": "cpp",
+  "cc": "cpp",
+  "cxx": "cpp",
+  "g++": "cpp",
+  "c#": "csharp",
+  "cs": "csharp",
+  "dotnet": "csharp",
+  "js": "javascript",
+  "node": "javascript",
+  "ts": "typescript",
+  "py": "python",
+  "python3": "python",
+  "golang": "go",
+  "rb": "ruby",
+  "sh": "bash",
+  "shell": "bash",
+  "rscript": "r",
+  "kt": "kotlin",
+  "rs": "rust",
+  "pl": "perl",
+  "pascal": "freebasic",
+};
+
+interface Runtime {
+  language: string;
+  version: string;
+  aliases?: string[];
+}
+
+let rtCache: { at: number; list: Runtime[] } | null = null;
+
+/** Engine runtimes (10-minute server-side cache; honest [] on failure). */
+async function runtimes(): Promise<Runtime[]> {
+  if (rtCache && Date.now() - rtCache.at < 10 * 60_000) return rtCache.list;
+  const base = (process.env.RUNNER_URL || PUBLIC_PISTON).replace(/\/$/, "");
+  try {
+    const headers: Record<string, string> = {};
+    if (process.env.RUNNER_KEY) headers.Authorization = `Bearer ${process.env.RUNNER_KEY}`;
+    const res = await fetch(`${base}/runtimes`, { headers, signal: AbortSignal.timeout(8000), cache: "no-store" });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const j = (await res.json()) as Runtime[];
+    if (!Array.isArray(j) || !j.length) throw new Error("empty runtimes");
+    rtCache = { at: Date.now(), list: j };
+    return j;
+  } catch {
+    return rtCache?.list ?? [];
+  }
+}
+
+/** resolve a user language id to a concrete runtime (name + version). */
+function resolve(language: string, list: Runtime[]): Runtime | null {
+  const id = (language || "").toLowerCase().trim();
+  const target = ALIASES[id] ?? id;
+  const exact = list.filter((r) => r.language === target);
+  if (exact.length) return exact[exact.length - 1]; // last = newest when several exist
+  return list.find((r) => (r.aliases ?? []).some((a) => a.toLowerCase() === target)) ?? null;
+}
 
 const hits = new Map<string, { n: number; t: number }>();
 
@@ -30,7 +91,8 @@ function rateLimit(ip: string): boolean {
 }
 
 export async function GET() {
-  return Response.json({ languages: process.env.RUNNER_URL ? ["c", "cpp", "java"] : [] });
+  const list = await runtimes();
+  return Response.json({ languages: list.map((r) => r.language) });
 }
 
 export async function POST(req: Request) {
@@ -60,44 +122,62 @@ export async function POST(req: Request) {
   const stdin = String(body.stdin ?? "");
   const timeoutMs = Math.max(1000, Math.min(15000, Number(body.timeoutMs) || 5000));
 
-  if (!ALLOWED.includes(language)) {
-    return Response.json({ error: `Language "${language}" is not allowed here.` }, { status: 400 });
-  }
+  if (!language) return Response.json({ error: "No language given" }, { status: 400 });
   if (!code.trim()) return Response.json({ error: "Empty code" }, { status: 400 });
   if (code.length > MAX_CODE) return Response.json({ error: "Code exceeds 20 KB" }, { status: 413 });
   if (stdin.length > MAX_STDIN) return Response.json({ error: "stdin exceeds 4 KB" }, { status: 413 });
 
-  const base = process.env.RUNNER_URL;
-  if (!base) {
+  const list = await runtimes();
+  if (!list.length) {
     return Response.json(
-      { error: "Remote runner not configured (set RUNNER_URL). Python and JavaScript run locally instead." },
+      { error: "Cloud compiler is unreachable right now — Python and JavaScript still run locally in your browser." },
       { status: 503 }
     );
   }
 
+  const rt = resolve(language, list);
+  if (!rt) {
+    const sample = list.slice(0, 12).map((r) => r.language).join(", ");
+    return Response.json(
+      { error: `Language "${language}" isn't available on this runner. Try one of: ${sample}…` },
+      { status: 400 }
+    );
+  }
+
+  const base = (process.env.RUNNER_URL || PUBLIC_PISTON).replace(/\/$/, "");
   try {
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     if (process.env.RUNNER_KEY) headers.Authorization = `Bearer ${process.env.RUNNER_KEY}`;
 
-    const res = await fetch(`${base.replace(/\/$/, "")}/execute`, {
+    const res = await fetch(`${base}/execute`, {
       method: "POST",
       headers,
-      body: JSON.stringify({ language, version: "*", files: [{ content: code }], stdin, run_timeout: timeoutMs }),
-      signal: AbortSignal.timeout(timeoutMs + 5000),
+      body: JSON.stringify({
+        language: rt.language,
+        version: rt.version,
+        files: [{ content: code }],
+        stdin,
+        run_timeout: timeoutMs,
+        compile_timeout: timeoutMs,
+      }),
+      signal: AbortSignal.timeout(timeoutMs + 8000),
     });
+    if (res.status === 429) {
+      return Response.json({ error: "The cloud compiler is busy — wait a few seconds and run again." }, { status: 429, headers: { "Retry-After": "10" } });
+    }
     if (!res.ok) {
       return Response.json({ error: `Runner HTTP ${res.status}` }, { status: 502 });
     }
     const j = await res.json();
     return Response.json({
       stdout: j.run?.stdout ?? "",
-      stderr: j.run?.stderr ?? "",
+      stderr: j.compile?.stderr || j.run?.stderr || "",
       exitCode: Number(j.run?.code ?? 0),
       timedOut: !!j.run?.timeout || String(j.run?.signal ?? "") === "SIGKILL" || Number(j.run?.code ?? 0) === 124,
-      engine: `${language}@${j.language?.version ?? "remote"}`,
+      engine: `${rt.language}@${rt.version} · ${process.env.RUNNER_URL ? "self-hosted runner" : "piston cloud"}`,
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    return Response.json({ error: `Runner unreachable: ${msg}` }, { status: 502 });
+    return Response.json({ error: `Compiler unreachable: ${msg}` }, { status: 502 });
   }
 }
