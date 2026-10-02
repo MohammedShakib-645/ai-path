@@ -29,10 +29,13 @@ export default function SidebarWrapper({ children }: { children: React.ReactNode
     );
   }
 
+  // AI Tutor = full-width content: sidebar stays, main area goes edge-to-edge.
+  const immersive = pathname === "/ai-tutor";
+
   return (
     <div className="flex min-h-screen">
       <Sidebar mobileOpen={open} onClose={() => setOpen(false)} />
-      <main className="flex-1 min-w-0 px-4 md:px-8 py-5 pb-24 md:pb-8 max-w-[1400px] mx-auto w-full">
+      <main className={immersive ? "flex-1 min-w-0 w-full pb-20 md:pb-0" : "flex-1 min-w-0 px-4 md:px-8 py-5 pb-24 md:pb-8 max-w-[1400px] mx-auto w-full"}>
         {/* keyed by route: replays the page-enter animation on navigation */}
         <div key={pathname} className="page-enter">
           <MenuProvider onMenu={() => setOpen(true)}>{children}</MenuProvider>

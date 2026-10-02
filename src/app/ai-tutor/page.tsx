@@ -253,7 +253,7 @@ export default function AITutorPage() {
   );
 
   return (
-    <div className="flex flex-col h-[calc(100dvh-116px)] md:h-[calc(100dvh-52px)]">
+    <div>
       <div className="shrink-0">
       <TopHeader
         title="AI Tutor"
@@ -265,9 +265,9 @@ export default function AITutorPage() {
       />
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-[220px_3fr] gap-4 flex-1 min-h-0">
+      <div className="grid grid-cols-1 xl:grid-cols-[220px_3fr] gap-4">
         {/* conversations */}
-        <div className={`card p-3 h-full min-h-0 flex-col ${showChats ? "flex" : "hidden"} xl:flex`}>
+        <div className={`card p-3 flex-col ${showChats ? "flex" : "hidden"} xl:flex`}>
           <button onClick={() => { const id = newChat(mode); setActiveId(id); setShowChats(false); }} className="w-full py-2 rounded-xl primary-gradient text-white text-[12px] font-bold flex items-center justify-center gap-1.5 mb-2">
             <Plus className="w-4 h-4" /> New chat
           </button>
@@ -301,7 +301,7 @@ export default function AITutorPage() {
         </div>
 
         {/* chat */}
-        <div className="card p-0 overflow-hidden flex flex-col h-full min-h-0">
+        <div className="card p-0 overflow-hidden flex flex-col">
           <div className="shrink-0 bg-indigo-50/60 dark:bg-white/5 border-b border-indigo-100 dark:border-white/10 px-4 py-3 flex items-center gap-2 flex-wrap">
             <span className="w-9 h-9 rounded-full bg-white dark:bg-white/10 border border-indigo-200 dark:border-white/15 flex items-center justify-center text-[18px] shrink-0">🤖</span>
             <select value={chat?.mode || mode} onChange={(e) => { setMode(e.target.value); if (chat) saveChat(chat.id, { mode: e.target.value }); }} className="bg-white dark:bg-white/10 border border-indigo-200 dark:border-white/15 rounded-full px-3 py-1.5 text-[12px] font-bold outline-none text-[#101a3f] dark:text-slate-100 [&>option]:text-slate-800">
@@ -321,7 +321,7 @@ export default function AITutorPage() {
             ))}
           </div>
 
-          <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4 bg-white">
+          <div className="min-h-[60vh] p-4 space-y-4 bg-white">
             {msgs.length === 0 && (
               <div className="h-full flex flex-col justify-center text-center text-slate-400 text-sm">
                 <div className="w-14 h-14 mx-auto rounded-full bg-indigo-100 flex items-center justify-center text-[28px] mb-2">🤖</div>

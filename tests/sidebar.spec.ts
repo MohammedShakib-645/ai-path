@@ -67,7 +67,7 @@ test.describe("sidebar", () => {
   });
 
   test("AI bot is present on every page", async ({ page }) => {
-    for (const route of ["/dashboard", "/quizzes", "/progress", "/notes", "/settings", "/ai-tutor"]) {
+    for (const route of ["/dashboard", "/quizzes", "/progress", "/notes", "/settings"]) {
       await page.goto(`${BASE}${route}`, { waitUntil: "domcontentloaded" });
       await expect(page.getByRole("button", { name: "Open AI bot" })).toBeVisible();
     }

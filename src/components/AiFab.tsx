@@ -87,6 +87,9 @@ export default function AiFab() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  // On /ai-tutor the full chat is already open — the floating bot would only cover the Send button.
+  if (pathname === "/ai-tutor") return null;
+
   // what the bot "sees": current route + visible page text (no screenshots leave the browser)
   const screenText = () => {
     if (typeof document === "undefined") return "";
