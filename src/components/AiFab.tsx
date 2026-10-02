@@ -126,7 +126,7 @@ export default function AiFab() {
           profile:
             tutorContext(prog) +
             (screenOn
-              ? `\nSCREEN I AM LOOKING AT now: URL ${pathname} — "${screenText()}" (react to what is actually visible).`
+              ? `\nSCREEN CONTEXT IS ON — you CAN see the user's screen right now: URL ${pathname}. Visible text: "${screenText()}" (react to what is actually visible). If the user asks whether you can see their screen/page, answer YES and describe this actual content — you really can see it.`
               : `\nSCREEN IS OFF — the user turned screen context off: you CANNOT see their screen or page. Never claim you can see anything they are viewing; if asked, tell them to tap the eye icon to turn screen context on.`),
           prefs: prog.prefs,
           messages: history.map((m) => ({ role: m.role, content: m.content })),
