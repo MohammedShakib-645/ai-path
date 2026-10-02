@@ -8,6 +8,7 @@ import {
   streakCount, learnerLevel, avgScore,
 } from "../../lib/store";
 import { nextAction, weakTopics, dailyBrief } from "../../lib/engine";
+import { useAuth } from "../../lib/auth";
 import { selectSkills } from "../../lib/selectors";
 import { SkeletonStat } from "../../components/ui";
 import {
@@ -17,7 +18,7 @@ import {
 import {
   BookOpen, BotMessageSquare, ClipboardList, FlaskConical,
   CheckCircle2, ArrowRight, Target, Zap, Clock, Flame, Sparkles,
-  Trophy, Folder, BarChart3,
+  Trophy, Folder, BarChart3, BookmarkCheck,
 } from "lucide-react";
 
 function Ring({ pct, size = 112 }: { pct: number; size?: number }) {
@@ -52,6 +53,25 @@ export default function Dashboard() {
   const [recEngine, setRecEngine] = useState("");
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
+  const auth = useAuth();
+  // "Save Progress" prompt — shown once to guests, dismissible (never pushy).
+  // Lazy init reads the dismissal flag during render (safe: the banner only
+  // renders after the hydration gate, so server and client HTML match).
+  const [bannerDismissed, setBannerDismissed] = useState(() => {
+    try {
+      return typeof window !== "undefined" && localStorage.getItem("ai-path-auth-banner") === "dismissed";
+    } catch {
+      return false;
+    }
+  });
+  const dismissBanner = () => {
+    try {
+      localStorage.setItem("ai-path-auth-banner", "dismissed");
+    } catch {
+      /* ignore */
+    }
+    setBannerDismissed(true);
+  };
 
   const pct = completionInt(s);
   const act = nextAction(s);
@@ -122,6 +142,34 @@ export default function Dashboard() {
   return (
     <div>
       <TopHeader />
+
+      {/* One quiet prompt — only for guests who have real progress to keep */}
+      {!bannerDismissed && !auth && (
+        <div className="mb-4 flex items-center gap-3 flex-wrap rounded-xl border border-indigo-100 dark:border-indigo-900/60 bg-indigo-50/70 dark:bg-indigo-950/30 px-4 py-3">
+          <div className="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-300 flex items-center justify-center shrink-0">
+            <BookmarkCheck className="w-4 h-4" />
+          </div>
+          <div className="flex-1 min-w-[190px]">
+            <div className="text-[13.5px] font-bold text-[#101a3f] dark:text-slate-100">Save Progress</div>
+            <div className="text-[12.5px] text-slate-500 dark:text-slate-400">
+              Sign in to save your progress across devices.
+            </div>
+          </div>
+          <Link
+            href="/signup?next=/dashboard"
+            className="px-4 py-2 rounded-lg bg-[#4f46e5] hover:bg-[#4338ca] text-white text-[13px] font-bold transition"
+          >
+            Sign Up
+          </Link>
+          <button
+            type="button"
+            onClick={dismissBanner}
+            className="px-3 py-2 text-[13px] font-semibold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+          >
+            Continue as Guest
+          </button>
+        </div>
+      )}
 
       {/* Continue learning — the core action */}
       <div className="card hero-gradient !border-0 p-6 text-white relative overflow-hidden mb-4 flex flex-wrap gap-4 items-center">

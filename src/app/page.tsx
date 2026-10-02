@@ -54,7 +54,7 @@ export default function LandingPage() {
             <span className="font-extrabold tracking-tight text-[16px]">AI-PATH</span>
           </div>
           <nav className="flex items-center gap-2.5">
-            <Link href="/start" className="text-[13px] font-bold text-slate-300 hover:text-white px-3 py-2">Get started</Link>
+            <Link href="/signup" className="text-[13px] font-bold text-slate-300 hover:text-white px-3 py-2">Get started</Link>
             <Link href="/dashboard" className="text-[13px] font-bold bg-white/10 border border-white/15 hover:bg-white/20 rounded-xl px-4 py-2.5">Open dashboard</Link>
           </nav>
         </div>
@@ -76,7 +76,7 @@ export default function LandingPage() {
             while keeping every number honest. Your progress stays on your device.
           </p>
           <div className="mt-8 flex items-center justify-center gap-3 flex-wrap">
-            <Link href="/start" className="primary-gradient text-white font-bold text-[14.5px] rounded-xl px-6 py-3.5 inline-flex items-center gap-2 shadow-lg shadow-indigo-600/30 hover:-translate-y-0.5">
+            <Link href="/signup" className="primary-gradient text-white font-bold text-[14.5px] rounded-xl px-6 py-3.5 inline-flex items-center gap-2 shadow-lg shadow-indigo-600/30 hover:-translate-y-0.5">
               Start free — build my path <ArrowRight className="w-4 h-4" />
             </Link>
             <Link href="/start?demo=1" className="text-white font-bold text-[14.5px] rounded-xl px-6 py-3.5 inline-flex items-center gap-2 border border-white/20 bg-white/5 hover:bg-white/10 hover:-translate-y-0.5">
@@ -143,7 +143,7 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto px-5 py-14 text-center">
           <h2 className="font-extrabold text-[24px] md:text-[28px] tracking-tight">Ready to see your path?</h2>
           <div className="mt-6 flex items-center justify-center gap-3 flex-wrap">
-            <Link href="/start" className="primary-gradient text-white font-bold text-[14.5px] rounded-xl px-6 py-3.5 inline-flex items-center gap-2 shadow-lg shadow-indigo-600/30 hover:-translate-y-0.5">
+            <Link href="/signup" className="primary-gradient text-white font-bold text-[14.5px] rounded-xl px-6 py-3.5 inline-flex items-center gap-2 shadow-lg shadow-indigo-600/30 hover:-translate-y-0.5">
               Create my learning path <ArrowRight className="w-4 h-4" />
             </Link>
             <Link href="/start?demo=1" className="text-slate-200 font-bold text-[14px] underline underline-offset-4 hover:text-white px-2 py-3">

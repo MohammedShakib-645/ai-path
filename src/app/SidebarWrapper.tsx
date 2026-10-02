@@ -19,8 +19,9 @@ export default function SidebarWrapper({ children }: { children: React.ReactNode
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
-  // Marketing landing at "/" is full-bleed: no app shell (palette still global).
-  if (pathname === "/") {
+  // Landing + auth pages are full-bleed: no app shell (palette still global).
+  const bare = pathname === "/" || pathname === "/signup" || pathname === "/signin";
+  if (bare) {
     return (
       <>
         {children}
