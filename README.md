@@ -13,8 +13,10 @@
 [![Live](https://img.shields.io/badge/%F0%9F%9A%80-Live%20App-059669?style=for-the-badge)](https://ai-path-tutor.vercel.app)
 [![Next.js](https://img.shields.io/badge/Next.js-16-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)](https://nextjs.org)
 [![React](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![Supabase](https://img.shields.io/badge/Supabase-Auth%20%2B%20DB-3FCF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com)
 [![Vercel](https://img.shields.io/badge/Vercel-Deployed-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://vercel.com)
+[![Playwright](https://img.shields.io/badge/Playwright-21%20tests-2EAD33?style=for-the-badge&logo=playwright&logoColor=white)](https://playwright.dev)
 
 <br>
 
@@ -24,8 +26,8 @@
 
 | &nbsp; | &nbsp; | &nbsp; | &nbsp; |
 |---:|---:|---:|---:|
-| **23** | **10** | **3** | **0** |
-| Pages | Tutor modes | AI failover layers | Mock data |
+| **23** | **17** | **10** | **0** |
+| Pages | Coding languages | Tutor modes | Mock data |
 
 </div>
 
@@ -54,6 +56,7 @@
 | ⚡ **Code lab** | Python + JavaScript run instantly in the browser (Pyodide/WASM) — plus 15 languages on real cloud compilers (C, C++, Java, Go, Rust, C#, TypeScript…) |
 | 🧠 **Quizzes that feed back** | Generated from your lessons → scored → weak topics detected → injected into your next explanation |
 | 🎤 **Mock interviews** | Webcam room, AI voice questions, dictated answers, graded feedback |
+| 📝 **Notes workspace** | Rich notes with sketch pad, AI summarize/flashcards/improve, drag-to-resize cards |
 | 📊 **Honest dashboard** | Real streaks, real scores, activity feed — no seeded numbers, ever |
 
 ---
@@ -120,6 +123,34 @@ flowchart TB
 
 ---
 
+## 🧰 Tech stack
+
+| Layer | Technologies |
+|---|---|
+| **Frontend** | Next.js 16 (App Router) · React 19 · TypeScript (strict) · Tailwind CSS · Lucide icons · MDX lessons |
+| **In-browser compute** | Pyodide (CPython → WASM) · Web Worker sandbox · Web Speech API (interview voice) |
+| **API / edge** | Next.js route handlers on Vercel · server-side key-pool proxy · 40 req/min/IP rate limits |
+| **AI providers** | Groq (10-key pool, primary) → OpenRouter → Gemini — automatic 3-layer failover |
+| **Code execution** | Local: Python, JavaScript · Cloud: 15 real compilers proxied via `/api/run` (gcc, OpenJDK, mono, Go, Rust…) |
+| **Data & auth** | Supabase — email/password auth, HTTP-only cookie sessions, Postgres with row-level security |
+| **Quality** | tsc strict · ESLint · Playwright (21 tests, console errors auto-fail) |
+
+---
+
+## 🔌 API surface
+
+| Route | Purpose |
+|---|---|
+| `POST /api/auth/signup` · `signin` · `signout` · `GET /api/auth/session` | Real auth lifecycle (Supabase-backed) |
+| `POST /api/auth/forgot` | Password reset — human messages only |
+| `GET/PUT /api/auth/progress` | Progress read/write (RLS-scoped per user) |
+| `POST /api/ai/chat` | Tutor / bot gateway — modes, live profile, screen context |
+| `POST /api/ai/lesson` | On-demand lesson generation |
+| `POST /api/ai/recommend` | Next-unit recommendation from the LearningEngine |
+| `POST /api/run` | Real compiler proxy — 15 languages, stdin, honest errors |
+
+---
+
 ## 🔐 Security & honesty
 
 | | |
@@ -149,12 +180,25 @@ npm run dev -- --port 3000          # → http://localhost:3000
 
 ---
 
+## 📁 Project structure
+
+```
+src/
+├── app/            # 23 routes — dashboard, learn, practice, quizzes, interview, notes…
+├── components/     # AI bot, auth screen, editors, toasts, command palette
+├── lib/            # LearningEngine, AI gateway + key pool, code runner, store
+tests/              # Playwright specs — auth roundtrip, e2e, sidebar, MDX, fit audit
+docs/               # Pitch deck
+```
+
+---
+
 ## ✅ Quality gates
 
 ```bash
 npx tsc --noEmit          # strict TypeScript → 0 errors
 npx eslint src/ tests/    # lint → 0 errors
-npx playwright test       # 7 suites — real auth roundtrip, e2e, fit audit
+npx playwright test       # 21 tests — real auth roundtrip, e2e, fit audit
 npm run build             # production build
 ```
 
@@ -164,7 +208,7 @@ Console errors fail the suite automatically — regressions can't slip through.
 
 ## 🤖 AI disclosure
 
-Built pair-programming with **OpenCode**. Runtime models: **Groq `openai/gpt-oss-120b`** (×10 pool) with OpenRouter/Gemini fallback. Foundation lessons are authored; practice, quizzes and tutor answers are model-generated on demand. Camera/mic stay in the browser.
+Development used AI tools — **ChatGPT** and **Google Antigravity** — for drafting, refactoring and testing, alongside standard AI-assisted workflows. Runtime AI: **Groq `openai/gpt-oss-120b`** (×10 key pool) with OpenRouter/Gemini fallback, all server-proxied. Foundation lessons are authored; practice, quizzes and tutor answers are model-generated on demand. Camera/mic stay in the browser.
 
 ---
 
