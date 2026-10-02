@@ -1,6 +1,5 @@
 "use client";
 import { useState, useRef, useEffect, useMemo } from "react";
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Send, Copy, Check, RotateCcw, Plus, Search, Pin, Trash2, Pencil, Square, RefreshCw, Play, Bookmark, Paperclip } from "lucide-react";
 import { toast } from "../../components/Toaster";
@@ -8,7 +7,7 @@ import { runCode as runSandbox } from "../../lib/runner";
 import {
   useProgress, newChat, saveChat, deleteChat, toggleBookmark, logActivity, type Chat,
 } from "../../lib/store";
-import { nextAction, tutorContext } from "../../lib/engine";
+import { tutorContext } from "../../lib/engine";
 import { readAttachmentFiles, type Attachment } from "../../lib/attachments";
 import TopHeader from "../../components/TopHeader";
 import Markdown, { parseFollowups } from "../../components/Markdown";
@@ -38,7 +37,6 @@ export default function AITutorPage() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<string>("explain");
-  const [pool, setPool] = useState({ groqKeys: 0, geminiKeys: 0 });
   const [online, setOnline] = useState<boolean | null>(null);
   const [copied, setCopied] = useState<number | null>(null);
   const [chatQ, setChatQ] = useState("");
@@ -86,13 +84,11 @@ export default function AITutorPage() {
   useEffect(() => {
     fetch("/api/ai/chat", { cache: "no-store" })
       .then((r) => r.json())
-      .then((d) => setPool({ groqKeys: 0, geminiKeys: 0 }))
       .catch(() => {});
     fetch("/api/chat", { cache: "no-store" })
       .then((r) => r.json())
       .then((d) => {
         setOnline(!!d.ok);
-        setPool(d.pools ?? { groqKeys: 0, geminiKeys: 0 });
       })
       .catch(() => setOnline(false));
   }, []);
@@ -256,10 +252,9 @@ export default function AITutorPage() {
     />
   );
 
-  const act = nextAction(prog);
-
   return (
-    <div>
+    <div className="flex flex-col h-[calc(100dvh-116px)] md:h-[calc(100dvh-52px)]">
+      <div className="shrink-0">
       <TopHeader
         title="AI Tutor"
         subtitle="Knows your level, weak topics and history — adapts every answer"
@@ -268,10 +263,11 @@ export default function AITutorPage() {
           <button onClick={() => setShowChats(!showChats)} className="xl:hidden px-3 py-2 rounded-xl bg-white dark:bg-white/10 border border-slate-200 dark:border-white/15 text-[12px] font-bold">Chats</button>
         }
       />
+      </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-[220px_3fr_1.2fr] gap-4">
+      <div className="grid grid-cols-1 xl:grid-cols-[220px_3fr] gap-4 flex-1 min-h-0">
         {/* conversations */}
-        <div className={`card p-3 ${showChats ? "" : "hidden"} xl:block`}>
+        <div className={`card p-3 h-full min-h-0 flex-col ${showChats ? "flex" : "hidden"} xl:flex`}>
           <button onClick={() => { const id = newChat(mode); setActiveId(id); setShowChats(false); }} className="w-full py-2 rounded-xl primary-gradient text-white text-[12px] font-bold flex items-center justify-center gap-1.5 mb-2">
             <Plus className="w-4 h-4" /> New chat
           </button>
@@ -279,7 +275,7 @@ export default function AITutorPage() {
             <Search className="w-3.5 h-3.5 text-slate-400" />
             <input value={chatQ} onChange={(e) => setChatQ(e.target.value)} placeholder="Search chats…" className="bg-transparent outline-none text-[12px] w-full" />
           </div>
-          <div className="space-y-1 max-h-[420px] overflow-y-auto">
+          <div className="space-y-1 flex-1 min-h-0 overflow-y-auto">
             {filteredChats.length === 0 && <p className="text-[12px] text-slate-400 p-2">No saved conversations yet.</p>}
             {filteredChats.map((c) => (
               <div key={c.id} className={`rounded-xl px-2.5 py-2 cursor-pointer border ${c.id === chat?.id ? "border-indigo-300 bg-indigo-50/50" : "border-transparent hover:bg-slate-50"}`} onClick={() => { setActiveId(c.id); setShowChats(false); }}>
@@ -305,13 +301,14 @@ export default function AITutorPage() {
         </div>
 
         {/* chat */}
-        <div className="card p-0 overflow-hidden flex flex-col h-[calc(100dvh-235px)] md:h-[calc(100dvh-145px)] min-h-[420px]">
+        <div className="card p-0 overflow-hidden flex flex-col h-full min-h-0">
           <div className="shrink-0 bg-indigo-50/60 dark:bg-white/5 border-b border-indigo-100 dark:border-white/10 px-4 py-3 flex items-center gap-2 flex-wrap">
             <span className="w-9 h-9 rounded-full bg-white dark:bg-white/10 border border-indigo-200 dark:border-white/15 flex items-center justify-center text-[18px] shrink-0">🤖</span>
             <select value={chat?.mode || mode} onChange={(e) => { setMode(e.target.value); if (chat) saveChat(chat.id, { mode: e.target.value }); }} className="bg-white dark:bg-white/10 border border-indigo-200 dark:border-white/15 rounded-full px-3 py-1.5 text-[12px] font-bold outline-none text-[#101a3f] dark:text-slate-100 [&>option]:text-slate-800">
               {MODES.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
             </select>
             <span className="text-[11px] text-slate-500 dark:text-slate-400 hidden sm:inline">adapts to {prog.prefs.level} • {prog.done.length}/12 units</span>
+            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${online ? "bg-green-100 text-green-700" : online === false ? "bg-red-100 text-red-600" : "bg-slate-100 text-slate-400"}`}>{online === null ? "checking…" : online ? "cloud ready" : "offline"}</span>
             <span className="ml-auto flex gap-1.5">
               <button onClick={() => send(undefined, true)} disabled={loading || !msgs.length} title="Regenerate" className="w-8 h-8 rounded-full bg-white dark:bg-white/10 border border-indigo-200 dark:border-white/15 flex items-center justify-center disabled:opacity-40"><RefreshCw className="w-3.5 h-3.5" /></button>
               <button onClick={() => { if (chat) { saveChat(chat.id, { msgs: [] }); toast("Conversation cleared"); } }} title="Clear chat" className="w-8 h-8 rounded-full bg-white dark:bg-white/10 border border-indigo-200 dark:border-white/15 flex items-center justify-center"><RotateCcw className="w-3.5 h-3.5" /></button>
@@ -328,7 +325,7 @@ export default function AITutorPage() {
             {msgs.length === 0 && (
               <div className="h-full flex flex-col justify-center text-center text-slate-400 text-sm">
                 <div className="w-14 h-14 mx-auto rounded-full bg-indigo-100 flex items-center justify-center text-[28px] mb-2">🤖</div>
-                <b className="text-slate-600">Start a {modeLabel(chat?.mode || mode).toLowerCase()} session</b>
+                <b className="text-slate-600">Start your {modeLabel(chat?.mode || mode).toLowerCase()} session</b>
                 <p className="text-[12px] mt-1">I know your progress — just ask, paste code, or pick a suggestion.</p>
               </div>
             )}
@@ -421,22 +418,6 @@ export default function AITutorPage() {
           </div>
         </div>
 
-        {/* right column */}
-        <div className="space-y-4">
-          <div className="card p-5">
-            <h3 className="font-bold text-[15px] mb-2">🎯 {act.kind === "start" ? "Get Started" : "Recommended Next"}</h3>
-            <b className="text-[13px]">{act.title}</b>
-            <p className="text-[12px] text-slate-500 mt-0.5">{act.why}</p>
-            <Link href={act.href} className="mt-2 inline-block bg-gradient-to-r from-purple-600 to-indigo-500 text-white text-[12px] font-bold px-4 py-2 rounded-lg">{act.cta} →</Link>
-          </div>
-          <div className="card p-5">
-            <h3 className="font-bold text-[15px] mb-2">⚡ Engine</h3>
-            <div className={`text-[12px] font-bold px-3 py-2 rounded-xl ${online ? "bg-green-50 text-green-700" : online === false ? "bg-red-50 text-red-600" : "bg-slate-50 text-slate-500"}`}>
-              {online === null ? "Checking…" : online ? `Cloud ready (${pool.groqKeys} Groq + ${pool.geminiKeys} Gemini keys)` : "AI not configured — add keys in Vercel env"}
-            </div>
-            <p className="text-[11px] text-slate-400">Answers stream from the cloud key pool — free for you.</p>
-          </div>
-        </div>
       </div>
     </div>
   );

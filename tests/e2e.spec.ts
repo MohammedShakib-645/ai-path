@@ -76,7 +76,7 @@ test("quiz answer + submit saves attempt and mistakes", async ({ page }) => {
 test("tutor answers and stores the conversation", async ({ page }) => {
   test.setTimeout(240000);
   await page.goto(`${BASE}/ai-tutor`);
-  await expect(page.getByText(/Start a .* session/)).toBeVisible();
+  await expect(page.getByText(/Start (a|your) .*session/)).toBeVisible();
   await page.getByPlaceholder(/Ask anything/).fill("What is a tuple in one line?");
   await page.getByRole("button", { name: "Send message" }).click();
   await expect(page.getByRole("button", { name: "Copy" }).first()).toBeVisible({ timeout: 210000 });

@@ -5,7 +5,7 @@ const BASE = process.env.BASE_URL || "http://localhost:3000";
 test("markdown reply renders with follow-up chips", async ({ page }) => {
   test.setTimeout(120000);
   await page.goto(`${BASE}/ai-tutor`); // default waitUntil "load" — bundle loaded before fill (hydration gate)
-  await expect(page.getByText(/Start a .* session/)).toBeVisible();
+  await expect(page.getByText(/Start (a|your) .*session/)).toBeVisible();
   await page.getByPlaceholder(/Ask anything/).fill("Explain list comprehension in Python with an example");
   // controlled input: Send enables only after React picked up the value (post-hydration)
   await expect(page.getByRole("button", { name: "Send message" })).toBeEnabled({ timeout: 15000 });
