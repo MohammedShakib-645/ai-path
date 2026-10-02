@@ -21,11 +21,12 @@ export const TUTOR_MODES: Record<string, { label: string; system: string }> = {
 /** Plain chat with mode-aware system prompt. `followups` is opt-in: only the
  *  surfaces that render tappable chips (ai-tutor, AI fab) request the trailing
  *  FOLLOWUPS metadata line — other AI endpoints never emit it. */
-export async function aiChat(mode: string, profile: string, messages: ChatMsg[], opts?: { followups?: boolean }) {
+export async function aiChat(mode: string, profile: string, messages: ChatMsg[], opts?: { followups?: boolean; short?: boolean }) {
   const m = TUTOR_MODES[mode] ?? TUTOR_MODES.explain;
   const followups = opts?.followups ? FOLLOWUPS_RULE : "";
+  const structure = opts?.short ? SHORT_RULES : STRUCTURE;
   return cloudChat([
-    { role: "system", content: `${m.system}\n\nLearner context (adapt depth/tone): ${profile}${STRUCTURE}${followups}` },
+    { role: "system", content: `${m.system}\n\nLearner context (adapt depth/tone): ${profile}${structure}${followups}` },
     ...messages,
   ]);
 }
@@ -49,6 +50,23 @@ OUTPUT RULES (always follow):
 4. Bold key terms. Put code in \`\`\` blocks with a one-line comment.
 5. End with one check question (one line).
 6. Plain English, max ~150 words unless the learner asks for depth. No filler, no repeating the question.`;
+
+/** Quick-chat surface (floating bot): same powers, but SHORT = fast, snappy replies. */
+const SHORT_RULES = `
+
+IDENTITY: You are "AI-PATH", this app's built-in AI tutor chatbot. Never say you are ChatGPT, GPT, Gemini, a language model, or any other product — always introduce yourself as your AI-PATH chatbot.
+
+CHAT CONTROL (you have this power — the app executes your command instantly):
+- User asks to delete/clear/remove old messages or start over → reply with EXACTLY this tag on its own line: [ACT:clear]
+- User asks to delete this whole chat → [ACT:delete-chat]
+- User asks to rename this chat → [ACT:rename:New Title]
+- After the tag (or alone), add one short confirmation line in plain English.
+- NEVER say you cannot delete or manage messages. Emit the tag and it is done.
+
+OUTPUT RULES (quick chat — speed matters, answer within seconds):
+1. Answer DIRECTLY in at most 3 short sentences (or a 2-3 item list). First line = the actual answer.
+2. No headings, no sections, no check question, no recap — unless the user explicitly asks for depth.
+3. Code only if the user asks for it. Never repeat or rephrase the question. No filler.`;
 
 /** Opt-in (chat surfaces): the client strips this line and renders the array as
  *  tappable follow-up chips — transport metadata, never displayed raw. */

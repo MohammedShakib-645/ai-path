@@ -24,10 +24,15 @@ const TASKS = [  { id: "next", icon: "🎯", label: "Tell my next step", prompt:
 /** Pages the bot can OPEN inside the app when you say "open X" / "kholo X". */
 const ROUTES: { href: string; label: string; words: string[] }[] = [
   { href: "/dashboard", label: "Dashboard", words: ["dashboard", "home", "main page", "home page", "mukhya"] },
-  { href: "/learn", label: "Learn", words: ["learning path", "path", "syllabus", "course", "curriculum", "topics list", "roadmap", "catalog"] },
+  { href: "/learn", label: "Learn", words: ["learn section", "learning path", "lessons", "learn", "path", "syllabus", "course", "curriculum", "topics list", "roadmap", "catalog"] },
   { href: "/ai-tutor", label: "AI Tutor", words: ["ai tutor", "tutor", "chat", "assistant", "teacher"] },
   { href: "/quizzes", label: "Quizzes", words: ["quiz", "quizzes", "test", "exam", "mock test", "paper"] },
   { href: "/practice", label: "Practice / Code Lab", words: ["practice", "code", "coding", "lab", "compiler", "runner", "problems"] },
+  { href: "/projects", label: "Projects", words: ["projects", "project list"] },
+  { href: "/interview", label: "Interview Prep", words: ["interview", "interviews", "mock interview"] },
+  { href: "/doubt", label: "Doubt Solver", words: ["doubt", "doubts"] },
+  { href: "/code-explainer", label: "Code Explainer", words: ["code explainer", "explain this code"] },
+  { href: "/achievements", label: "Achievements", words: ["achievements", "achievement", "badges", "rewards"] },
   { href: "/progress", label: "Progress", words: ["progress", "stats", "analytics", "chart", "performance", "report card"] },
   { href: "/activity", label: "Activity", words: ["activity", "history", "timeline", "log"] },
   { href: "/notes", label: "Notes", words: ["note", "notes", "my notes"] },
@@ -117,9 +122,12 @@ export default function AiFab() {
         body: JSON.stringify({
           mode: task ? "exam" : "explain",
           followups: true,
+          short: true,
           profile:
             tutorContext(prog) +
-            (screenOn ? `\nSCREEN I AM LOOKING AT now: URL ${pathname} — "${screenText()}" (react to what is actually visible).` : ""),
+            (screenOn
+              ? `\nSCREEN I AM LOOKING AT now: URL ${pathname} — "${screenText()}" (react to what is actually visible).`
+              : `\nSCREEN IS OFF — the user turned screen context off: you CANNOT see their screen or page. Never claim you can see anything they are viewing; if asked, tell them to tap the eye icon to turn screen context on.`),
           prefs: prog.prefs,
           messages: history.map((m) => ({ role: m.role, content: m.content })),
           attachments: attachments.map((a) => ({ name: a.name, mime: a.mime, kind: a.kind, data: a.data })),
