@@ -1,157 +1,284 @@
 <div align="center">
 
-# 🎓 AI-PATH — Personalised AI Tutor for Learning AI
+# AI-PATH
 
-**Your personal AI tutor that builds a learning path around you — then adapts every lesson,
-quiz and explanation to your live progress.**
+### Personalised AI Tutor for Learning AI
 
-[![Build Fast with AI 2026](https://img.shields.io/badge/Build%20Fast%20with%20AI-2026-8B5CF6?style=for-the-badge&logo=vercel&logoColor=white)](https://ai-path-tutor.vercel.app)
-[![Live Demo](https://img.shields.io/badge/🟢%20Live%20Demo-ai--path--tutor.vercel.app-10B981?style=for-the-badge)](https://ai-path-tutor.vercel.app)
-[![Demo Video](https://img.shields.io/badge/🎬%20Demo%20Video-Watch-F59E0B?style=for-the-badge)](https://drive.google.com/file/d/1x6GuXbR447IFWwk5L_fjbo_O3yfwUkJDI/view?usp=sharing)
-[![Next.js](https://img.shields.io/badge/Next.js%2016-App%20Router-black?style=for-the-badge&logo=nextdotjs&logoColor=white)](https://nextjs.org)
-[![React](https://img.shields.io/badge/React%2019-UI-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev)
+**A full-stack, adaptive learning platform that builds your personal path from beginner to building real AI — and reshapes itself around your live progress.**
+
+[![Challenge](https://img.shields.io/badge/Build%20Fast%20with%20AI-2026-7C3AED?style=for-the-badge)](https://ai-path-tutor.vercel.app)
+[![Live](https://img.shields.io/badge/LIVE-ai--path--tutor.vercel.app-059669?style=for-the-badge)](https://ai-path-tutor.vercel.app)
+[![Next.js](https://img.shields.io/badge/Next.js-16%20App%20Router-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)](https://nextjs.org)
+[![React](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev)
 [![Supabase](https://img.shields.io/badge/Supabase-Auth%20%2B%20Postgres-3FCF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com)
-[![Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel&logoColor=white)](https://vercel.com)
+[![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+[![Vercel](https://img.shields.io/badge/Deployed-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://vercel.com)
 
-**🚀 [Live App](https://ai-path-tutor.vercel.app)** · **[🎬 Demo Video](https://drive.google.com/file/d/1x6GuXbR447IFWwk5L_fjbo_O3yfwUkJDI/view?usp=sharing)** · **📊 [Pitch Deck](docs/AI-Path-Hackathon-Deck.pptx)** · **[🌐 GitHub](https://github.com/MohammedShakib-645/ai-path)**
+**[🚀 Live App](https://ai-path-tutor.vercel.app)** · **[📊 Pitch Deck](docs/AI-Path-Hackathon-Deck.pptx)** · **[📦 Repository](https://github.com/MohammedShakib-645/ai-path)**
+
+<br>
+
+<sub><b>23 pages</b> · <b>10 tutor modes</b> · <b>3-layer AI failover</b> · <b>real auth + RLS</b> · <b>zero mock data</b></sub>
 
 </div>
 
 ---
 
-## 🔴 The problem
+## 📚 Table of Contents
 
-Learners who want to get into AI face a messy status quo:
-
-- **Scattered content** — YouTube playlists, blogs, docs… no single path, no order.
-- **No feedback loop** — you watch 3 hours of video and still don't know what you *actually* understood.
-- **Decision paralysis** — "what do I learn next?" is asked more than any concept.
-
-> **AI-PATH answers exactly two questions: _"What do I learn next?"_ and _"Did I really get it?"_**
-
-That is precisely the gap of **PS 03 — Personalised AI Tutor for Learning AI**.
+1. [The Problem](#-1-the-problem)
+2. [The Solution](#-2-the-solution)
+3. [Personalisation Engine](#-3-personalisation-engine)
+4. [System Architecture](#-4-system-architecture)
+5. [Feature Matrix](#-5-feature-matrix)
+6. [Reliability — AI Key-Pool](#-6-reliability--ai-key-pool)
+7. [Security Model](#-7-security-model)
+8. [Tech Stack](#-8-tech-stack)
+9. [Page Map](#-9-page-map)
+10. [Getting Started](#-10-getting-started)
+11. [Quality Gates](#-11-quality-gates)
+12. [Roadmap](#-12-roadmap)
+13. [AI Disclosure](#-13-ai-disclosure)
 
 ---
 
-## ✨ What makes it personal (not just another chatbot)
+## 🔴 1 · The Problem
 
-| | Feature | How it personalises |
-|---|---|---|
-| 🧭 | **Adaptive learning path** | Onboarding (goal · level · daily minutes) → a personal 12-unit roadmap; ticking a unit updates the whole app live |
-| 🤖 | **AI Tutor, 10 modes** | Every message carries your live profile (level, units done, avg score, current unit) → the model adapts depth, tone and practice |
-| 👁️ | **Screen-aware bot** | The floating bot reads the page you're actually on and answers in context (with an honest eye-toggle: off = it truly can't see) |
-| ⚡ | **In-browser code lab** | Real Python execution via Pyodide sandbox — instant, offline-capable, zero server cost |
-| 🧠 | **AI quizzes that feed back** | Generated live from your lessons → scored → weak-topic detection → injected into the tutor's next explanation (**closed personalisation loop**) |
-| 🎤 | **Mock interviews** | Webcam room, AI voice questions, dictated answers, graded feedback |
-| 📊 | **Honest dashboard** | Real streaks (calendar days), real scores, activity feed — **no mock numbers anywhere** |
+| Status quo | Consequence |
+|---|---|
+| Scattered YouTube playlists, blogs, docs | No order, no completion criteria |
+| Watch-then-forget content | Zero feedback on what you *actually* understood |
+| "What do I learn next?" | Asked more often than any real concept |
+| Generic chatbots | No memory of your level, progress or weak topics |
+
+> **AI-PATH answers exactly two questions — _"What do I learn next?"_ and _"Did I really get it?"_**
+> That is precisely the gap of **PS 03 — Personalised AI Tutor for Learning AI**.
+
+---
+
+## ✅ 2 · The Solution
+
+An end-to-end learning product — not a prompt wrapper:
+
+- **Onboarding → personal path** — goal, level and daily minutes compile into a 12-unit roadmap unique to the learner.
+- **Every surface shares one brain** — the tutor, dashboard and progress page read the same `LearningEngine`, so they never disagree.
+- **AI that sees your context** — each tutor message carries your live profile *and* (optionally) the exact page you're reading.
+- **Practice → assessment → adaptation** — code lab and quizzes produce real signal that changes the next lesson.
+- **Real accounts, real data** — Supabase auth with cookie sessions; progress syncs per-user behind row-level security.
+
+---
+
+## 🧠 3 · Personalisation Engine
 
 ```mermaid
 flowchart LR
-    A[Onboarding\ngoal · level · time] --> B[Personal Path\n12 units]
-    B --> C[Lessons + Practice]
-    C --> D[AI Quizzes\nscored live]
-    D --> E{Weak-topic\ndetection}
-    E --> F[LearningEngine\nmastery · next action]
+    A["🎯 Onboarding<br/>goal · level · daily minutes"] --> B["🗺️ Personal Path<br/>12 adaptive units"]
+    B --> C["📚 Lessons +<br/>⚡ Code Lab"]
+    C --> D["🧠 AI Quizzes<br/>scored live"]
+    D --> E{"🔍 Weak-topic<br/>detection"}
+    E -->|weak| B
+    E -->|clear| F["🏆 Mastery advances"]
     F --> B
-    F --> G[Tutor context\nevery message]
+    B -. "context injected<br/>into every message" .-> G["🤖 AI Tutor<br/>10 modes"]
     G --> C
 ```
 
-**One brain (`LearningEngine`)** computes mastery, weak topics and the next best action —
-so the tutor, dashboard and progress page never disagree.
+**`LearningEngine`** — a single deterministic module — computes mastery, weak topics and the
+next best action from your real records. The LLM never invents your progress; it *receives* it.
 
 ---
 
-## 🏗️ Architecture
+## 🏗️ 4 · System Architecture
+
+```mermaid
+flowchart TB
+    subgraph CLIENT["🌐 CLIENT — Next.js 16 · React 19 · Tailwind v4"]
+        R["23 routes<br/>dashboard · learn · tutor · quizzes · practice · interview …"]
+        B["Floating AI Bot<br/>screen-aware · honest eye-toggle"]
+        K["Pyodide Code Runner<br/>Python in-browser · WASM sandbox"]
+        E["LearningEngine<br/>mastery · weak topics · next action"]
+    end
+
+    subgraph EDGE["⚡ SERVER — Vercel"]
+        AUTH["Auth API<br/>signup · signin · forgot · session · signout"]
+        AI["AI Gateway<br/>/api/ai/chat · quiz · exam"]
+        POOL["Key-Pool Proxy<br/>round-robin · auto cooldown · self-heal"]
+    end
+
+    subgraph DATA["🗄️ DATA — Supabase"]
+        SU["Auth<br/>email/password · cookie sessions"]
+        PG[("Postgres<br/>user_progress · profiles")]
+        RLS["Row-Level Security<br/>own rows only"]
+    end
+
+    subgraph LLM["🤖 PROVIDERS — 3 layers"]
+        L1["Layer 1 — Groq ×10 keys<br/>openai/gpt-oss-120b"]
+        L2["Layer 2 — OpenRouter<br/>fast fallback"]
+        L3["Layer 3 — Gemini<br/>backup"]
+    end
+
+    R --> AUTH
+    R --> AI
+    B --> AI
+    E -->|"live profile"| AI
+    AUTH --> SU
+    AUTH --> PG
+    PG -. enforced by .-> RLS
+    AI --> POOL
+    POOL --> L1
+    L1 -. "429 / down → next key" .-> L2
+    L2 -. failover .-> L3
+```
+
+| Boundary | Responsibility | Guarantee |
+|---|---|---|
+| **Client** | Rendering, Pyodide execution, local intent routing (`open X`) | Secrets never enter the bundle |
+| **Server** | Session cookies, LLM calls, key rotation | All provider keys stay server-side |
+| **Data** | Durable per-user progress | RLS: users touch only their own rows |
+| **Providers** | Answer generation | 3 layers — no single point of failure |
+
+---
+
+## 🧩 5 · Feature Matrix
+
+| Domain | Capabilities |
+|---|---|
+| **Learn** | Adaptive roadmap · 12 units · authored MDX lessons · AI lesson explanations · completion tracking |
+| **AI Tutor** | 10 modes (Explain, Teach, Debug, Review, Generate, Practice, Interview, Exam, Mentor, Planner) · chat history · pin/rename · follow-up chips |
+| **Floating Bot** | Screen-aware answers · one-tap navigation (`"open quizzes"`) · task shortcuts · attachment paste (images/PDF) |
+| **Practice** | Real Python execution in-browser · AI hints · code analysis |
+| **Assessment** | Easy/Medium/AI-generated quizzes · grading · weak-topic feedback into the tutor |
+| **Career** | AI mock interviews — webcam room · voice questions · dictated answers · feedback |
+| **Tools** | Doubt solver · Code explainer · Smart notes · Saved bookmarks · Study planner · Projects |
+| **Platform** | Email/password auth · forgot/reset · guest mode · ⌘K palette · dark mode · mobile-first · PWA |
+
+---
+
+## ⚙️ 6 · Reliability — AI Key-Pool
 
 ```
-Next.js 16 (App Router)  ──►  Vercel edge/lambda
- ├─ Real auth            ──►  Supabase (email/password, cookie sessions, RLS)
- ├─ Progress sync        ──►  Postgres user_progress (per-user, row-level security)
- ├─ AI chat/tutor/quiz   ──►  /api/ai/*  ─►  Key-pool proxy
- │                                            ├─ Layer 1: Groq ×10 keys (round-robin)
- │                                            ├─ Layer 2: OpenRouter (fast fallback)
- │                                            └─ Layer 3: Gemini (backup)
- ├─ Code runner          ──►  Pyodide (WASM, in-browser)
- └─ Lessons              ──►  authored MDX + model-generated practice
+request ──► round-robin cursor ──► Groq key #n
+                 │                       │
+                 │              429 / 5xx / timeout
+                 │                       ▼
+                 │              key parks itself (Retry-After honoured)
+                 ▼                       │
+         next healthy key ◄──────────────┘
+                 │
+        all Groq parked? ──► OpenRouter ──► Gemini ──► honest error (never fake)
 ```
 
-**Why a key-pool?** One provider rate-limiting or going down can never take the tutor offline —
-a key hitting 429 parks itself and the next key answers instantly (self-healing, no restart).
-Keys live **server-side only** (Vercel env) — never in the browser bundle, never in git.
+- **10 Groq keys** rotate round-robin — one key's rate limit becomes a non-event.
+- **Self-healing** — parked keys re-enter rotation automatically; no restarts, no dashboards.
+- **Honest degradation** — if every layer fails, the user gets a truthful message, never a fabricated answer.
 
 ---
 
-## 🗺️ Page map
+## 🔐 7 · Security Model
 
-`/` landing · `/start` onboarding · `/dashboard` · `/learn` roadmap+catalog · `/learn/[id]` AI lesson ·
-`/lesson/[id]` MDX lessons · `/ai-tutor` (10 modes, history, pin/rename) · `/quizzes` ·
-`/interview` webcam interview room · `/practice` code lab · `/progress` · `/activity` · `/notes` ·
-`/saved` · `/planner` · `/projects` · `/doubt` · `/code-explainer` · `/search` · `/settings` ·
-`/signup` `/signin` `/reset-password` auth flows · ⌘K command palette everywhere
+| Layer | Mechanism |
+|---|---|
+| **Authentication** | Supabase email/password · HTTP-only session cookies · auto-refresh · forgot/reset flow · explicit guest mode |
+| **Authorization** | Postgres Row-Level Security — `user_progress` and `profiles` policies bind rows to `auth.uid()` |
+| **Secrets** | LLM keys exist only in Vercel environment variables; server routes proxy every call |
+| **Client exposure** | Only the Supabase URL + anon key ship to the browser (safe by design — RLS enforces access) |
+| **Honesty** | Unconfigured features say so explicitly; empty states are real, never seeded |
 
 ---
 
-## ⚡ Quick start
+## 🛠️ 8 · Tech Stack
+
+| Layer | Choice |
+|---|---|
+| Framework | **Next.js 16** (App Router, webpack) · **React 19** |
+| Language | **TypeScript** — strict, 0-error gates |
+| Styling | **Tailwind CSS v4** · dark mode · mobile-first |
+| Auth + DB | **Supabase** (GoTrue auth · Postgres · RLS) |
+| AI | **Groq** `openai/gpt-oss-120b` (×10 pool) · OpenRouter · Gemini |
+| Compute | **Pyodide** — Python compiled to WASM, runs 100% in-browser |
+| Deploy | **Vercel** — edge/lambda, free tier |
+| Testing | **Playwright** — 7 suites · console-error traps · viewport fit audit |
+
+---
+
+## 🗺️ 9 · Page Map
+
+| Area | Routes |
+|---|---|
+| Core | `/` landing · `/start` onboarding · `/dashboard` |
+| Learn | `/learn` · `/learn/[id]` · `/lesson/[id]` · `/progress` · `/activity` |
+| AI | `/ai-tutor` · `/quizzes` · `/practice` · `/doubt` · `/code-explainer` · `/interview` |
+| Tools | `/notes` · `/saved` · `/planner` · `/projects` · `/achievements` · `/search` |
+| Account | `/signup` · `/signin` · `/reset-password` · `/settings` |
+
+*Old URLs 308-redirect (`/courses`, `/learning-path`, `/roadmap` → `/learn`). ⌘K works everywhere.*
+
+---
+
+## 🚀 10 · Getting Started
 
 ```bash
 git clone https://github.com/MohammedShakib-645/ai-path.git
 cd ai-path
 npm install
-cp .env.local.example .env.local   # fill NEXT_PUBLIC_SUPABASE_URL / _ANON_KEY (+ optional keys)
+cp .env.local.example .env.local   # fill Supabase URL + anon key (optional: AI keys)
 npm run dev -- --port 3000
-# open http://localhost:3000
+# → http://localhost:3000
 ```
 
-### Environment (Vercel → Settings → Environment Variables — never committed)
+### Environment variables (Vercel → Settings — never committed)
 
-| Var | Purpose |
+| Variable | Purpose |
 |---|---|
-| `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Project URL + anon key (safe to be public — RLS enforces access) |
-| `GROQ_KEYS` | comma-separated Groq keys (`gsk_...`, free at console.groq.com) — primary pool |
-| `GEMINI_KEYS` / `OPENROUTER_KEYS` | backup pools — automatic failover |
-| `NEXT_PUBLIC_OAUTH_PROVIDERS` | optional `google,github` — shows OAuth buttons once configured |
+| `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Project identity (public-safe, RLS enforces access) |
+| `GROQ_KEYS` | Comma-separated Groq keys — primary pool |
+| `OPENROUTER_KEYS` / `GEMINI_KEYS` | Fallback pools — automatic failover |
+| `NEXT_PUBLIC_OAUTH_PROVIDERS` | Optional `google,github` — enables OAuth buttons |
 
 ---
 
-## ✅ Testing & quality gates
+## ✅ 11 · Quality Gates
 
 ```bash
-npx tsc --noEmit                    # 0 errors — strict TypeScript
-npx eslint src/ tests/              # 0 errors
-npx playwright test                 # 22 tests, 7 suites — e2e, sidebar, lessons,
-                                    #   cmd-K, path actions, AUTH roundtrip
-node scripts/auth-fit.mjs           # viewport fit audit (1920→1280, zero scroll)
-npm run build                       # production build
+npx tsc --noEmit                 # strict types — 0 errors
+npx eslint src/ tests/           # lint — 0 errors
+npx playwright test              # 7 suites — auth roundtrip, e2e, sidebar,
+                                 #   lessons, ⌘K, path actions
+node scripts/auth-fit.mjs        # viewport fit audit — 1920→1280, zero scroll
+npm run build                    # production build
 ```
 
-The suite fails on **any browser console error**, so rendering regressions are caught automatically.
-Auth tests run a real signup → session → sign-out → sign-in roundtrip against the live backend.
+- The e2e suite **fails on any browser console error** — rendering regressions can't slip through.
+- Auth tests perform a **real signup → session → sign-out → sign-in roundtrip** against the live backend.
 
 ---
 
-## 🔐 Security & honesty
+## 📍 12 · Roadmap
 
-- **Auth is real** — Supabase email/password, HTTP-only cookie sessions, forgot/reset flow, guest mode.
-- **Row-level security** — users can only ever read/write their own progress rows.
-- **API keys never ship to the browser** — all LLM calls go through server routes; secrets live in Vercel env only.
-- **No fake UI** — unconfigured features say so honestly; empty states are real, never seeded.
+- [ ] Google / GitHub OAuth (env-gated — buttons appear the moment credentials exist)
+- [ ] Streaming replies (token-by-token rendering)
+- [ ] Team/classrooms with shared progress
+- [ ] Spaced-repetition review queue
 
 ---
 
-## 🤖 AI tools disclosure (per challenge rules)
+## 🤖 13 · AI Disclosure
 
-- Built pair-programming with **OpenCode** as the coding agent.
-- Runtime LLMs: **Groq `openai/gpt-oss-120b`** (primary pool) · OpenRouter fallback · Gemini backup.
-- MDX foundation lessons are editorial; practice questions, quizzes, plans and tutor answers are model-generated on demand.
-- Camera/mic (interview room) stay in the browser — nothing is uploaded.
+Per challenge rules — full transparency:
+
+- **Pair-programming:** built with **OpenCode** as the coding agent.
+- **Runtime models:** Groq `openai/gpt-oss-120b` (primary) · OpenRouter (fallback) · Gemini (backup).
+- **Content:** MDX foundation lessons are editorial; practice questions, quizzes, plans and tutor answers are model-generated on demand.
+- **Privacy:** camera/mic (interview room) stay in the browser; no uploads.
 
 ---
 
 <div align="center">
 
-**Built for the Build Fast with AI Challenge 2026 — track: PS 03, Personalised AI Tutor for Learning AI**
+### Built for the Build Fast with AI Challenge 2026 · Track PS 03 — Personalised AI Tutor for Learning AI
 
-[Live App](https://ai-path-tutor.vercel.app) · [Demo Video](https://drive.google.com/file/d/1x6GuXbR447IFWwk5L_fjbo_O3yfwUkJDI/view?usp=sharing) · [Deck](docs/AI-Path-Hackathon-Deck.pptx)
+**[🚀 Live App](https://ai-path-tutor.vercel.app)** · **[📊 Deck](docs/AI-Path-Hackathon-Deck.pptx)**
+
+<sub>Real auth · real data · real AI — no mock numbers anywhere.</sub>
 
 </div>
